@@ -5,13 +5,15 @@ Thumbs.db
 # VS Code
 .vscode/
 
+
 # Python / Backend
-backend/__pycache__/
+**/__pycache__/
 backend/*.py[cod]
 backend/.venv/
 backend/.env
 backend/*.db
 backend/uv.lock
+backend/data/
 
 # Node / Frontend
 frontend/node_modules/
