@@ -9,7 +9,7 @@ class CrawlerService:
     def __init__(self):
         pass
 
-    def download_file(self, url: str, save_path: Path, max_retries: int = 3) -> bool:
+    def download_file(self, url: str, save_path: Path, max_retries: int = 3, **kwargs) -> bool:
         """
         Download a file from a URL to a local path with retries.
         """
@@ -18,7 +18,7 @@ class CrawlerService:
         for attempt in range(max_retries):
             try:
                 logger.info(f"Downloading {url} (Attempt {attempt + 1}/{max_retries})")
-                response = requests.get(url, timeout=30)
+                response = requests.get(url, timeout=30, **kwargs)
                 response.raise_for_status()
                 
                 with open(save_path, "wb") as f:
