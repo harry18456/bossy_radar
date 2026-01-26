@@ -11,7 +11,10 @@ Thumbs.db
 backend/*.py[cod]
 backend/.venv/
 backend/.env
-backend/*.db
+# Ignore SQLite database files everywhere
+*.db
+*.db-shm
+*.db-wal
 backend/uv.lock
 backend/data/
 

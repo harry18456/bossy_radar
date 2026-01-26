@@ -72,11 +72,20 @@ Syncs labor violation records from 8 Ministry of Labor Open Data sources (Labor 
 - **Architecture**:
   - **Main DB (`bossy_radar.db`)**: Stores violations linked to **Listed/OTC Companies**.
   - **Archive DB (`archive.db`)**: Stores unmatched violations (Small businesses, individuals) to keep the main DB clean.
+- **Linking Strategy**:
+  1. **Exact Match**: Matches company name or abbreviation directly (e.g., "Generic Corp").
+  2. **Branch Match**: Matches if violation name starts with company name (e.g., "Generic Corp Kaohsiung Branch").
+  3. **Chairman Match**: Matches if the responsible person is unique to a listed company.
 - **CLI Command**:
   ```bash
   # Sync all violation sources
   uv run python -m app.cli.main sync-violations --source all
   ```
+
+  3. **Chairman Match**: Matches if the responsible person is unique to a listed company.
+- **Data Stats (2026-01-27)**:
+  - **Matched**: 9,591 records (Main DB).
+  - **Unmatched**: 165,661 records (Archive DB).
 - **API**: `GET /api/v1/violations`
   - **Global Search**: Query violations across all companies.
   - **Key Filters**:
