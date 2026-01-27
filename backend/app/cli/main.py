@@ -8,6 +8,7 @@ from app.services.crawler_service import CrawlerService
 from app.services.crawler_service import CrawlerService
 from app.services.company_service import CompanyService
 from app.services.violation_service import ViolationService
+from app.services.mops_scraper import MopsScraper
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -145,6 +146,56 @@ def sync_violations(
     typer.echo("--- Starting Violation Sync ---")
     violation_service.sync_violations(data_dir, target_sources)
     typer.echo("Violation Sync completed.")
+
+@app.command()
+def sync_mops(
+    start_year: Optional[int] = typer.Option(None, "--start-year", help="Start ROC year (default: current - 4)"),
+    end_year: Optional[int] = typer.Option(None, "--end-year", help="End ROC year (default: current)"),
+    data_type: Optional[str] = typer.Option(None, "--data-type", help="Specific data type to sync (employee_benefit, non_manager_salary, welfare_policy, salary_adjustment)"),
+):
+    """
+    Sync MOPS employee salary/benefit data.
+    
+    Data types:
+    - employee_benefit: t100sb14 財務報告附註揭露之員工福利(薪資)資訊
+    - non_manager_salary: t100sb15 非擔任主管職務之全時員工薪資資訊
+    - welfare_policy: t100sb13 員工福利政策及權益維護措施揭露
+    - salary_adjustment: t222sb01 基層員工調整薪資或分派酬勞
+    """
+    scraper = MopsScraper()
+    
+    # Calculate year range
+    current_roc = scraper.get_current_roc_year()
+    start_year = start_year or (current_roc - 4)
+    end_year = end_year or current_roc
+    years = list(range(start_year, end_year + 1))
+    markets = ["sii", "otc"]
+    
+    typer.echo(f"--- Starting MOPS Sync ---")
+    typer.echo(f"Years: {years}")
+    typer.echo(f"Markets: {markets}")
+    
+    if data_type:
+        # Sync specific data type
+        data_type_map = {
+            "employee_benefit": scraper.sync_employee_benefit,
+            "non_manager_salary": scraper.sync_non_manager_salary,
+            "welfare_policy": scraper.sync_welfare_policy,
+            "salary_adjustment": scraper.sync_salary_adjustment,
+        }
+        
+        if data_type not in data_type_map:
+            typer.echo(f"Invalid data type: {data_type}. Available: {list(data_type_map.keys())}")
+            raise typer.Exit(code=1)
+        
+        typer.echo(f"Syncing data type: {data_type}")
+        data_type_map[data_type](years, markets)
+    else:
+        # Sync all
+        typer.echo("Syncing all MOPS data types...")
+        scraper.sync_all(start_year=start_year, end_year=end_year)
+    
+    typer.echo("MOPS Sync completed.")
 
 if __name__ == "__main__":
     app()
