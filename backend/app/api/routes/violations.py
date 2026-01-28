@@ -23,7 +23,7 @@ def read_violations(
     max_fine: Optional[int] = Query(None, description="Filter by fine_amount <= max_fine"),
     sort: Optional[str] = Query(None, description="Sort field (prefix with - for desc, e.g. -fine_amount)"),
     offset: int = 0,
-    limit: int = Query(default=100, le=1000),
+    limit: int = Query(default=100, le=100),
 ) -> Any:
     """
     Retrieve violations from the Main DB (Listed/OTC companies only).
