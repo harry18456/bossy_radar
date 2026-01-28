@@ -130,6 +130,26 @@
   - `sort`: 多欄位排序（如 `-year`、`company_code`）
   - `company_code`、`year`、`market_type`: 多值過濾
 
+### 4. 公司聚合 API
+
+提供公司綜合資料查詢，整合違規、薪資、福利等關聯資料。
+
+- **API 端點**:
+  | 端點 | 說明 |
+  |------|------|
+  | `GET /api/v1/companies/{code}/profile` | 單一公司完整資料（含歷年違規/薪資/福利） |
+  | `GET /api/v1/companies/yearly-summary` | 公司年度摘要列表（公司×年份矩陣） |
+
+- **Yearly Summary 回傳欄位**:
+  - 違規統計：`violations_year_count`、`violations_total_count`（當年度/歷年累計）
+  - 薪資：`employee_count`、`salary_per_employee`、`avg_salary`、`median_salary`
+  - 福利：`planned_salary_increase`、`has_salary_adjustment`
+
+- **查詢參數**:
+  - `page=0`: 返回全部（無分頁）
+  - `sort`: 支援所有數值欄位排序（如 `-violations_total_count`）
+  - `year`、`company_code`、`market_type`、`industry`: 多值過濾
+
 ## 本地開發
 
 ### 前置需求
