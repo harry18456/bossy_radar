@@ -77,12 +77,14 @@ Syncs labor violation records from 8 Ministry of Labor Open Data sources (Labor 
   2. **Branch Match**: Matches if violation name starts with company name (e.g., "Generic Corp Kaohsiung Branch").
   3. **Chairman Match**: Matches if the responsible person is unique to a listed company.
 - **CLI Command**:
+
   ```bash
   # Sync all violation sources
   uv run python -m app.cli.main sync-violations --source all
   ```
 
   3. **Chairman Match**: Matches if the responsible person is unique to a listed company.
+
 - **Data Stats (2026-01-27)**:
   - **Matched**: 9,591 records (Main DB).
   - **Unmatched**: 165,661 records (Archive DB).
@@ -92,6 +94,44 @@ Syncs labor violation records from 8 Ministry of Labor Open Data sources (Labor 
     - `data_source`: Filter by law type (e.g., `LaborStandards`).
     - `min_fine` / `max_fine`: Filter by fine amount.
     - `start_date` / `end_date`: Filter by penalty timeframe.
+
+### 3. MOPS Employee Salary/Benefit Data
+
+Syncs employee salary and benefit data from MOPS (公開資訊觀測站) for Listed/OTC companies.
+
+- **Data Sources**:
+  | Source | Description |
+  |--------|-------------|
+  | t100sb14 | 財務報告附註揭露之員工福利(薪資)資訊 |
+  | t100sb15 | 非擔任主管職務之全時員工薪資資訊 |
+  | t100sb13 | 員工福利政策及權益維護措施揭露 |
+  | t222sb01 | 基層員工調整薪資或分派酬勞 |
+
+- **CLI Command**:
+
+  ```bash
+  # Sync all data types (default: last 5 years)
+  uv run python -m app.cli.main sync-mops
+
+  # Sync specific year range
+  uv run python -m app.cli.main sync-mops --start-year 113 --end-year 113
+
+  # Sync specific data type
+  uv run python -m app.cli.main sync-mops --data-type employee_benefit
+  ```
+
+- **API Endpoints**:
+  | Endpoint | Description |
+  |----------|-------------|
+  | `GET /api/v1/mops/employee-benefits` | 員工福利(薪資)資訊 |
+  | `GET /api/v1/mops/non-manager-salaries` | 非主管全時員工薪資 |
+  | `GET /api/v1/mops/welfare-policies` | 福利政策揭露 |
+  | `GET /api/v1/mops/salary-adjustments` | 基層員工調薪/分派酬勞 |
+
+- **Common Query Parameters**:
+  - `page`, `size`: Pagination (max 100 per page).
+  - `sort`: Multi-sort (e.g., `-year`, `company_code`).
+  - `company_code`, `year`, `market_type`: Multi-value filters.
 
 ## Local Development
 
