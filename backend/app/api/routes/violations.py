@@ -1,74 +1,89 @@
-from typing import List, Optional, Any
+"""
+Violations API Routes
+
+GET /violations - 查詢勞動違規記錄
+"""
+import math
+from typing import List, Optional
 from datetime import date
 
-from fastapi import APIRouter, Depends, Query, HTTPException
-from sqlmodel import Session, select, col
+from fastapi import APIRouter, Query
+from sqlmodel import select, col, asc, desc, func
 
-from app.db.session import get_session
+from app.api.deps import SessionDep
 from app.models.violation import Violation
 from app.schemas.violation import ViolationPublic
-from app.core.config import settings
+from app.schemas.company import PaginatedResponse
 
 router = APIRouter()
 
-@router.get("/", response_model=List[ViolationPublic])
+
+@router.get("/", response_model=PaginatedResponse[ViolationPublic])
 def read_violations(
-    session: Session = Depends(get_session),
-    company_code: Optional[str] = Query(None, description="Filter by company code"),
-    data_source: List[str] = Query(None, description="Filter by data source (e.g. LaborStandards)"),
-    authority: List[str] = Query(None, description="Filter by authority (e.g. Taipei)"),
-    start_date: Optional[date] = Query(None, description="Filter by penalty_date >= start_date"),
-    end_date: Optional[date] = Query(None, description="Filter by penalty_date <= end_date"),
-    min_fine: Optional[int] = Query(None, description="Filter by fine_amount >= min_fine"),
-    max_fine: Optional[int] = Query(None, description="Filter by fine_amount <= max_fine"),
-    sort: Optional[str] = Query(None, description="Sort field (prefix with - for desc, e.g. -fine_amount)"),
-    offset: int = 0,
-    limit: int = Query(default=100, le=100),
-) -> Any:
+    session: SessionDep,
+    page: int = Query(1, ge=1, description="頁碼"),
+    size: int = Query(20, le=100, description="每頁筆數"),
+    sort: Optional[List[str]] = Query(None, description="排序欄位 (e.g. -fine_amount, penalty_date)"),
+    company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
+    data_source: Optional[List[str]] = Query(None, description="資料來源過濾 (e.g. LaborStandards)"),
+    authority: Optional[List[str]] = Query(None, description="主管機關過濾 (e.g. Taipei)"),
+    start_date: Optional[date] = Query(None, description="處分日期起始"),
+    end_date: Optional[date] = Query(None, description="處分日期結束"),
+    min_fine: Optional[int] = Query(None, description="最低罰款金額"),
+    max_fine: Optional[int] = Query(None, description="最高罰款金額"),
+):
     """
-    Retrieve violations from the Main DB (Listed/OTC companies only).
+    查詢勞動違規記錄（僅上市櫃公司）
     """
-    statement = select(Violation)
+    query = select(Violation)
     
     # Filters
     if company_code:
-        statement = statement.where(Violation.company_code == company_code)
+        query = query.where(col(Violation.company_code).in_(company_code))
     
     if data_source:
-        statement = statement.where(col(Violation.data_source).in_(data_source))
+        query = query.where(col(Violation.data_source).in_(data_source))
         
     if authority:
-        statement = statement.where(col(Violation.authority).in_(authority))
+        query = query.where(col(Violation.authority).in_(authority))
         
     if start_date:
-        statement = statement.where(Violation.penalty_date >= start_date)
+        query = query.where(Violation.penalty_date >= start_date)
     
     if end_date:
-        statement = statement.where(Violation.penalty_date <= end_date)
+        query = query.where(Violation.penalty_date <= end_date)
         
     if min_fine is not None:
-        statement = statement.where(Violation.fine_amount >= min_fine)
+        query = query.where(Violation.fine_amount >= min_fine)
         
     if max_fine is not None:
-        statement = statement.where(Violation.fine_amount <= max_fine)
+        query = query.where(Violation.fine_amount <= max_fine)
+    
+    # Count total before pagination
+    count_query = select(func.count()).select_from(query.subquery())
+    total = session.exec(count_query).one()
         
     # Sorting
     if sort:
-        sort_fields = sort.split(",")
-        for field in sort_fields:
-            field = field.strip()
-            if field.startswith("-"):
-                field_name = field[1:]
-                if hasattr(Violation, field_name):
-                    statement = statement.order_by(getattr(Violation, field_name).desc())
-            else:
-                if hasattr(Violation, field):
-                    statement = statement.order_by(getattr(Violation, field).asc())
+        for sort_field in sort:
+            direction = desc if sort_field.startswith("-") else asc
+            field_name = sort_field.lstrip("-")
+            if hasattr(Violation, field_name):
+                query = query.order_by(direction(getattr(Violation, field_name)))
     else:
         # Default sort
-        statement = statement.order_by(Violation.penalty_date.desc(), Violation.id.desc())
-        
-    statement = statement.offset(offset).limit(limit)
-    violations = session.exec(statement).all()
+        query = query.order_by(desc(Violation.penalty_date), desc(Violation.id))
     
-    return violations
+    # Pagination
+    query = query.offset((page - 1) * size).limit(size)
+    violations = session.exec(query).all()
+    
+    total_pages = math.ceil(total / size) if size > 0 else 0
+    
+    return PaginatedResponse(
+        items=violations,
+        total=total,
+        page=page,
+        size=size,
+        total_pages=total_pages
+    )

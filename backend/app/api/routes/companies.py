@@ -10,23 +10,23 @@ router = APIRouter()
 @router.get("/", response_model=PaginatedResponse[CompanyResponse])
 def read_companies(
     session: SessionDep,
-    page: int = Query(1, ge=1, description="Page number"),
-    size: int = Query(20, le=100, description="Page size"),
-    sort: Optional[List[str]] = Query(None, description="Sort fields (e.g. -capital, listing_date)"),
-    market_type: Optional[List[str]] = Query(None, description="Filter by market type (Listed, OTC, Emerging)"),
-    industry: Optional[List[str]] = Query(None, description="Filter by industry"),
-    code: Optional[List[str]] = Query(None, description="Filter by company code"),
-    name: Optional[str] = Query(None, description="Filter by company name (partial match)"),
+    page: int = Query(1, ge=1, description="頁碼"),
+    size: int = Query(20, le=100, description="每頁筆數"),
+    sort: Optional[List[str]] = Query(None, description="排序欄位 (e.g. -capital, listing_date)"),
+    market_type: Optional[List[str]] = Query(None, description="市場別過濾 (Listed, OTC, Emerging)"),
+    industry: Optional[List[str]] = Query(None, description="產業類別過濾"),
+    company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
+    name: Optional[str] = Query(None, description="公司名稱過濾 (模糊比對)"),
 ):
     """
-    Retrieve companies with pagination, sorting, and filtering.
+    查詢公司資料（分頁、排序、過濾）
     """
     service = CompanyService()
     
     filters = {
         "market_type": market_type,
         "industry": industry,
-        "code": code,
+        "code": company_code,  # 內部仍用 code，僅 API 參數統一
         "name": name
     }
     
