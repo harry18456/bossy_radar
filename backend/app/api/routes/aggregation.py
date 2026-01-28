@@ -103,17 +103,39 @@ def get_company_profile(
 @router.get("/yearly-summary", response_model=YearlySummaryResponse)
 def get_yearly_summary(
     session: SessionDep,
-    page: int = Query(0, ge=0, description="頁碼 (0=全部)"),
+    page: int = Query(1, ge=1, description="頁碼 (從 1 開始)"),
     size: int = Query(20, le=100, description="每頁筆數"),
     sort: Optional[List[str]] = Query(None, description="排序欄位"),
     year: Optional[List[int]] = Query(None, description="民國年過濾"),
     company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
     market_type: Optional[List[str]] = Query(None, description="市場別過濾"),
     industry: Optional[List[str]] = Query(None, description="產業過濾"),
+    include: Optional[List[str]] = Query(
+        None, 
+        description="要包含的資料：violations, employee_benefit, non_manager_salary, welfare_policy, salary_adjustment, all"
+    ),
 ):
     """
     取得公司年度摘要列表（公司×年份矩陣）
+    
+    include 參數說明：
+    - 不設定：只回傳公司基本資料 + year
+    - violations：加入違規統計
+    - employee_benefit：加入員工福利完整資料
+    - non_manager_salary：加入非主管薪資完整資料
+    - welfare_policy：加入福利政策完整資料
+    - salary_adjustment：加入調薪完整資料
+    - all：包含所有資料
     """
+    # 解析 include 參數
+    include_set = set(include) if include else set()
+    include_all = "all" in include_set
+    include_violations = include_all or "violations" in include_set
+    include_employee_benefit = include_all or "employee_benefit" in include_set
+    include_non_manager_salary = include_all or "non_manager_salary" in include_set
+    include_welfare_policy = include_all or "welfare_policy" in include_set
+    include_salary_adjustment = include_all or "salary_adjustment" in include_set
+    
     # Step 1: 取得所有年份（從 employee_benefit 和 non_manager_salary）
     years_query = select(EmployeeBenefit.year).distinct()
     if year:
@@ -141,38 +163,39 @@ def get_yearly_summary(
     company_codes = [c.code for c in companies]
     company_map = {c.code: c for c in companies}
     
-    # Step 4: 預先查詢所有關聯資料
-    # 違規 - 歷年累計
+    # Step 4: 預先查詢關聯資料（根據 include 參數）
     violations_total = {}
-    violations_total_query = session.exec(
-        select(
-            Violation.company_code,
-            func.count(Violation.id).label("count"),
-            func.sum(Violation.fine_amount).label("fine")
-        )
-        .where(col(Violation.company_code).in_(company_codes))
-        .group_by(Violation.company_code)
-    ).all()
-    for row in violations_total_query:
-        violations_total[row[0]] = {"count": row[1], "fine": row[2] or 0}
-    
-    # 違規 - 按年度
     violations_by_year = {}
-    violations_year_query = session.exec(
-        select(
-            Violation.company_code,
-            extract('year', Violation.penalty_date).label("year"),
-            func.count(Violation.id).label("count"),
-            func.sum(Violation.fine_amount).label("fine")
-        )
-        .where(col(Violation.company_code).in_(company_codes))
-        .group_by(Violation.company_code, extract('year', Violation.penalty_date))
-    ).all()
-    for row in violations_year_query:
-        key = (row[0], int(row[1]) - 1911 if row[1] else None)  # 西元轉民國
-        violations_by_year[key] = {"count": row[2], "fine": row[3] or 0}
+    if include_violations:
+        # 違規 - 歷年累計
+        violations_total_query = session.exec(
+            select(
+                Violation.company_code,
+                func.count(Violation.id).label("count"),
+                func.sum(Violation.fine_amount).label("fine")
+            )
+            .where(col(Violation.company_code).in_(company_codes))
+            .group_by(Violation.company_code)
+        ).all()
+        for row in violations_total_query:
+            violations_total[row[0]] = {"count": row[1], "fine": row[2] or 0}
+        
+        # 違規 - 按年度
+        violations_year_query = session.exec(
+            select(
+                Violation.company_code,
+                extract('year', Violation.penalty_date).label("year"),
+                func.count(Violation.id).label("count"),
+                func.sum(Violation.fine_amount).label("fine")
+            )
+            .where(col(Violation.company_code).in_(company_codes))
+            .group_by(Violation.company_code, extract('year', Violation.penalty_date))
+        ).all()
+        for row in violations_year_query:
+            key = (row[0], int(row[1]) - 1911 if row[1] else None)  # 西元轉民國
+            violations_by_year[key] = {"count": row[2], "fine": row[3] or 0}
     
-    # 員工福利
+    # 員工福利（必須查詢用於判斷資料是否存在）
     benefits_map = {}
     benefits = session.exec(
         select(EmployeeBenefit)
@@ -200,13 +223,13 @@ def get_yearly_summary(
         policies_map[(p.company_code, p.year)] = p
     
     # 調薪
-    adjustments_set = set()
+    adjustments_map = {}
     adjustments = session.exec(
-        select(SalaryAdjustment.company_code, SalaryAdjustment.year)
+        select(SalaryAdjustment)
         .where(col(SalaryAdjustment.company_code).in_(company_codes))
     ).all()
     for a in adjustments:
-        adjustments_set.add((a[0], a[1]))
+        adjustments_map[(a.company_code, a.year)] = a
     
     # Step 5: 組合結果
     items = []
@@ -220,34 +243,43 @@ def get_yearly_summary(
             benefit = benefits_map.get((code, y))
             salary = salaries_map.get((code, y))
             policy = policies_map.get((code, y))
-            has_adjustment = (code, y) in adjustments_set
+            adjustment = adjustments_map.get((code, y))
             
             # 如果沒有任何資料，跳過
-            if not benefit and not salary and not policy and not has_adjustment:
+            if not benefit and not salary and not policy and not adjustment:
                 continue
             
-            vio_year = violations_by_year.get((code, y), {"count": 0, "fine": 0})
-            vio_total = violations_total.get(code, {"count": 0, "fine": 0})
-            
+            # 建立基本資料
             item = YearlySummaryItem(
                 company_code=code,
                 company_name=company.name,
                 market_type=company.market_type,
                 industry=company.industry,
                 year=y,
-                violations_year_count=vio_year["count"],
-                violations_year_fine=vio_year["fine"],
-                violations_total_count=vio_total["count"],
-                violations_total_fine=vio_total["fine"],
-                employee_count=benefit.employee_count if benefit else None,
-                salary_per_employee=benefit.avg_salary_current_year if benefit else None,
-                median_employee_salary=None,  # t100sb14 沒有這個欄位
-                avg_salary=salary.avg_salary if salary else None,
-                median_salary=salary.median_salary if salary else None,
-                planned_salary_increase=policy.planned_salary_increase if policy else None,
-                actual_salary_increase=policy.actual_salary_increase if policy else None,
-                has_salary_adjustment=has_adjustment,
             )
+            
+            # 加入違規統計
+            if include_violations:
+                vio_year = violations_by_year.get((code, y), {"count": 0, "fine": 0})
+                vio_total = violations_total.get(code, {"count": 0, "fine": 0})
+                item.violations_year_count = vio_year["count"]
+                item.violations_year_fine = vio_year["fine"]
+                item.violations_total_count = vio_total["count"]
+                item.violations_total_fine = vio_total["fine"]
+            
+            # 加入 MOPS 完整物件
+            if include_employee_benefit and benefit:
+                item.employee_benefit = EmployeeBenefitResponse.model_validate(benefit)
+            
+            if include_non_manager_salary and salary:
+                item.non_manager_salary = NonManagerSalaryResponse.model_validate(salary)
+            
+            if include_welfare_policy and policy:
+                item.welfare_policy = WelfarePolicyResponse.model_validate(policy)
+            
+            if include_salary_adjustment and adjustment:
+                item.salary_adjustment = SalaryAdjustmentResponse.model_validate(adjustment)
+            
             items.append(item)
     
     # Step 6: 排序
@@ -263,20 +295,16 @@ def get_yearly_summary(
     
     # Step 7: 分頁
     total = len(items)
-    if page > 0:
-        start = (page - 1) * size
-        end = start + size
-        items = items[start:end]
-        total_pages = math.ceil(total / size) if size > 0 else 0
-    else:
-        # page=0 返回全部
-        total_pages = 1
-        page = 1
+    start = (page - 1) * size
+    end = start + size
+    items = items[start:end]
+    total_pages = math.ceil(total / size) if size > 0 else 0
     
     return YearlySummaryResponse(
         items=items,
         total=total,
         page=page,
-        size=len(items) if page == 0 else size,
+        size=size,
         total_pages=total_pages,
     )
+

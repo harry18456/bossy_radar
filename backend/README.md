@@ -140,15 +140,23 @@
   | `GET /api/v1/companies/{code}/profile` | 單一公司完整資料（含歷年違規/薪資/福利） |
   | `GET /api/v1/companies/yearly-summary` | 公司年度摘要列表（公司×年份矩陣） |
 
-- **Yearly Summary 回傳欄位**:
-  - 違規統計：`violations_year_count`、`violations_total_count`（當年度/歷年累計）
-  - 薪資：`employee_count`、`salary_per_employee`、`avg_salary`、`median_salary`
-  - 福利：`planned_salary_increase`、`has_salary_adjustment`
+- **Yearly Summary 回傳資料選擇**（`include` 參數）:
+  | 值 | 回傳內容 |
+  |----|----------|
+  | 不設定 | 只有公司基本資料 + year |
+  | `violations` | + 違規統計（當年度/歷年累計） |
+  | `employee_benefit` | + 員工福利完整資料 (t100sb14) |
+  | `non_manager_salary` | + 非主管薪資完整資料 (t100sb15) |
+  | `welfare_policy` | + 福利政策完整資料 (t100sb13) |
+  | `salary_adjustment` | + 調薪完整資料 (t222sb01) |
+  | `all` | 包含所有資料 |
 
 - **查詢參數**:
-  - `page=0`: 返回全部（無分頁）
+  - `page`: 頁碼（從 1 開始）
+  - `size`: 每頁筆數（最多 100 筆）
   - `sort`: 支援所有數值欄位排序（如 `-violations_total_count`）
   - `year`、`company_code`、`market_type`、`industry`: 多值過濾
+  - `include`: 選擇要回傳的資料（可多選）
 
 ## 本地開發
 

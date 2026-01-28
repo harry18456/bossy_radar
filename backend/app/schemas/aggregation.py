@@ -29,36 +29,24 @@ class CompanyProfileResponse(BaseModel):
 # ========== Yearly Summary ==========
 class YearlySummaryItem(BaseModel):
     """公司年度摘要"""
-    # 公司基本資料
+    # 公司基本資料（必定回傳）
     company_code: str
     company_name: str
     market_type: Optional[str] = None
     industry: Optional[str] = None
     year: int
     
-    # 違規統計 - 當年度
-    violations_year_count: int = 0
-    violations_year_fine: int = 0
+    # 違規統計（include=violations 時回傳）
+    violations_year_count: Optional[int] = None
+    violations_year_fine: Optional[int] = None
+    violations_total_count: Optional[int] = None
+    violations_total_fine: Optional[int] = None
     
-    # 違規統計 - 歷年累計
-    violations_total_count: int = 0
-    violations_total_fine: int = 0
-    
-    # 員工福利 (t100sb14)
-    employee_count: Optional[int] = None
-    salary_per_employee: Optional[int] = None
-    median_employee_salary: Optional[int] = None
-    
-    # 非主管薪資 (t100sb15)
-    avg_salary: Optional[int] = None
-    median_salary: Optional[int] = None
-    
-    # 福利政策 (t100sb13)
-    planned_salary_increase: Optional[str] = None
-    actual_salary_increase: Optional[str] = None
-    
-    # 調薪 (t222sb01)
-    has_salary_adjustment: bool = False
+    # 完整 MOPS 物件（根據 include 參數回傳）
+    employee_benefit: Optional[EmployeeBenefitResponse] = None
+    non_manager_salary: Optional[NonManagerSalaryResponse] = None
+    welfare_policy: Optional[WelfarePolicyResponse] = None
+    salary_adjustment: Optional[SalaryAdjustmentResponse] = None
 
 
 class YearlySummaryResponse(BaseModel):
