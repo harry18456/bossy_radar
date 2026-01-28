@@ -9,6 +9,7 @@ from datetime import date
 
 from fastapi import APIRouter, Query
 from sqlmodel import select, col, asc, desc, func
+from sqlalchemy import extract
 
 from app.api.deps import SessionDep
 from app.models.violation import Violation
@@ -27,6 +28,7 @@ def read_violations(
     company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
     data_source: Optional[List[str]] = Query(None, description="資料來源過濾 (e.g. LaborStandards)"),
     authority: Optional[List[str]] = Query(None, description="主管機關過濾 (e.g. Taipei)"),
+    year: Optional[List[int]] = Query(None, description="年度過濾 (西元年)"),
     start_date: Optional[date] = Query(None, description="處分日期起始"),
     end_date: Optional[date] = Query(None, description="處分日期結束"),
     min_fine: Optional[int] = Query(None, description="最低罰款金額"),
@@ -46,6 +48,9 @@ def read_violations(
         
     if authority:
         query = query.where(col(Violation.authority).in_(authority))
+    
+    if year:
+        query = query.where(extract('year', Violation.penalty_date).in_(year))
         
     if start_date:
         query = query.where(Violation.penalty_date >= start_date)
