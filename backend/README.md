@@ -1,158 +1,155 @@
-# Backend Architecture
+# Backend 架構說明
 
-## Architecture Principles
+## 架構原則
 
-### 1. Data Ingestion / ETL (CLI)
+### 1. 資料擷取 / ETL (CLI)
 
-- **Role**: Dedicated to "Preparing Data".
-- **Location**: `app/cli`
-- **Responsibilities**:
-  - Fetching external data (Web Scraping, API Calls).
-  - Parsing and Cleaning data.
-  - Saving/Updating the Database.
-- **Characteristics**:
-  - **Long-running**: Tasks that take time and shouldn't block HTTP requests.
-  - **Active/Scheduled**: Triggered by admin commands or cron jobs.
-  - **Write-Heavy**: Focus on data persistence.
+- **角色**: 負責「準備資料」
+- **位置**: `app/cli`
+- **職責**:
+  - 擷取外部資料（網頁爬蟲、API 呼叫）
+  - 資料解析與清理
+  - 儲存/更新資料庫
+- **特性**:
+  - **長時間執行**: 不應阻塞 HTTP 請求
+  - **主動/排程**: 由管理員指令或 cron job 觸發
+  - **寫入密集**: 專注於資料持久化
 
-### 2. Data Serving (FastAPI)
+### 2. 資料服務 (FastAPI)
 
-- **Role**: Dedicated to "Consuming/Serving Data".
-- **Location**: `app/api`
-- **Responsibilities**:
-  - API Endpoints for Frontend/Clients.
-  - Handling Request/Response cycles.
-  - Query parameters validation (Filter, Sort).
-- **Characteristics**:
-  - **Real-time**: Must respond quickly to avoid timeouts.
-  - **Passive**: Triggered by user actions.
-  - **Read-Heavy**: Focus on querying efficient data views.
+- **角色**: 負責「提供/消費資料」
+- **位置**: `app/api`
+- **職責**:
+  - 提供前端/客戶端 API 端點
+  - 處理請求/回應週期
+  - 查詢參數驗證（過濾、排序）
+- **特性**:
+  - **即時**: 必須快速回應避免超時
+  - **被動**: 由使用者操作觸發
+  - **讀取密集**: 專注於高效查詢
 
-### 3. Layered Design (Services)
+### 3. 分層設計 (Services)
 
-- **Role**: Shared Business Logic.
-- **Location**: `app/services`
-- **Principle**: Do not lock core logic inside CLI strings or API routes.
-- **Structure**:
-  - **Entry Points (CLI/API)**: Only handle input parsing and trigger services.
-  - **Service Layer**: Contains the actual logic (e.g., `crawler_service.py`, `company_service.py`).
-  - **Data Layer (DB/Models)**: Handles direct database interactions.
+- **角色**: 共用商業邏輯
+- **位置**: `app/services`
+- **原則**: 不要將核心邏輯鎖在 CLI 字串或 API 路由中
+- **結構**:
+  - **進入點 (CLI/API)**: 僅處理輸入解析並觸發服務
+  - **服務層**: 包含實際邏輯（如 `crawler_service.py`、`company_service.py`）
+  - **資料層 (DB/Models)**: 處理直接的資料庫互動
 
-### 4. File Storage / Artifacts
+### 4. 檔案儲存 / 產出物
 
-- **Role**: Temporary or persistent file storage for CLI operations.
-- **Location**: `backend/data`
-- **Structure**:
-  - `data/raw`: Raw HTML/JSON responses from crawlers.
-  - `data/processed`: Intermediate data structures (e.g., CSVs, Parquet) before DB insertion.
-  - `data/logs`: Execution logs.
-- **Policy**:
-  - **Gitignore**: **MUST** be ignored by git.
-  - **Retention**: Treated as temporary. The Database is the source of truth.
+- **角色**: CLI 操作的暫時或持久檔案儲存
+- **位置**: `backend/data`
+- **結構**:
+  - `data/raw`: 爬蟲的原始 HTML/JSON 回應（如 MOPS 快取）
+- **政策**:
+  - **Gitignore**: **必須**被 git 忽略
+  - **保留期**: 視為暫時性。資料庫為資料來源的唯一真相
 
-## Features & Modules
+## 功能與模組
 
-### 1. Company Data (Listing Info)
+### 1. 公司資料（上市櫃資訊）
 
-Syncs company basic information from TWSE (Listed/OTC/Emerging).
+從證交所同步公司基本資料（上市/上櫃/興櫃）。
 
-- **CLI Command**:
+- **CLI 指令**:
   ```bash
-  # Sync all market types
+  # 同步所有市場類型
   uv run python -m app.cli.main sync-companies --type all
   ```
 - **API**: `GET /api/v1/companies`
-  - Supports filtering by `market_type`, `industry`, `code`, `name`.
-  - Supports multi-sort (e.g., `sort=-capital`).
+  - 支援過濾：`market_type`、`industry`、`code`、`name`
+  - 支援多欄位排序（如 `sort=-capital`）
 
-### 2. Labor Violation Data
+### 2. 勞動違規資料
 
-Syncs labor violation records from 8 Ministry of Labor Open Data sources (Labor Standards, Gender Equality, Occupational Safety, etc.).
+從勞動部開放資料同步 8 種勞動違規記錄（勞基法、性平法、職安法等）。
 
-- **Architecture**:
-  - **Main DB (`bossy_radar.db`)**: Stores violations linked to **Listed/OTC Companies**.
-  - **Archive DB (`archive.db`)**: Stores unmatched violations (Small businesses, individuals) to keep the main DB clean.
-- **Linking Strategy**:
-  1. **Exact Match**: Matches company name or abbreviation directly (e.g., "Generic Corp").
-  2. **Branch Match**: Matches if violation name starts with company name (e.g., "Generic Corp Kaohsiung Branch").
-  3. **Chairman Match**: Matches if the responsible person is unique to a listed company.
-- **CLI Command**:
-
+- **架構**:
+  - **主資料庫 (`bossy_radar.db`)**: 儲存與**上市櫃公司**連結的違規
+  - **歸檔資料庫 (`archive.db`)**: 儲存未比對的違規（中小企業、個人），保持主資料庫乾淨
+- **比對策略**:
+  1. **精確比對**: 直接比對公司名稱或簡稱
+  2. **分公司比對**: 違規名稱以公司名稱開頭（如「台積電高雄分公司」）
+  3. **負責人比對**: 負責人為唯一對應到某上市公司
+- **CLI 指令**:
   ```bash
-  # Sync all violation sources
+  # 同步所有違規來源
   uv run python -m app.cli.main sync-violations --source all
   ```
-
-  3. **Chairman Match**: Matches if the responsible person is unique to a listed company.
-
-- **Data Stats (2026-01-27)**:
-  - **Matched**: 9,591 records (Main DB).
-  - **Unmatched**: 165,661 records (Archive DB).
 - **API**: `GET /api/v1/violations`
-  - **Global Search**: Query violations across all companies.
-  - **Key Filters**:
-    - `data_source`: Filter by law type (e.g., `LaborStandards`).
-    - `min_fine` / `max_fine`: Filter by fine amount.
-    - `start_date` / `end_date`: Filter by penalty timeframe.
+  - **主要過濾器**:
+    - `data_source`: 依法規類型過濾（如 `LaborStandards`）
+    - `min_fine` / `max_fine`: 依罰款金額過濾
+    - `start_date` / `end_date`: 依處分日期過濾
 
-### 3. MOPS Employee Salary/Benefit Data
+### 3. MOPS 員工薪資/福利資料
 
-Syncs employee salary and benefit data from MOPS (公開資訊觀測站) for Listed/OTC companies.
+從公開資訊觀測站同步上市櫃公司員工薪資與福利資料。
 
-- **Data Sources**:
-  | Source | Description |
-  |--------|-------------|
+- **資料來源**:
+  | 來源代號 | 說明 |
+  |----------|------|
   | t100sb14 | 財務報告附註揭露之員工福利(薪資)資訊 |
   | t100sb15 | 非擔任主管職務之全時員工薪資資訊 |
   | t100sb13 | 員工福利政策及權益維護措施揭露 |
   | t222sb01 | 基層員工調整薪資或分派酬勞 |
 
-- **CLI Command**:
+- **架構**:
+  - **主資料庫 (`bossy_radar.db`)**: 儲存與上市櫃公司成功比對的薪資/福利資料
+  - **歸檔資料庫 (`archive.db`)**: 儲存無法比對的資料（如公司代號不在 Company 表中）
+- **比對策略**:
+  1. **公司代號比對**: 直接比對 MOPS 資料的公司代號
+  2. **分公司比對**: 若公司代號帶有分公司後綴，比對母公司代號
+
+- **CLI 指令**:
 
   ```bash
-  # Sync all data types (default: last 5 years)
+  # 同步所有資料類型（預設：近 5 年）
   uv run python -m app.cli.main sync-mops
 
-  # Sync specific year range
+  # 同步指定年份範圍
   uv run python -m app.cli.main sync-mops --start-year 113 --end-year 113
 
-  # Sync specific data type
+  # 同步指定資料類型
   uv run python -m app.cli.main sync-mops --data-type employee_benefit
   ```
 
-- **API Endpoints**:
-  | Endpoint | Description |
-  |----------|-------------|
+- **API 端點**:
+  | 端點 | 說明 |
+  |------|------|
   | `GET /api/v1/mops/employee-benefits` | 員工福利(薪資)資訊 |
   | `GET /api/v1/mops/non-manager-salaries` | 非主管全時員工薪資 |
   | `GET /api/v1/mops/welfare-policies` | 福利政策揭露 |
   | `GET /api/v1/mops/salary-adjustments` | 基層員工調薪/分派酬勞 |
 
-- **Common Query Parameters**:
-  - `page`, `size`: Pagination (max 100 per page).
-  - `sort`: Multi-sort (e.g., `-year`, `company_code`).
-  - `company_code`, `year`, `market_type`: Multi-value filters.
+- **共用查詢參數**:
+  - `page`、`size`: 分頁（每頁最多 100 筆）
+  - `sort`: 多欄位排序（如 `-year`、`company_code`）
+  - `company_code`、`year`、`market_type`: 多值過濾
 
-## Local Development
+## 本地開發
 
-### Prerequisites
+### 前置需求
 
 - Python 3.10+
-- [uv](https://github.com/astral-sh/uv) (Package Manager)
+- [uv](https://github.com/astral-sh/uv)（套件管理器）
 
-### Setup
+### 安裝
 
 ```bash
-# Install dependencies
+# 安裝依賴
 uv sync
 ```
 
-### Running the Server
+### 啟動伺服器
 
 ```bash
-# Start development server (Auto-reload)
+# 啟動開發伺服器（自動重載）
 uv run fastapi dev app/main.py
 ```
 
-- **API Docs**: `http://127.0.0.1:8000/docs`
-- **API Root**: `http://127.0.0.1:8000/api/v1`
+- **API 文件**: `http://127.0.0.1:8000/docs`
+- **API 根路徑**: `http://127.0.0.1:8000/api/v1`
