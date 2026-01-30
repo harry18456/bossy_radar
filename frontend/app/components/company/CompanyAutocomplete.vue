@@ -2,6 +2,7 @@
 import { useCompanyStore } from '~/stores/company'
 import type { CompanyCatalog } from '~/types/api'
 import { onClickOutside } from '@vueuse/core'
+import { INDUSTRIES, MARKET_TYPES } from '~/constants'
 
 const props = defineProps<{
   modelValue: string | null | undefined
@@ -24,6 +25,15 @@ const selectedIndex = ref(-1)
 onMounted(() => {
   companyStore.fetchCatalog()
 })
+
+const getMarketLabel = (type: string) => {
+  return MARKET_TYPES.find(m => m.value === type)?.label || type
+}
+
+const getIndustryLabel = (code: string | null | undefined) => {
+  if (!code) return ''
+  return INDUSTRIES[code] || code
+}
 
 const query = computed({
   get: () => props.modelValue || '',
@@ -75,12 +85,19 @@ const suggestions = computed(() => {
     .slice(0, 10) // Limit to 10 results for performance
 })
 
+const isSelecting = ref(false)
+
 const selectCompany = (company: CompanyCatalog) => {
+  isSelecting.value = true
   emit('update:modelValue', company.name)
   emit('select', company)
   emit('search', company.name)
   isOpen.value = false
   selectedIndex.value = -1
+  // Reset flag after a tick to allow future typing to open suggestions
+  nextTick(() => {
+    isSelecting.value = false
+  })
 }
 
 const handleKeyDown = (e: KeyboardEvent) => {
@@ -127,6 +144,8 @@ onClickOutside(containerRef, () => {
 })
 
 watch(query, () => {
+  if (isSelecting.value) return
+  
   if (query.value.length >= 1) {
     isOpen.value = true
     selectedIndex.value = -1
@@ -189,11 +208,14 @@ watch(query, () => {
               </span>
             </div>
             <div class="flex items-center space-x-2">
+              <span class="text-[10px] px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-900/30 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/10">
+                {{ getMarketLabel(company.market_type) }}
+              </span>
+              <span v-if="company.industry" class="text-[10px] px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-900/30 text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-900/10">
+                {{ getIndustryLabel(company.industry) }}
+              </span>
               <span class="text-xs font-mono font-medium px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400">
                 {{ company.code }}
-              </span>
-              <span class="text-[10px] px-1.5 py-0.5 rounded border border-gray-200 dark:border-slate-700 text-gray-400">
-                {{ company.market_type }}
               </span>
             </div>
           </li>

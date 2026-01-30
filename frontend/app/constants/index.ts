@@ -43,7 +43,8 @@ export const INDUSTRIES: Record<string, string> = {
 export const MARKET_TYPES = [
   { value: 'Listed', label: '上市' },
   { value: 'OTC', label: '上櫃' },
-  { value: 'Emerging', label: '興櫃' }
+  { value: 'Emerging', label: '興櫃' },
+  { value: 'Public', label: '公開發行' }
 ]
 
 export const DEFAULT_PAGE_SIZE = 20

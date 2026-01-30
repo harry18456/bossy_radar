@@ -100,7 +100,7 @@ class MopsScraper:
             end_year: End ROC year (default: current_year)
         """
         current_roc = self.get_current_roc_year()
-        start_year = start_year or (current_roc - 4)
+        start_year = start_year or 107
         end_year = end_year or current_roc
         
         years = list(range(start_year, end_year + 1))
@@ -291,14 +291,16 @@ class MopsScraper:
         return []
 
     def _parse_t100sb14(self, table, year: int, market: str) -> List[dict]:
-        """Parse t100sb14 table."""
+        """Parse t100sb14 table - 員工福利及薪資統計."""
         records = []
         rows = table.find_all("tr")
         
         for row in rows:
             cells = row.find_all("td")
-            # Skip header rows and rows with too few cells
-            if len(cells) < 10:
+            num_cells = len(cells)
+            
+            # 107 year has 13 columns, 108+ has 15 columns
+            if num_cells < 13:
                 continue
             
             try:
@@ -307,25 +309,43 @@ class MopsScraper:
                 if not raw_code or not raw_code.isdigit():
                     continue
                 
+                # Base fields (0-8 are same for 13/15 cols)
+                # 0:Industry, 1:Code, 2:Name, 3:Category, 4:BenefitExp, 5:SalaryExp, 6:Count, 7:AvgBen, 8:AvgSal
                 record = {
                     "year": year,
                     "market_type": market,
                     "industry": self._clean_text(cells[0]),
                     "raw_company_code": raw_code,
                     "company_name": self._clean_text(cells[2]),
-                    "company_category": self._clean_text(cells[3]) if len(cells) > 3 else None,
-                    "employee_benefit_expense": self._parse_number(cells[4]) if len(cells) > 4 else None,
-                    "employee_salary_expense": self._parse_number(cells[5]) if len(cells) > 5 else None,
-                    "employee_count": self._parse_number(cells[6]) if len(cells) > 6 else None,
-                    "avg_benefit_per_employee": self._parse_number(cells[7]) if len(cells) > 7 else None,
-                    "avg_salary_current_year": self._parse_number(cells[8]) if len(cells) > 8 else None,
-                    "avg_salary_previous_year": self._parse_number(cells[9]) if len(cells) > 9 else None,
-                    "salary_change_rate": self._parse_float(cells[10]) if len(cells) > 10 else None,
-                    "eps": self._parse_float(cells[11]) if len(cells) > 11 else None,
-                    "industry_avg_benefit": self._parse_number(cells[12]) if len(cells) > 12 else None,
-                    "industry_avg_salary": self._parse_number(cells[13]) if len(cells) > 13 else None,
-                    "industry_avg_eps": self._parse_float(cells[14]) if len(cells) > 14 else None,
+                    "company_category": self._clean_text(cells[3]) if num_cells > 3 else None,
+                    "employee_benefit_expense": self._parse_number(cells[4]) if num_cells > 4 else None,
+                    "employee_salary_expense": self._parse_number(cells[5]) if num_cells > 5 else None,
+                    "employee_count": self._parse_number(cells[6]) if num_cells > 6 else None,
+                    "avg_benefit_per_employee": self._parse_number(cells[7]) if num_cells > 7 else None,
+                    "avg_salary_current_year": self._parse_number(cells[8]) if num_cells > 8 else None,
                 }
+                
+                if num_cells >= 15:
+                    # V2 (108+): Has Prev Year & Change
+                    record.update({
+                        "avg_salary_previous_year": self._parse_number(cells[9]),
+                        "salary_change_rate": self._parse_float(cells[10]),
+                        "eps": self._parse_float(cells[11]),
+                        "industry_avg_benefit": self._parse_number(cells[12]),
+                        "industry_avg_salary": self._parse_number(cells[13]),
+                        "industry_avg_eps": self._parse_float(cells[14]),
+                    })
+                elif num_cells >= 13:
+                    # V1 (107): No Prev Year & Change
+                    # 9: EPS, 10: IndAvgBen, 11: IndAvgSal, 12: IndAvgEPS
+                    record.update({
+                        "avg_salary_previous_year": None,
+                        "salary_change_rate": None,
+                        "eps": self._parse_float(cells[9]),
+                        "industry_avg_benefit": self._parse_number(cells[10]),
+                        "industry_avg_salary": self._parse_number(cells[11]),
+                        "industry_avg_eps": self._parse_float(cells[12]),
+                    })
                 
                 if record["raw_company_code"] and record["company_name"]:
                     records.append(record)
@@ -346,23 +366,87 @@ class MopsScraper:
                 continue
             
             try:
+                # Dynamic column detection
+                num_cells = len(cells)
+                
+                # Base fields (Classic V1: 13 cols)
+                # 0:Industry, 1:Code, 2:Name, 3:Total, 4:Count, 5:Avg, 6:EPS, 7:IndAvgSal, 8:IndAvgEPS, 9-12:Flags
+                
+                # V2 (16 cols): V1 + Median(6,7,8 shift) -> 
+                # 0-5 Same
+                # 6: Avg Prev (New)
+                # 7: Median (New)
+                # 8: Median Prev (New)
+                # 9: EPS (Was 6)
+                # 10: Ind Avg Sal (Was 7)
+                # 11: Ind Avg EPS (Was 8)
+                # 12-15: Flags
+                
+                # V3 (19 cols): V2 + Change(7,10) + Notes(17,18) ->
+                # 0-6 Same
+                # 7: Avg Change (New)
+                # 8: Median (Was 7)
+                # 9: Median Prev (Was 8)
+                # 10: Median Change (New)
+                # 11: EPS (Was 9)
+                # ...
+                
                 record = {
                     "year": year,
                     "market_type": market,
-                    "industry": self._clean_text(cells[0]) if len(cells) > 0 else None,
-                    "raw_company_code": self._clean_text(cells[1]) if len(cells) > 1 else None,
-                    "company_name": self._clean_text(cells[2]) if len(cells) > 2 else None,
-                    "employee_count": self._parse_number(cells[3]) if len(cells) > 3 else None,
-                    "total_salary": self._parse_number(cells[4]) if len(cells) > 4 else None,
-                    "avg_salary": self._parse_number(cells[5]) if len(cells) > 5 else None,
-                    "median_salary": self._parse_number(cells[6]) if len(cells) > 6 else None,
-                    "avg_salary_previous_year": self._parse_number(cells[7]) if len(cells) > 7 else None,
-                    "salary_change_rate": self._parse_float(cells[8]) if len(cells) > 8 else None,
-                    "industry_avg_salary": self._parse_number(cells[9]) if len(cells) > 9 else None,
-                    "industry_median_salary": self._parse_number(cells[10]) if len(cells) > 10 else None,
-                    "eps": self._parse_float(cells[11]) if len(cells) > 11 else None,
-                    "industry_avg_eps": self._parse_float(cells[12]) if len(cells) > 12 else None,
+                    "industry": self._clean_text(cells[0]) if num_cells > 0 else None,
+                    "raw_company_code": self._clean_text(cells[1]) if num_cells > 1 else None,
+                    "company_name": self._clean_text(cells[2]) if num_cells > 2 else None,
+                    "total_salary": self._parse_number(cells[3]) if num_cells > 3 else None,
+                    "employee_count": self._parse_number(cells[4]) if num_cells > 4 else None,
+                    "avg_salary": self._parse_number(cells[5]) if num_cells > 5 else None,
                 }
+
+                # Mapping based on version
+                if num_cells >= 19:
+                    # V3 (113+)
+                    record.update({
+                        "avg_salary_previous_year": self._parse_number(cells[6]),
+                        "avg_salary_change": self._parse_float(cells[7]),
+                        "median_salary": self._parse_number(cells[8]),
+                        "median_salary_previous_year": self._parse_number(cells[9]),
+                        "median_salary_change": self._parse_float(cells[10]),
+                        "eps": self._parse_float(cells[11]),
+                        "industry_avg_salary": self._parse_number(cells[12]),
+                        "industry_avg_eps": self._parse_float(cells[13]),
+                        "is_avg_salary_under_500k": self._clean_text(cells[14]),
+                        "is_better_eps_lower_salary": self._clean_text(cells[15]),
+                        "is_eps_growth_salary_decrease": self._clean_text(cells[16]),
+                        "performance_salary_relation_note": self._clean_text(cells[17]),
+                        "improvement_measures_note": self._clean_text(cells[18]),
+                    })
+                elif num_cells >= 16:
+                    # V2 (110-112)
+                    record.update({
+                        "avg_salary_previous_year": self._parse_number(cells[6]),
+                        "median_salary": self._parse_number(cells[7]),
+                        "median_salary_previous_year": self._parse_number(cells[8]),
+                        "eps": self._parse_float(cells[9]),
+                        "industry_avg_salary": self._parse_number(cells[10]),
+                        "industry_avg_eps": self._parse_float(cells[11]),
+                        "is_avg_salary_under_500k": self._clean_text(cells[12]),
+                        "is_better_eps_lower_salary": self._clean_text(cells[13]),
+                        "is_eps_growth_salary_decrease": self._clean_text(cells[14]),
+                        # Note column is at 15 but often empty or combined
+                    })
+                elif num_cells >= 13:
+                    # V1 (107-109)
+                    record.update({
+                        "eps": self._parse_float(cells[6]),
+                        "industry_avg_salary": self._parse_number(cells[7]),
+                        "industry_avg_eps": self._parse_float(cells[8]),
+                        "is_avg_salary_under_500k": self._clean_text(cells[9]),
+                        "is_better_eps_lower_salary": self._clean_text(cells[10]),
+                        "is_eps_growth_salary_decrease": self._clean_text(cells[11]),
+                    })
+                else:
+                    logger.warning(f"Skipping row with unexpected column count {num_cells}: {self._clean_text(cells[1])}")
+                    continue
                 
                 if record.get("raw_company_code") and record.get("company_name"):
                     records.append(record)
@@ -423,6 +507,10 @@ class MopsScraper:
 
     def _parse_t222sb01(self, table, year: int, market: str) -> List[dict]:
         """Parse t222sb01 table - 基層員工調整薪資或分派酬勞."""
+        # This table only exists starting from year 113
+        if year < 113:
+            return []
+
         records = []
         rows = table.find_all("tr")
         

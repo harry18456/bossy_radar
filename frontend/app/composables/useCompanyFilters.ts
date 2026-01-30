@@ -78,12 +78,11 @@ export const useCompanyFilters = () => {
     { deep: true }
   )
 
-  // Watch URL changes (e.g. back/forward button) and sync back to state
   watch(
     () => route.query,
     (newQuery) => {
-      if (newQuery.page) filters.page = Number(newQuery.page)
-      if (newQuery.size) filters.size = Number(newQuery.size)
+      filters.page = Number(newQuery.page) || 1
+      filters.size = Number(newQuery.size) || 20
       filters.sort = (newQuery.sort as string) || undefined
       filters.name = (newQuery.name as string) || undefined
       filters.industry = parseArray(newQuery.industry as string | string[])

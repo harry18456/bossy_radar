@@ -15,45 +15,51 @@ const api = useApi()
 const companies = computed(() => watchlistStore.companies)
 
 // Comparison Data
-// We only fetch when there are companies to watch
-const { data: comparisonData, status, refresh } = await useAsyncData(
+const { data: allComparisonData, status, refresh } = await useAsyncData(
   'watchlist-comparison',
   async () => {
     if (companies.value.length === 0) return []
     
-    // Get latest year summary for these companies
     const codes = companies.value.map(c => c.code)
-    // We assume we want the latest data, let's try getting data without year filter first to see what we get,
-    // or better, typically we want the last 3 years? Or just one. 
-    // Let's get "last available year". Since API needs year or returns all, we can ask for specific recent years if needed.
-    // However, getYearlySummary returns a list.
     
-    // Strategy: Fetch all data for these companies, then we find the latest year common to them or just show latest for each.
-    // To optimization, maybe just fetch? The API might return a lot if we don't filter year.
-    // Let's try fetching 112 (2023) and 111 (2022) as default recent years often available.
-    // Or just 112 (2023). Let's hardcode 112 for now or make it selectable in future.
-    // Actually, let's fetch without year filter but specific companies, it shouldn't be too huge if watchlist is small.
-    // But safely, let's filter year=112 (2023).
-    const recentYear = 112
-    
+    // Fetch all available data for these companies
     const response = await api.getYearlySummary({
       company_code: codes,
-      year: [recentYear], 
-      include: ['all'] // Get everything for comparison
+      include: ['all'] 
     })
     
     return response.items
   },
   {
-    watch: [companies], // Refetch if watchlist changes
+    watch: [companies],
     immediate: true
   }
 )
 
+// Computed: Available years
+const availableYears = computed(() => {
+  if (!allComparisonData.value) return []
+  const years = new Set(allComparisonData.value.map(item => item.year))
+  return Array.from(years).sort((a, b) => b - a)
+})
+
+// State: Selected Year
+const selectedYear = ref<number | null>(null)
+
+// Set default year when data loads
+watch(availableYears, (years) => {
+  if (years.length > 0 && !selectedYear.value) {
+    selectedYear.value = years[0] ?? null
+  }
+}, { immediate: true })
+
 const sortedComparison = computed(() => {
-  if (!comparisonData.value) return []
-  // Sort by code
-  return [...comparisonData.value].sort((a, b) => a.company_code.localeCompare(b.company_code))
+  if (!allComparisonData.value || !selectedYear.value) return []
+  
+  // Filter by selected year and sort by code
+  return allComparisonData.value
+    .filter(item => item.year === selectedYear.value)
+    .sort((a, b) => a.company_code.localeCompare(b.company_code))
 })
 
 const clearWatchlist = () => {
@@ -74,13 +80,14 @@ const clearWatchlist = () => {
         </p>
       </div>
       
-      <button 
-        v-if="companies.length > 0"
-        @click="clearWatchlist"
-        class="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
-      >
-        清空清單
-      </button>
+      <div v-if="companies.length > 0" class="flex gap-4">
+        <button 
+          @click="clearWatchlist"
+          class="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+        >
+          清空清單
+        </button>
+      </div>
     </div>
 
     <!-- Empty State -->
@@ -114,11 +121,27 @@ const clearWatchlist = () => {
       </section>
 
       <!-- Comparison Section -->
-      <section v-if="comparisonData && comparisonData.length > 0">
-        <h2 class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center">
-          <Icon name="lucide:bar-chart-2" class="w-5 h-5 mr-2" />
-          薪資比較 (112年)
-        </h2>
+      <section v-if="sortedComparison.length > 0">
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+            <Icon name="lucide:bar-chart-2" class="w-5 h-5 mr-2" />
+            薪資比較 ({{ selectedYear }}年)
+          </h2>
+          
+          <!-- Year Selector -->
+          <div class="flex items-center space-x-2">
+            <label for="year-select" class="text-sm font-medium text-gray-700 dark:text-slate-300">年份：</label>
+            <select 
+              id="year-select"
+              v-model="selectedYear"
+              class="block w-32 rounded-md border-gray-300 dark:border-slate-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 text-sm bg-white dark:bg-slate-800 dark:text-white"
+            >
+              <option v-for="year in availableYears" :key="year" :value="year">
+                {{ year }}年
+              </option>
+            </select>
+          </div>
+        </div>
         
         <div class="overflow-x-auto bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm">
           <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-800">
@@ -139,6 +162,9 @@ const clearWatchlist = () => {
                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
                   違規次數
                 </th>
+                <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
+                  總違規次數
+                </th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 dark:divide-slate-800">
@@ -147,28 +173,38 @@ const clearWatchlist = () => {
                   <div class="flex items-center">
                     <div class="text-sm font-medium text-gray-900 dark:text-white">{{ item.company_name }}</div>
                     <div class="ml-2 text-xs text-gray-500 dark:text-slate-400">{{ item.company_code }}</div>
+                    <NuxtLink :to="`/companies/${item.company_code}`" class="ml-2 text-blue-500 hover:text-blue-700">
+                      <Icon name="lucide:external-link" class="w-3.5 h-3.5" />
+                    </NuxtLink>
                   </div>
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-green-600 dark:text-green-400">
-                  {{ formatCurrency(item.avg_salary_non_manager) }}
+                  {{ item.non_manager_salary?.avg_salary ? formatCurrency(item.non_manager_salary.avg_salary) : '-' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-yellow-600 dark:text-yellow-400">
-                  {{ formatCurrency(item.median_salary_non_manager) }}
+                  {{ item.non_manager_salary?.median_salary ? formatCurrency(item.non_manager_salary.median_salary) : '-' }}
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900 dark:text-white">
-                  {{ item.eps }}
+                  {{ item.non_manager_salary?.eps ?? '-' }}
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm" :class="item.violation_count > 0 ? 'text-red-500 font-bold' : 'text-gray-400'">
-                  {{ item.violation_count }}
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm" :class="(item.violations_year_count || 0) > 0 ? 'text-red-500 font-bold' : 'text-gray-400'">
+                  {{ item.violations_year_count || 0 }}
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm" :class="(item.violations_total_count || 0) > 0 ? 'text-red-600 font-bold' : 'text-gray-400'">
+                  {{ item.violations_total_count || 0 }}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
         <p class="mt-2 text-xs text-gray-500 dark:text-slate-400 text-right">
-          * 資料來源：112年度財報 (若無資料顯示為 0 或 -)
+          * 資料來源：{{ selectedYear }}年度公開資訊 (若無資料顯示為 -)
         </p>
       </section>
+      
+      <div v-else-if="companies.length > 0 && status !== 'pending'" class="text-center py-12 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800">
+          <p class="text-gray-500 dark:text-slate-400">無法取得比較資料，請稍後再試。</p>
+      </div>
     </div>
   </div>
 </template>

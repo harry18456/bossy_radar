@@ -15,16 +15,21 @@ class EmployeeBenefitResponse(BaseModel):
     year: int
     market_type: str
     industry: Optional[str] = None
-    employee_count: Optional[int] = None
-    employee_salary: Optional[int] = None
-    salary_per_employee: Optional[int] = None
-    supervisor_salary: Optional[int] = None
-    median_employee_salary: Optional[int] = None
-    non_supervisor_count: Optional[int] = None
-    non_supervisor_salary: Optional[int] = None
-    salary_per_non_supervisor: Optional[int] = None
-    salary_change_rate: Optional[float] = None
     company_category: Optional[str] = None
+    
+    # Matching EmployeeBenefit model fields
+    employee_benefit_expense: Optional[int] = None
+    employee_salary_expense: Optional[int] = None
+    employee_count: Optional[int] = None
+    avg_benefit_per_employee: Optional[int] = None
+    avg_salary_current_year: Optional[int] = None
+    avg_salary_previous_year: Optional[int] = None
+    salary_change_rate: Optional[float] = None
+    eps: Optional[float] = None
+    industry_avg_benefit: Optional[int] = None
+    industry_avg_salary: Optional[int] = None
+    industry_avg_eps: Optional[float] = None
+    
     created_at: datetime
     last_updated: datetime
 
@@ -44,8 +49,17 @@ class NonManagerSalaryResponse(BaseModel):
     employee_count: Optional[int] = None
     avg_salary: Optional[int] = None
     median_salary: Optional[int] = None
+    avg_salary_previous_year: Optional[int] = None
     avg_salary_change: Optional[float] = None
+    median_salary_previous_year: Optional[int] = None
     median_salary_change: Optional[float] = None
+    eps: Optional[float] = None
+    industry_avg_eps: Optional[float] = None
+    is_avg_salary_under_500k: Optional[str] = None
+    is_better_eps_lower_salary: Optional[str] = None
+    is_eps_growth_salary_decrease: Optional[str] = None
+    performance_salary_relation_note: Optional[str] = None
+    improvement_measures_note: Optional[str] = None
     created_at: datetime
     last_updated: datetime
 

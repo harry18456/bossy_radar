@@ -11,27 +11,34 @@ import {
   LineElement,
   type ChartOptions
 } from 'chart.js'
-import { Bar, Line } from 'vue-chartjs'
+import { Bar, Line, Chart } from 'vue-chartjs'
+import { LineController, BarController } from 'chart.js'
 
 ChartJS.register(
   CategoryScale,
   LinearScale,
   BarElement,
-  PointElement,
+  BarController,
   LineElement,
+  LineController,
+  PointElement,
   Title,
   Tooltip,
   Legend
 )
 
 const props = defineProps<{
-  stats: any[] // YearlySummaryItem
+  stats: any[] // NonManagerSalary[]
 }>()
+
+const sortedStats = computed(() => {
+  return [...props.stats].sort((a, b) => a.year - b.year)
+})
 
 const isDark = useDark()
 
 // Chart Configuration
-const chartOptions = computed<ChartOptions<'bar' | 'line'>>(() => ({
+const chartOptions = computed<any>(() => ({
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
@@ -60,7 +67,8 @@ const chartOptions = computed<ChartOptions<'bar' | 'line'>>(() => ({
         color: isDark.value ? '#334155' : '#e2e8f0'
       },
       ticks: {
-        color: isDark.value ? '#94a3b8' : '#64748b'
+        color: isDark.value ? '#94a3b8' : '#64748b',
+        callback: (value: any) => value.toLocaleString()
       }
     }
   }
@@ -68,32 +76,45 @@ const chartOptions = computed<ChartOptions<'bar' | 'line'>>(() => ({
 
 // EPS Data
 const epsData = computed(() => ({
-  labels: props.stats.map(s => s.year + '年'),
+  labels: sortedStats.value.map(s => s.year + '年'),
   datasets: [
     {
       label: 'EPS (每股盈餘)',
-      data: props.stats.map(s => s.eps),
+      data: sortedStats.value.map(s => s.eps),
       backgroundColor: '#3b82f6',
-      borderRadius: 4
+      borderRadius: 4,
+      order: 2
+    },
+    {
+      label: '同產業平均 EPS',
+      data: sortedStats.value.map(s => s.industry_avg_eps),
+      borderColor: '#94a3b8',
+      backgroundColor: '#94a3b8',
+      borderDash: [5, 5],
+      type: 'line' as const,
+      pointStyle: 'circle',
+      pointRadius: 4,
+      fill: false,
+      order: 1
     }
   ]
 }))
 
 // Salary Data
 const salaryData = computed(() => ({
-  labels: props.stats.map(s => s.year + '年'),
+  labels: sortedStats.value.map(s => s.year + '年'),
   datasets: [
     {
-      label: '非主管平均薪資',
-      data: props.stats.map(s => s.avg_salary_non_manager),
+      label: '非主管平均薪資 (仟元)',
+      data: sortedStats.value.map(s => s.avg_salary),
       borderColor: '#22c55e', // Green
       backgroundColor: '#22c55e',
       type: 'line' as const,
       yAxisID: 'y'
     },
     {
-      label: '非主管中位數薪資',
-      data: props.stats.map(s => s.median_salary_non_manager),
+      label: '非主管中位數薪資 (仟元)',
+      data: sortedStats.value.map(s => s.median_salary),
       borderColor: '#eab308', // Yellow
       backgroundColor: '#eab308',
       type: 'line' as const,
@@ -106,15 +127,15 @@ const salaryData = computed(() => ({
 <template>
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <!-- EPS Chart -->
-    <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+    <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6">歷年 EPS 趨勢</h3>
       <div class="h-64">
-        <Bar :data="epsData" :options="chartOptions" />
+        <Chart type="bar" :data="epsData" :options="chartOptions" />
       </div>
     </div>
 
     <!-- Salary Chart -->
-    <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+    <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6">非主管薪資趨勢</h3>
       <div class="h-64">
         <Line :data="salaryData" :options="chartOptions" />

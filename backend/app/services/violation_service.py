@@ -228,8 +228,8 @@ class ViolationService:
             year_roc = int(s[:year_len])
             month = int(s[year_len:year_len+2])
             day = int(s[year_len+2:])
-            
-            return date(year_roc + 1911, month, day)
+            actual_year = year_roc + 1911 if year_roc < 1000 else year_roc
+            return date(actual_year, month, day)
         except:
             return None
 

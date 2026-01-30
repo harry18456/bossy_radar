@@ -67,6 +67,8 @@ export interface NonManagerSalary {
   median_salary?: number | null;
   avg_salary_change?: number | null;
   median_salary_change?: number | null;
+  eps?: number | null;
+  industry_avg_eps?: number | null;
   created_at: string;
   last_updated: string;
 }
@@ -163,4 +165,15 @@ export interface PaginatedResponse<T> {
   page: number;
   size: number;
   total_pages: number;
+}
+
+export interface CategorySyncStatus {
+  last_updated: string | null;
+  count: number;
+}
+
+export interface SystemSyncStatus {
+  companies: Record<string, CategorySyncStatus>;
+  violations: Record<string, CategorySyncStatus>;
+  mops: Record<string, CategorySyncStatus>;
 }

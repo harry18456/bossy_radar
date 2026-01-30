@@ -8,7 +8,8 @@ import type {
   NonManagerSalary,
   WelfarePolicy,
   SalaryAdjustment,
-  CompanyCatalog
+  CompanyCatalog,
+  SystemSyncStatus
 } from '~/types/api'
 
 export const useApi = () => {
@@ -66,5 +67,8 @@ export const useApi = () => {
 
     getSalaryAdjustments: (params?: any) => 
       api<PaginatedResponse<SalaryAdjustment>>('/api/v1/mops/salary-adjustments', { params }),
+
+    getSystemSyncStatus: () =>
+      api<SystemSyncStatus>('/api/v1/system/sync-status'),
   }
 }
