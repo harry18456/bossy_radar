@@ -19,7 +19,8 @@ app = typer.Typer(no_args_is_help=True)
 URLS = {
     "Listed": "https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv",
     "OTC": "https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv",
-    "Emerging": "https://mopsfin.twse.com.tw/opendata/t187ap03_R.csv"
+    "Emerging": "https://mopsfin.twse.com.tw/opendata/t187ap03_R.csv",
+    "Public": "https://mopsfin.twse.com.tw/opendata/t187ap03_P.csv"
 }
 
 VIOLATION_URLS = {
@@ -43,11 +44,11 @@ def goodbye():
 
 @app.command()
 def sync_companies(
-    market_type: str = typer.Option("all", "--type", help="Type of market to sync (all, listed, otc, emerging)"),
+    market_type: str = typer.Option("all", "--type", help="Type of market to sync (all, listed, otc, emerging, public)"),
 ):
     """
     Sync company data from TWSE/TPEX to database.
-    Order: Emerging -> OTC -> Listed (to ensure proper precedence if overlap, though keys are unique)
+    Order: Public -> Emerging -> OTC -> Listed (to ensure proper precedence if overlap)
     """
     crawler_service = CrawlerService()
     company_service = CompanyService()
@@ -55,7 +56,8 @@ def sync_companies(
     # Define execution order
     target_types = []
     if market_type.lower() == "all":
-        target_types = ["Emerging", "OTC", "Listed"]
+        # 排序：從初階到進階，確保最新狀態蓋掉舊狀態
+        target_types = ["Public", "Emerging", "OTC", "Listed"]
     elif market_type.capitalize() in URLS:
         target_types = [market_type.capitalize()]
     else:

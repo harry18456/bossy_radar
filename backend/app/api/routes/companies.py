@@ -14,7 +14,7 @@ def read_companies(
     page: int = Query(1, ge=1, description="頁碼"),
     size: int = Query(20, le=100, description="每頁筆數"),
     sort: Optional[List[str]] = Query(None, description="排序欄位 (e.g. -capital, listing_date)"),
-    market_type: Optional[List[str]] = Query(None, description="市場別過濾 (Listed, OTC, Emerging)"),
+    market_type: Optional[List[str]] = Query(None, description="市場別過濾 (Listed, OTC, Emerging, Public)"),
     industry: Optional[List[str]] = Query(None, description="產業類別過濾"),
     company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
     name: Optional[str] = Query(None, description="公司名稱過濾 (模糊比對)"),

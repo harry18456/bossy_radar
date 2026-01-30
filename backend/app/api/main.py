@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.routes import companies, violations, mops, aggregation
+from app.api.routes import companies, violations, mops, aggregation, system
 
 api_router = APIRouter()
 
@@ -9,3 +9,4 @@ api_router.include_router(aggregation.router, prefix="/companies", tags=["aggreg
 api_router.include_router(companies.router, prefix="/companies", tags=["companies"])
 api_router.include_router(violations.router, prefix="/violations", tags=["violations"])
 api_router.include_router(mops.router, prefix="/mops", tags=["mops"])
+api_router.include_router(system.router, prefix="/system", tags=["system"])
