@@ -52,7 +52,7 @@
 
 ### 1. 公司資料（上市櫃資訊）
 
-從證交所同步公司基本資料（上市/上櫃/興櫃）。
+從證交所同步公司基本資料（上市/上櫃/興櫃/公開發行）。
 
 - **CLI 指令**:
   ```bash
@@ -60,7 +60,7 @@
   uv run python -m app.cli.main sync-companies --type all
   ```
 - **API**: `GET /api/v1/companies`
-  - 支援過濾：`market_type`、`industry`、`code`、`name`
+  - 支援過濾：`market_type` (Listed, OTC, Emerging, Public)、`industry`、`code`、`name`
   - 支援多欄位排序（如 `sort=-capital`）
 
 ### 2. 勞動違規資料
@@ -68,7 +68,7 @@
 從勞動部開放資料同步 8 種勞動違規記錄（勞基法、性平法、職安法等）。
 
 - **架構**:
-  - **主資料庫 (`bossy_radar.db`)**: 儲存與**上市櫃公司**連結的違規
+  - **主資料庫 (`bossy_radar.db`)**: 儲存與**上市櫃、公開發行公司**連結的違規
   - **歸檔資料庫 (`archive.db`)**: 儲存未比對的違規（中小企業、個人），保持主資料庫乾淨
 - **比對策略**:
   1. **精確比對**: 直接比對公司名稱或簡稱
@@ -98,7 +98,7 @@
   | t222sb01 | 基層員工調整薪資或分派酬勞 |
 
 - **架構**:
-  - **主資料庫 (`bossy_radar.db`)**: 儲存與上市櫃公司成功比對的薪資/福利資料
+  - **主資料庫 (`bossy_radar.db`)**: 儲存與上市櫃、公開發行公司成功比對的薪資/福利資料
   - **歸檔資料庫 (`archive.db`)**: 儲存無法比對的資料（如公司代號不在 Company 表中）
 - **比對策略**:
   1. **公司代號比對**: 直接比對 MOPS 資料的公司代號
@@ -124,8 +124,9 @@
   | `GET /api/v1/mops/non-manager-salaries` | 非主管全時員工薪資 |
   | `GET /api/v1/mops/welfare-policies` | 福利政策揭露 |
   | `GET /api/v1/mops/salary-adjustments` | 基層員工調薪/分派酬勞 |
+  | `GET /api/v1/system/sync-status` | 系統同步狀態 |
 
-- **共用查詢參數**:
+- **共用查詢參數(MOPS)**:
   - `page`、`size`: 分頁（每頁最多 100 筆）
   - `sort`: 多欄位排序（如 `-year`、`company_code`）
   - `company_code`、`year`、`market_type`: 多值過濾
