@@ -7,7 +7,8 @@ import type {
   EmployeeBenefit,
   NonManagerSalary,
   WelfarePolicy,
-  SalaryAdjustment 
+  SalaryAdjustment,
+  CompanyCatalog
 } from '~/types/api'
 
 export const useApi = () => {
@@ -39,6 +40,9 @@ export const useApi = () => {
     // Companies
     getCompanies: (params?: any) => 
       api<PaginatedResponse<Company>>('/api/v1/companies/', { params }),
+    
+    getCompanyCatalog: () => 
+      api<CompanyCatalog[]>('/api/v1/companies/catalog'),
     
     getCompanyProfile: (companyCode: string) => 
       api<CompanyProfile>(`/api/v1/companies/${companyCode}/profile`),

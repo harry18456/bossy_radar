@@ -49,6 +49,7 @@ export const MARKET_TYPES = [
 export const DEFAULT_PAGE_SIZE = 20
 
 // Transform INDUSTRIES object into an array of options for Select components
+// Sorted by industry code number (01, 02, etc.)
 export const INDUSTRY_OPTIONS = Object.entries(INDUSTRIES)
   .sort(([keyA], [keyB]) => Number(keyA) - Number(keyB))
   .map(([key, value]) => ({

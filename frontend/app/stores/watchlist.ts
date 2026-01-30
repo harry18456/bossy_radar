@@ -39,7 +39,5 @@ export const useWatchlistStore = defineStore('watchlist', {
     }
   },
 
-  persist: {
-    storage: persistedState.localStorage,
-  }
+  persist: true
 })

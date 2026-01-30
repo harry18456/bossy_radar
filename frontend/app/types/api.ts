@@ -144,6 +144,19 @@ export interface YearlySummaryItem {
   salary_adjustment?: SalaryAdjustment | null;
 }
 
+export interface CompanyCatalog {
+  code: string;
+  name: string;
+  abbreviation?: string | null;
+  market_type: string;
+  industry?: string | null;
+}
+
+export interface YearlySummaryResponse {
+  items: YearlySummaryItem[];
+  total: number;
+}
+
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;
