@@ -73,6 +73,25 @@ class CompanyService:
         
         return results, total
 
+    def get_catalog(self, session: Session) -> List[Company]:
+        """
+        Get all companies with minimal fields for search catalog.
+        """
+        # Select only required columns for efficiency
+        query = select(
+            Company.code,
+            Company.name,
+            Company.abbreviation,
+            Company.market_type,
+            Company.industry
+        ).order_by(Company.code)
+        
+        # When using select(col1, col2), SQLModel returns rows (tuples)
+        # But we can map them back to models or just return as is if the caller handles it.
+        # Here we return the list of tuples/objects. 
+        # API will handle the mapping to CompanyCatalogItem.
+        return session.exec(query).all()
+
     def sync_companies(self, data_dir: Path, target_types: List[str]):
         """
         Sync companies from downloaded CSVs to DB.
@@ -192,11 +211,13 @@ class CompanyService:
                 return None
                 
             year_len = len(date_str) - 4
-            year_roc = int(date_str[:year_len])
+            year_val = int(date_str[:year_len])
             month = int(date_str[year_len:year_len+2])
             day = int(date_str[year_len+2:])
             
-            return date(year_roc + 1911, month, day)
+            # If year is already in AD format (e.g. 1950), don't add 1911
+            actual_year = year_val + 1911 if year_val < 1000 else year_val
+            return date(actual_year, month, day)
         except ValueError:
             return None
 

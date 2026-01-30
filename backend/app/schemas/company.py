@@ -13,3 +13,10 @@ class PaginatedResponse(BaseModel, Generic[T]):
 
 class CompanyResponse(Company):
     pass
+
+class CompanyCatalogItem(BaseModel):
+    code: str
+    name: str
+    abbreviation: Optional[str] = None
+    market_type: str
+    industry: Optional[str] = None

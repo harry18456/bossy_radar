@@ -1,8 +1,9 @@
 from typing import List, Optional
 from fastapi import APIRouter, Query, Depends
 from app.api.deps import SessionDep
-from app.schemas.company import CompanyResponse, PaginatedResponse
+from app.schemas.company import CompanyResponse, PaginatedResponse, CompanyCatalogItem
 from app.services.company_service import CompanyService
+
 import math
 
 router = APIRouter()
@@ -47,3 +48,11 @@ def read_companies(
         size=size,
         total_pages=total_pages
     )
+
+@router.get("/catalog", response_model=List[CompanyCatalogItem])
+def read_company_catalog(session: SessionDep):
+    """
+    取得所有公司的精簡清單（用於前端搜尋建議）
+    """
+    service = CompanyService()
+    return service.get_catalog(session)
