@@ -105,4 +105,9 @@ onMounted(() => {
 .ad-unit {
   min-height: 100px;
 }
+
+:deep(iframe) {
+  margin: 0 auto !important;
+  display: block !important;
+}
 </style>
