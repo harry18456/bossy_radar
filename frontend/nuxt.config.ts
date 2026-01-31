@@ -53,6 +53,10 @@ export default defineNuxtConfig({
   nitro: {
     prerender: {
       failOnError: false
+    },
+    compressPublicAssets: {
+      gzip: true,
+      brotli: true
     }
   }
 });

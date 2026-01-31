@@ -160,10 +160,10 @@ const clearWatchlist = () => {
                   EPS
                 </th>
                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                  違規次數
+                  勞動違規
                 </th>
                 <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">
-                  總違規次數
+                  環保違規
                 </th>
               </tr>
             </thead>
@@ -189,9 +189,15 @@ const clearWatchlist = () => {
                 </td>
                 <td class="px-6 py-4 whitespace-nowrap text-right text-sm" :class="(item.violations_year_count || 0) > 0 ? 'text-red-500 font-bold' : 'text-gray-400'">
                   {{ item.violations_year_count || 0 }}
+                  <span v-if="item.violations_total_count" class="text-xs font-normal text-gray-400 ml-1">
+                     (累計 {{ item.violations_total_count }})
+                  </span>
                 </td>
-                <td class="px-6 py-4 whitespace-nowrap text-right text-sm" :class="(item.violations_total_count || 0) > 0 ? 'text-red-600 font-bold' : 'text-gray-400'">
-                  {{ item.violations_total_count || 0 }}
+                <td class="px-6 py-4 whitespace-nowrap text-right text-sm" :class="(item.env_violations_year_count || 0) > 0 ? 'text-red-600 font-bold' : 'text-gray-400'">
+                  {{ item.env_violations_year_count || 0 }}
+                   <span v-if="item.env_violations_total_count" class="text-xs font-normal text-gray-400 ml-1">
+                     (累計 {{ item.env_violations_total_count }})
+                  </span>
                 </td>
               </tr>
             </tbody>

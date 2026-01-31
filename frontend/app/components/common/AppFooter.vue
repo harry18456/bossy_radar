@@ -50,7 +50,8 @@ const aggregatedStatus = computed(() => {
   return {
     companies: aggregate(status.value.companies),
     violations: aggregate(status.value.violations),
-    mops: aggregate(status.value.mops)
+    mops: aggregate(status.value.mops),
+    environmental: aggregate(status.value.environmental_violations)
   }
 })
 </script>
@@ -73,7 +74,7 @@ const aggregatedStatus = computed(() => {
 
         <!-- Sync Status -->
         <div class="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 border border-gray-100 dark:border-slate-700/50">
-          <div v-if="aggregatedStatus" class="grid grid-cols-3 gap-2">
+          <div v-if="aggregatedStatus" class="grid grid-cols-4 gap-2">
             <div class="space-y-0.5">
               <span class="block text-xs text-gray-500 dark:text-slate-400 uppercase tracking-widest font-medium">公司</span>
               <span class="block text-sm font-mono font-bold text-blue-600 dark:text-cyan-400 leading-tight">
@@ -84,8 +85,8 @@ const aggregatedStatus = computed(() => {
               </span>
             </div>
             
-            <div class="space-y-0.5 border-x border-gray-300 dark:border-slate-700 px-3">
-              <span class="block text-xs text-gray-500 dark:text-slate-400 uppercase tracking-widest font-medium">違規</span>
+            <div class="space-y-0.5 border-l border-gray-300 dark:border-slate-700 pl-2">
+              <span class="block text-xs text-gray-500 dark:text-slate-400 uppercase tracking-widest font-medium">勞動裁罰</span>
               <span class="block text-sm font-mono font-bold text-blue-600 dark:text-cyan-400 leading-tight">
                 <CommonAnimatedNumber :value="aggregatedStatus.violations.count" />
               </span>
@@ -94,7 +95,17 @@ const aggregatedStatus = computed(() => {
               </span>
             </div>
 
-            <div class="space-y-0.5">
+            <div class="space-y-0.5 border-l border-gray-300 dark:border-slate-700 pl-2">
+              <span class="block text-xs text-gray-500 dark:text-slate-400 uppercase tracking-widest font-medium">環保裁罰</span>
+              <span class="block text-sm font-mono font-bold text-blue-600 dark:text-cyan-400 leading-tight">
+                <CommonAnimatedNumber :value="aggregatedStatus.environmental.count" />
+              </span>
+              <span class="block text-[10px] text-gray-500 dark:text-slate-500 truncate">
+                {{ formatDate(aggregatedStatus.environmental.last_updated) }}
+              </span>
+            </div>
+
+            <div class="space-y-0.5 border-l border-gray-300 dark:border-slate-700 pl-2">
               <span class="block text-xs text-gray-500 dark:text-slate-400 uppercase tracking-widest font-medium">財報</span>
               <span class="block text-sm font-mono font-bold text-blue-600 dark:text-cyan-400 leading-tight">
                 <CommonAnimatedNumber :value="aggregatedStatus.mops.count" />

@@ -119,12 +119,75 @@ const salaryData = computed(() => ({
       backgroundColor: '#eab308',
       type: 'line' as const,
       yAxisID: 'y'
+    },
+    {
+      label: '同業平均薪資 (仟元)',
+      data: sortedStats.value.map(s => s.industry_avg_salary),
+      borderColor: '#94a3b8', // Gray
+      backgroundColor: '#94a3b8',
+      borderDash: [5, 5],
+      type: 'line' as const,
+      pointStyle: 'circle',
+      pointRadius: 4,
+      yAxisID: 'y',
+      order: 1
     }
   ]
 }))
 </script>
 
 <template>
+  <!-- Warning Alerts -->
+  <div v-if="sortedStats.some(s => ['Y', 'V'].includes(s.is_avg_salary_under_500k || '') || ['Y', 'V'].includes(s.is_better_eps_lower_salary || '') || ['Y', 'V'].includes(s.is_eps_growth_salary_decrease || ''))" class="mb-6 space-y-3">
+    <div v-for="stat in sortedStats" :key="stat.year">
+       <template v-if="['Y', 'V'].includes(stat.is_avg_salary_under_500k || '') || ['Y', 'V'].includes(stat.is_better_eps_lower_salary || '') || ['Y', 'V'].includes(stat.is_eps_growth_salary_decrease || '')">
+          <div class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
+            <Icon name="lucide:alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <div>
+              <h4 class="font-bold text-red-800 dark:text-red-300 text-sm mb-1">
+                {{ stat.year }}年度 薪資警示
+              </h4>
+              <ul class="list-disc list-inside text-sm text-red-700 dark:text-red-400 space-y-1">
+                <li v-if="['Y', 'V'].includes(stat.is_avg_salary_under_500k || '')">
+                  基層平均年薪未達 50 萬
+                </li>
+                <li v-if="['Y', 'V'].includes(stat.is_better_eps_lower_salary || '')">
+                  EPS 優於同業，薪資卻低於同業水準
+                </li>
+                <li v-if="['Y', 'V'].includes(stat.is_eps_growth_salary_decrease || '')">
+                  EPS 較去年成長，薪資卻不升反降
+                </li>
+              </ul>
+            </div>
+          </div>
+       </template>
+
+       <!-- Company Notes -->
+       <template v-if="stat.performance_salary_relation_note || stat.improvement_measures_note">
+          <div class="bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-lg p-4 text-sm mt-3">
+            <div class="flex items-center gap-2 mb-2 text-gray-900 dark:text-gray-100 font-medium">
+              <Icon name="lucide:info" class="w-4 h-4 text-blue-500" />
+              <span>{{ stat.year }}年度 公司補充說明</span>
+            </div>
+            
+            <div v-if="stat.performance_salary_relation_note" class="mb-3 last:mb-0">
+              <span class="block text-xs text-gray-500 dark:text-slate-400 mb-1">經營績效與薪酬之關聯性與合理性：</span>
+              <p class="text-gray-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                {{ stat.performance_salary_relation_note }}
+              </p>
+            </div>
+
+            <div v-if="stat.improvement_measures_note">
+              <span class="block text-xs text-gray-500 dark:text-slate-400 mb-1">未來改善措施：</span>
+              <p class="text-gray-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                {{ stat.improvement_measures_note }}
+              </p>
+            </div>
+          </div>
+       </template>
+    </div>
+  </div>
+
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
     <!-- EPS Chart -->
     <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm">

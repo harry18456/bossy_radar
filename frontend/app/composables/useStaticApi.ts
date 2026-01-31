@@ -4,6 +4,7 @@ import type {
   PaginatedResponse, 
   Violation, 
   YearlySummaryResponse,
+  YearlySummaryIndex,
   EmployeeBenefit,
   NonManagerSalary,
   WelfarePolicy,
@@ -91,7 +92,7 @@ export const useStaticApi = () => {
       if (params?.industry) {
         const industries = Array.isArray(params.industry) ? params.industry : [params.industry]
         // Filter out empty strings
-        const validIndustries = industries.filter(i => i !== '')
+        const validIndustries = industries.filter((i: string) => i !== '')
         
         if (validIndustries.length > 0) {
            items = items.filter(c => validIndustries.includes(c.industry))
@@ -101,7 +102,7 @@ export const useStaticApi = () => {
       // Handle Market Type Filter (Array or String)
       if (params?.market_type) {
         const markets = Array.isArray(params.market_type) ? params.market_type : [params.market_type]
-        const validMarkets = markets.filter(m => m !== '')
+        const validMarkets = markets.filter((m: string) => m !== '')
         
         if (validMarkets.length > 0) {
           // Mapping frontend values to possible backend values
@@ -116,7 +117,7 @@ export const useStaticApi = () => {
             'Public': ['Public', 'pub', 'PUB']
           }
 
-          const targetValues = validMarkets.flatMap(m => marketMapping[m] || [m])
+          const targetValues = validMarkets.flatMap((m: string) => marketMapping[m] || [m])
           
           items = items.filter(c => targetValues.includes(c.market_type))
         }
@@ -139,25 +140,70 @@ export const useStaticApi = () => {
     getCompanyProfile: (companyCode: string) => 
       fetchJson<CompanyProfile>(`companies/${companyCode}.json`),
       
+    // Yearly Summaries Index (available years)
+    getYearlySummaryIndex: async (): Promise<YearlySummaryIndex> => {
+      try {
+        return await fetchJson<YearlySummaryIndex>('yearly-summaries/index.json')
+      } catch {
+        // Fallback: return empty if index doesn't exist (old format)
+        return { years: [], year_stats: [], total_count: 0, generated_at: '' }
+      }
+    },
+    
     getYearlySummary: async (params?: any) => {
-      let items = await fetchJson<YearlySummaryItem[]>('yearly-summaries.json')
-      
-      // Filter by Companies
-      if (params?.company_code) {
-        const codes = Array.isArray(params.company_code) ? params.company_code : [params.company_code]
-        items = items.filter(i => codes.includes(i.company_code))
-      }
-      
-      // Filter by Year
-      if (params?.year) {
-        const years = Array.isArray(params.year) ? params.year : [params.year]
-        items = items.filter(i => years.includes(Number(i.year)))
-      }
+      // Try new split format first
+      try {
+        const index = await fetchJson<{ years: number[] }>('yearly-summaries/index.json')
+        
+        // Determine which years to load
+        let yearsToLoad: number[] = []
+        if (params?.year) {
+          const requestedYears = Array.isArray(params.year) ? params.year : [params.year]
+          yearsToLoad = requestedYears.map(Number).filter((y: number) => index.years.includes(y))
+        } else {
+          // Default: load latest year only
+          const firstYear = index.years[0]
+          yearsToLoad = firstYear !== undefined ? [firstYear] : []
+        }
+        
+        // Load data for each requested year
+        let items: YearlySummaryItem[] = []
+        for (const year of yearsToLoad) {
+          const yearData = await fetchJson<YearlySummaryItem[]>(`yearly-summaries/${year}.json`)
+          items = items.concat(yearData)
+        }
+        
+        // Filter by company_code if specified
+        if (params?.company_code) {
+          const codes = Array.isArray(params.company_code) ? params.company_code : [params.company_code]
+          items = items.filter(i => codes.includes(i.company_code))
+        }
+        
+        return {
+          items,
+          total: items.length
+        } as YearlySummaryResponse
+      } catch {
+        // Fallback: load old single file format
+        let items = await fetchJson<YearlySummaryItem[]>('yearly-summaries.json')
+        
+        // Filter by Companies
+        if (params?.company_code) {
+          const codes = Array.isArray(params.company_code) ? params.company_code : [params.company_code]
+          items = items.filter(i => codes.includes(i.company_code))
+        }
+        
+        // Filter by Year
+        if (params?.year) {
+          const years = Array.isArray(params.year) ? params.year : [params.year]
+          items = items.filter(i => years.includes(Number(i.year)))
+        }
 
-      return {
-        items,
-        total: items.length
-      } as YearlySummaryResponse
+        return {
+          items,
+          total: items.length
+        } as YearlySummaryResponse
+      }
     },
 
     // Violations

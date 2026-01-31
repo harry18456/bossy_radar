@@ -69,6 +69,13 @@ export interface NonManagerSalary {
   median_salary_change?: number | null;
   eps?: number | null;
   industry_avg_eps?: number | null;
+  is_avg_salary_under_500k?: string | null;
+  is_better_eps_lower_salary?: string | null;
+  is_eps_growth_salary_decrease?: string | null;
+  industry_avg_salary?: number | null;
+  industry_median_salary?: number | null;
+  performance_salary_relation_note?: string | null;
+  improvement_measures_note?: string | null;
   created_at: string;
   last_updated: string;
 }
@@ -121,9 +128,28 @@ export interface SalaryAdjustment {
   last_updated: string;
 }
 
+export interface EnvironmentalViolation {
+  id: number;
+  company_code: string;
+  company_name: string;
+  penalty_date: string;
+  disposition_no: string;
+  law_article: string;
+  violation_reason: string;
+  fine_amount: number;
+  authority: string;
+  is_illegal_profit?: string | null;
+  illegal_profit?: number | null;
+  other_penalty?: string | null;
+  is_serious?: string | null;
+  created_at: string;
+  last_updated: string;
+}
+
 export interface CompanyProfile {
   company: Company;
   violations: Violation[];
+  environmental_violations: EnvironmentalViolation[];
   employee_benefits: EmployeeBenefit[];
   non_manager_salaries: NonManagerSalary[];
   welfare_policies: WelfarePolicy[];
@@ -140,6 +166,10 @@ export interface YearlySummaryItem {
   violations_year_fine?: number | null;
   violations_total_count?: number | null;
   violations_total_fine?: number | null;
+  env_violations_year_count?: number | null;
+  env_violations_year_fine?: number | null;
+  env_violations_total_count?: number | null;
+  env_violations_total_fine?: number | null;
   employee_benefit?: EmployeeBenefit | null;
   non_manager_salary?: NonManagerSalary | null;
   welfare_policy?: WelfarePolicy | null;
@@ -152,6 +182,18 @@ export interface CompanyCatalog {
   abbreviation?: string | null;
   market_type: string;
   industry?: string | null;
+}
+
+export interface YearlySummaryYearStat {
+  year: number;
+  count: number;
+}
+
+export interface YearlySummaryIndex {
+  years: number[];
+  year_stats: YearlySummaryYearStat[];
+  total_count: number;
+  generated_at: string;
 }
 
 export interface YearlySummaryResponse {
@@ -176,4 +218,5 @@ export interface SystemSyncStatus {
   companies: Record<string, CategorySyncStatus>;
   violations: Record<string, CategorySyncStatus>;
   mops: Record<string, CategorySyncStatus>;
+  environmental_violations: Record<string, CategorySyncStatus>;
 }

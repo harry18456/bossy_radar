@@ -105,10 +105,34 @@ definePageMeta({
                 <li><strong>勞動基準法</strong>：如超時工作、未給付加班費、未依規定給予休假等。</li>
                 <li><strong>性別工作平等法</strong>：如性別歧視、性騷擾防治措施不足等。</li>
                 <li><strong>職業安全衛生法</strong>：如工作場所安全設施不足、未進行教育訓練等。</li>
-                <li><strong>勞工退休金條例</strong> & <strong>勞工保險條例</strong>：如未依規定提繳退休金或投保。</li>
-                <li><strong>就業服務法</strong>：如不實徵才廣告、非法解僱等。</li>
-                <li><strong>其他相關法規</strong>：包含中高齡者及高齡者就業促進法、工會法等。</li>
+                <li><strong>勞工退休金條例</strong> & <strong>勞工保險條例</strong>：如未依規定提繳退休金或投保.</li>
+                <li><strong>就業服務法</strong>：如不實徵才廣告、非法解僱等.</li>
+                <li><strong>其他相關法規</strong>：包含中高齡者及高齡者就業促進法、工會法等.</li>
               </ul>
+            </div>
+
+            <div>
+              <h3 class="font-medium text-gray-900 dark:text-white">4. 環境違規紀錄 (新增)</h3>
+              <div class="text-gray-600 dark:text-slate-400 text-sm mt-1 space-y-1">
+                <p>
+                  <strong>來源</strong>：<a href="https://data.moenv.gov.tw" target="_blank" rel="noopener" class="text-blue-600 hover:underline">環境部環境資料開放平臺</a>。
+                </p>
+                <p>
+                  <strong>技術來源平台</strong>：<a href="https://data.moenv.gov.tw/dataset/detail/EMS_P_46" target="_blank" rel="noopener" class="text-blue-600 hover:underline">列管事業污染源裁處資料 (EMS_P_46)</a>。
+                </p>
+                <p class="mt-2">
+                  本站彙整了以下環境保護相關法規之裁罰紀錄：
+                </p>
+                <ul class="list-disc pl-5 mt-2 space-y-1">
+                  <li><strong>空氣污染防制法</strong>：如排放污染物超過標準、未依規定操作防制設備等。</li>
+                  <li><strong>水污染防治法</strong>：如違規排放廢水、未取得排放許可等。</li>
+                  <li><strong>廢棄物清理法</strong>：如非法棄置廢棄物、未依規定申報廢棄物流向等。</li>
+                  <li><strong>毒性及關注化學物質管理法</strong>等其他相關環保法規。</li>
+                </ul>
+                <p class="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                  💡 <strong>特點</strong>：此資料集包含「統一編號」，本站透過統編進行<strong>精確比對</strong>，確保資料關聯之準確性。
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -127,7 +151,10 @@ definePageMeta({
             </p>
             <ol class="list-decimal pl-5 space-y-2">
               <li>
-                <strong>精確名稱比對</strong>：當違規紀錄的公司全名與上市櫃公司名稱完全一致時，視為匹配。
+                <strong>統編精確比對 (Exact Match)</strong>：針對環保裁罰等包含「統一編號」的資料，本站直接以統編進行 100% 精確關聯。
+              </li>
+              <li>
+                <strong>精確名稱比對</strong>：若無統編，則比對違規紀錄的公司全名與上市櫃公司名稱是否完全一致。
               </li>
               <li>
                 <strong>分公司與模糊比對</strong>：針對分公司或廠區（例如：「某某科技股份有限公司新竹廠」），我們會嘗試比對其總公司名稱。

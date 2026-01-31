@@ -24,6 +24,7 @@ usePageMeta({
 })
 
 const activeTab = ref<'overview' | 'stats' | 'violations' | 'welfare'>('overview')
+const violationType = ref<'labor' | 'env'>('labor')
 
 const tabs = [
   { id: 'overview', label: '基本資料' },
@@ -137,7 +138,7 @@ const toggleWatch = () => {
               activeTab === tab.id
                 ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 md:bg-transparent md:dark:bg-transparent md:shadow-none md:border-blue-500 md:border-b-2'
                 : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 md:border-transparent md:border-b-2 md:hover:border-gray-300',
-              'flex-1 text-center py-2 md:py-4 px-1 font-medium text-xs md:text-sm transition-all rounded-lg md:rounded-none'
+              'flex-1 text-center py-2 md:py-4 px-1 font-medium text-xs md:text-sm transition-all rounded-lg md:rounded-none cursor-pointer'
             ]"
           >
             {{ tab.label }}
@@ -190,70 +191,159 @@ const toggleWatch = () => {
 
         <!-- Violations Tab -->
         <div v-else-if="activeTab === 'violations'">
-          <div v-if="profile.violations && profile.violations.length > 0">
-             <!-- Desktop Table -->
-             <div class="hidden md:block overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl">
-               <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-800">
-                 <thead class="bg-gray-50 dark:bg-slate-800">
-                   <tr>
-                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">處分日期</th>
-                     <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">主管機關</th>
-                      <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">違反法規</th>
-                     <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">罰鍰金額</th>
-                   </tr>
-                 </thead>
-                 <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-800">
-                   <tr v-for="v in profile.violations" :key="v.id" class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
-                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                       {{ formatDate(v.penalty_date) }}
-                     </td>
-                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
-                       {{ v.authority }}
-                     </td>
-                      <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                        <div class="font-medium mb-1">{{ v.law_article }}</div>
-                        <p v-if="v.violation_content" class="text-gray-500 dark:text-slate-400 text-xs whitespace-pre-wrap leading-relaxed">
-                          {{ v.violation_content }}
-                        </p>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
-                        <span v-if="v.fine_amount > 0" class="text-red-600 dark:text-red-400">
-                          {{ formatCurrency(v.fine_amount) }}
-                        </span>
-                        <span v-else class="text-gray-400 dark:text-slate-500 font-normal">
-                          -
-                        </span>
-                      </td>
-                   </tr>
-                 </tbody>
-               </table>
-             </div>
+          <div class="mb-4 bg-gray-50 dark:bg-slate-800/50 p-1 rounded-lg inline-flex">
+             <button 
+               @click="violationType = 'labor'"
+               :class="violationType === 'labor' ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 font-medium' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+               class="px-4 py-2 rounded-md text-sm transition-all"
+             >
+               勞動違規 ({{ profile.violations?.length || 0 }})
+             </button>
+             <button 
+               @click="violationType = 'env'"
+               :class="violationType === 'env' ? 'bg-white dark:bg-slate-700 shadow-sm text-green-600 dark:text-green-400 font-medium' : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'"
+               class="px-4 py-2 rounded-md text-sm transition-all"
+             >
+               環保裁罰 ({{ profile.environmental_violations?.length || 0 }})
+             </button>
+          </div>
 
-             <!-- Mobile Cards -->
-             <div class="md:hidden space-y-4">
-               <div v-for="v in profile.violations" :key="v.id" class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
-                 <div class="flex justify-between items-start mb-3">
-                   <span class="text-xs text-gray-500 dark:text-slate-400">{{ formatDate(v.penalty_date) }}</span>
-                   <span v-if="v.fine_amount > 0" class="text-sm font-bold text-red-600 dark:text-red-400">
-                     {{ formatCurrency(v.fine_amount) }}
-                   </span>
-                   <span v-else class="text-xs text-gray-400">-</span>
-                 </div>
-                 <div class="mb-2">
-                   <div class="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">{{ v.authority }}</div>
-                   <div class="text-sm font-bold text-gray-900 dark:text-white">{{ v.law_article }}</div>
-                 </div>
-                 <p v-if="v.violation_content" class="text-xs text-gray-600 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 p-2 rounded-lg leading-relaxed mt-2">
-                   {{ v.violation_content }}
-                 </p>
+          <!-- Labor Violations -->
+          <div v-if="violationType === 'labor'">
+            <div v-if="profile.violations && profile.violations.length > 0">
+               <!-- Desktop Table -->
+               <div class="hidden md:block overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl">
+                 <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-800">
+                   <thead class="bg-gray-50 dark:bg-slate-800">
+                     <tr>
+                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">處分日期</th>
+                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">主管機關</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">違反法規</th>
+                       <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">罰鍰金額</th>
+                     </tr>
+                   </thead>
+                   <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-800">
+                     <tr v-for="v in profile.violations" :key="v.id" class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                         {{ formatDate(v.penalty_date) }}
+                       </td>
+                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+                         {{ v.authority }}
+                       </td>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                          <div class="font-medium mb-1">{{ v.law_article }}</div>
+                          <p v-if="v.violation_content" class="text-gray-500 dark:text-slate-400 text-xs whitespace-pre-wrap leading-relaxed">
+                            {{ v.violation_content }}
+                          </p>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                          <span v-if="v.fine_amount > 0" class="text-red-600 dark:text-red-400">
+                            {{ formatCurrency(v.fine_amount) }}
+                          </span>
+                          <span v-else class="text-gray-400 dark:text-slate-500 font-normal">
+                            -
+                          </span>
+                        </td>
+                     </tr>
+                   </tbody>
+                 </table>
                </div>
+
+               <!-- Mobile Cards -->
+               <div class="md:hidden space-y-4">
+                 <div v-for="v in profile.violations" :key="v.id" class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+                   <div class="flex justify-between items-start mb-3">
+                     <span class="text-xs text-gray-500 dark:text-slate-400">{{ formatDate(v.penalty_date) }}</span>
+                     <span v-if="v.fine_amount > 0" class="text-sm font-bold text-red-600 dark:text-red-400">
+                       {{ formatCurrency(v.fine_amount) }}
+                     </span>
+                     <span v-else class="text-xs text-gray-400">-</span>
+                   </div>
+                   <div class="mb-2">
+                     <div class="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">{{ v.authority }}</div>
+                     <div class="text-sm font-bold text-gray-900 dark:text-white">{{ v.law_article }}</div>
+                   </div>
+                   <p v-if="v.violation_content" class="text-xs text-gray-600 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 p-2 rounded-lg leading-relaxed mt-2">
+                     {{ v.violation_content }}
+                   </p>
+                 </div>
+               </div>
+            </div>
+             <div v-else class="text-center py-24 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 border-dashed">
+               <Icon name="lucide:check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4" />
+               <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">無勞動違規紀錄</h3>
+               <p class="text-gray-500 dark:text-slate-400">這是一間守法的公司（資料來源內未發現違規）</p>
              </div>
           </div>
-           <div v-else class="text-center py-24 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 border-dashed">
-             <Icon name="lucide:check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4" />
-             <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">無違規紀錄</h3>
-             <p class="text-gray-500 dark:text-slate-400">這是一間守法的公司（資料來源內未發現違規）</p>
-           </div>
+
+          <!-- Environmental Violations -->
+          <div v-if="violationType === 'env'">
+            <div v-if="profile.environmental_violations && profile.environmental_violations.length > 0">
+               <!-- Desktop Table -->
+               <div class="hidden md:block overflow-hidden bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl">
+                 <table class="min-w-full divide-y divide-gray-200 dark:divide-slate-800">
+                   <thead class="bg-gray-50 dark:bg-slate-800">
+                     <tr>
+                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">處分日期</th>
+                       <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">處分字號</th>
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">違反法規 / 事由</th>
+                       <th scope="col" class="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-slate-400 uppercase tracking-wider">處分金額</th>
+                     </tr>
+                   </thead>
+                   <tbody class="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-800">
+                     <tr v-for="ev in profile.environmental_violations" :key="ev.id" class="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+                         {{ formatDate(ev.penalty_date) }}
+                       </td>
+                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+                         {{ ev.disposition_no }}
+                         <div class="text-xs text-gray-400 mt-0.5">{{ ev.authority }}</div>
+                       </td>
+                        <td class="px-6 py-4 text-sm text-gray-900 dark:text-white">
+                          <div class="font-medium mb-1 text-green-700 dark:text-green-400">{{ ev.law_article }}</div>
+                          <p v-if="ev.violation_reason" class="text-gray-500 dark:text-slate-400 text-xs whitespace-pre-wrap leading-relaxed">
+                            {{ ev.violation_reason }}
+                          </p>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                          <span v-if="ev.fine_amount > 0" class="text-red-600 dark:text-red-400">
+                            {{ formatCurrency(ev.fine_amount) }}
+                          </span>
+                          <span v-else class="text-gray-400 dark:text-slate-500 font-normal">
+                            -
+                          </span>
+                        </td>
+                     </tr>
+                   </tbody>
+                 </table>
+               </div>
+
+               <!-- Mobile Cards -->
+               <div class="md:hidden space-y-4">
+                 <div v-for="ev in profile.environmental_violations" :key="ev.id" class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 shadow-sm">
+                   <div class="flex justify-between items-start mb-3">
+                     <span class="text-xs text-gray-500 dark:text-slate-400">{{ formatDate(ev.penalty_date) }}</span>
+                     <span v-if="ev.fine_amount > 0" class="text-sm font-bold text-red-600 dark:text-red-400">
+                       {{ formatCurrency(ev.fine_amount) }}
+                     </span>
+                     <span v-else class="text-xs text-gray-400">-</span>
+                   </div>
+                   <div class="mb-2">
+                     <div class="text-xs font-semibold text-green-600 dark:text-green-400 mb-1">{{ ev.authority }} ({{ ev.disposition_no }})</div>
+                     <div class="text-sm font-bold text-gray-900 dark:text-white">{{ ev.law_article }}</div>
+                   </div>
+                   <p v-if="ev.violation_reason" class="text-xs text-gray-600 dark:text-slate-400 bg-gray-50 dark:bg-slate-800/50 p-2 rounded-lg leading-relaxed mt-2">
+                     {{ ev.violation_reason }}
+                   </p>
+                 </div>
+               </div>
+            </div>
+             <div v-else class="text-center py-24 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 border-dashed">
+               <Icon name="lucide:leaf" class="w-16 h-16 text-green-500 mx-auto mb-4" />
+               <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">無環保裁罰紀錄</h3>
+               <p class="text-gray-500 dark:text-slate-400">感謝公司對環境保護的努力（資料來源內未發現違規）</p>
+             </div>
+          </div>
         </div>
 
         <!-- Welfare Tab -->
