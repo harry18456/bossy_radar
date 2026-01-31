@@ -118,12 +118,9 @@ export const useStaticApi = () => {
 
           const targetValues = validMarkets.flatMap(m => marketMapping[m] || [m])
           
-          console.log('Filtering by markets (mapped):', targetValues)
           items = items.filter(c => targetValues.includes(c.market_type))
         }
       }
-      
-      console.log('Filtered items:', items.length)
 
       // Convert Catalog to basic Company objects (missing fields will be undefined, but acceptable for list view)
       // Ideally catalog should match Company lists, or we map it. 
