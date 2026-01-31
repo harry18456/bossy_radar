@@ -34,7 +34,8 @@ const { data: allComparisonData, status, refresh } = await useAsyncData(
   },
   {
     watch: [companies],
-    immediate: true
+    immediate: true,
+    server: false  // Skip SSR - watchlist data depends on client-side localStorage
   }
 )
 
