@@ -35,10 +35,14 @@ export default defineNuxtPlugin((nuxtApp) => {
       ]
     })
 
-    gtag = (...args: any[]) => {
-      w.dataLayer.push(args)
+    // Standard implementation
+    gtag = function() {
+      w.dataLayer.push(arguments)
     }
   }
+
+  // Expose to window for global access/debugging
+  w.gtag = gtag
 
   // Initialize
   gtag('js', new Date())
