@@ -133,12 +133,32 @@ export const useStaticApi = () => {
         }
       }
 
-      // Convert Catalog to basic Company objects (missing fields will be undefined, but acceptable for list view)
-      // Ideally catalog should match Company lists, or we map it. 
-      // The current Company interface has more fields, but list view mostly needs name/code/market/industry.
+      // Sorting Logic
+      if (params?.sort) {
+        const sortKey = params.sort as string
+        const isDesc = sortKey.startsWith('-')
+        const key = isDesc ? sortKey.substring(1) : sortKey
+        
+        items.sort((a: any, b: any) => {
+          let valA = a[key]
+          let valB = b[key]
+          
+          // Handle null/undefined
+          if (valA === null || valA === undefined) return 1
+          if (valB === null || valB === undefined) return -1
+          
+          if (typeof valA === 'string' && typeof valB === 'string') {
+            return isDesc ? valB.localeCompare(valA) : valA.localeCompare(valB)
+          }
+          
+          return isDesc ? valB - valA : valA - valB
+        })
+      }
+
+      // Convert Catalog to basic Company objects
       const companyItems = items.map(c => ({
         ...c,
-        last_updated: new Date().toISOString() // Mock
+        last_updated: new Date().toISOString()
       } as unknown as Company))
 
       return paginate(companyItems, Number(params?.page) || 1, Number(params?.size) || 20)

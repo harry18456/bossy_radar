@@ -182,6 +182,9 @@ export interface CompanyCatalog {
   abbreviation?: string | null;
   market_type: string;
   industry?: string | null;
+  capital?: number | null;
+  establishment_date?: string | null;
+  listing_date?: string | null;
 }
 
 export interface YearlySummaryYearStat {
