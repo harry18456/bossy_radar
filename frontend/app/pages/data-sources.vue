@@ -36,14 +36,17 @@ definePageMeta({
               <h3 class="font-medium text-gray-900 dark:text-white">1. 公司基本資料</h3>
               <div class="text-gray-600 dark:text-slate-400 text-sm mt-1 space-y-1">
                 <p>
-                  來源：<a href="https://www.twse.com.tw/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">台灣證券交易所 (TWSE)</a> 與 <a href="https://www.tpex.org.tw/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">證券櫃檯買賣中心 (TPEX)</a>。
+                  <strong>資料權管單位</strong>：<a href="https://www.twse.com.tw/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">台灣證券交易所 (TWSE)</a> 與 <a href="https://www.tpex.org.tw/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">證券櫃檯買賣中心 (TPEX)</a>。
                 </p>
-                <ul class="list-disc pl-5">
+                <p>
+                  <strong>技術來源平台</strong>：<a href="https://mopsov.twse.com.tw/mops/web/t187sb03" target="_blank" rel="noopener" class="text-blue-600 hover:underline">公開資訊觀測站 (MOPS) 開放資料平台</a>。
+                </p>
+                <ul class="list-disc pl-5 mt-2">
                   <li><strong>TWSE</strong>：負責上市公司 (SII)。</li>
                   <li><strong>TPEX</strong>：負責上櫃公司 (OTC)、興櫃公司 (Emerging) 與公開發行公司 (Public)。</li>
                 </ul>
-                <p>
-                  本站整合上述兩者資料，涵蓋代號、名稱、產業別、董事長等基本資訊。
+                <p class="mt-2">
+                  本站整合上述四類公司之基本資訊（代號、名稱、產業別、董事長等），資料源自 MOPS 開放資料之 CSV 檔案。
                 </p>
               </div>
             </div>
@@ -84,14 +87,20 @@ definePageMeta({
 
             <div>
               <h3 class="font-medium text-gray-900 dark:text-white">3. 勞工違規紀錄</h3>
-              <p class="text-gray-600 dark:text-slate-400 text-sm mt-1">
-                來源：<a href="https://data.gov.tw/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">政府資料開放平臺</a>。
-                <br>
-                <span class="block mt-1 mb-2 text-xs text-slate-500">
+              <div class="text-gray-600 dark:text-slate-400 text-sm mt-1 space-y-1">
+                <p>
+                  <strong>來源</strong>：<a href="https://data.gov.tw/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">政府資料開放平臺 (Data.gov.tw)</a>。
+                </p>
+                <p>
+                  <strong>技術來源平台</strong>：<a href="https://apiservice.mol.gov.tw/OdService/download/A17000000J-030225-QDf" target="_blank" rel="noopener" class="text-blue-600 hover:underline">勞動部 Open Data API</a>。
+                </p>
+                <p class="text-xs text-slate-500 dark:text-slate-500">
                   (註：政府亦設有官方的 <a href="https://announcement.mol.gov.tw/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">違反勞動法令事業單位（雇主）查詢系統</a> 供民眾查詢)
-                </span>
-                本站彙整了以下主要法規之裁罰紀錄：
-              </p>
+                </p>
+                <p class="mt-2">
+                  本站彙整了以下主要法規之裁罰紀錄：
+                </p>
+              </div>
               <ul class="list-disc pl-5 mt-2 space-y-1 text-sm text-gray-600 dark:text-slate-400">
                 <li><strong>勞動基準法</strong>：如超時工作、未給付加班費、未依規定給予休假等。</li>
                 <li><strong>性別工作平等法</strong>：如性別歧視、性騷擾防治措施不足等。</li>

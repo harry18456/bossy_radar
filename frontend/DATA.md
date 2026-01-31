@@ -6,11 +6,15 @@
 
 ### 1. 公司基本資料
 
-- **來源**：台灣證券交易所 (TWSE) 與 證券櫃檯買賣中心 (TPEX)。
-- **說明**：
-  - **TWSE**：負責上市公司 (SII)。
-  - **TPEX**：負責上櫃公司 (OTC)、興櫃公司 (Emerging) 與公開發行公司 (Public)。
-  - 本站整合兩者資料，涵蓋代號、名稱、產業別、董事長等基本資訊。
+- **資料權管單位**：台灣證券交易所 (TWSE) 與 證券櫃檯買賣中心 (TPEX)。
+- **技術來源平台**：[公開資訊觀測站 (MOPS) 開放資料平台](https://mopsov.twse.com.tw/mops/web/t187sb03)。
+  - 上市公司 (SII): [CSV 下載](https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv)
+  - 上櫃公司 (OTC): [CSV 下載](https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv)
+  - 興櫃公司 (Emerging): [CSV 下載](https://mopsfin.twse.com.tw/opendata/t187ap03_R.csv)
+  - 公開發行公司 (Public): [CSV 下載](https://mopsfin.twse.com.tw/opendata/t187ap03_P.csv)
+- **說明**：包含上市公司 (SII)、上櫃公司 (OTC)、興櫃公司 (Emerging) 與公開發行公司 (Public) 的基本資訊。
+  - TWSE 負責管理上市公司。
+  - TPEX 負責管理上櫃、興櫃與公開發行公司。
 
 ### 2. 財務與薪資福利資料
 
@@ -30,7 +34,8 @@
 
 ### 3. 勞工違規紀錄
 
-- **來源**：政府資料開放平臺。
+- **來源**：[政府資料開放平臺 (Data.gov.tw)](https://data.gov.tw)。
+- **技術來源平台**：[勞動部 Open Data API](https://apiservice.mol.gov.tw/OdService/download/A17000000J-030225-QDf)。
 - **說明**：本站彙整了以下主要法規之裁罰紀錄：
   - **勞動基準法**：如超時工作、未給付加班費、未依規定給予休假等。
   - **性別工作平等法**：如性別歧視、性騷擾防治措施不足等。
