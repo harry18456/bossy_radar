@@ -10,6 +10,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       appVersion: pkg.version,
+      dataMode: process.env.NUXT_PUBLIC_DATA_MODE || 'dynamic',
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8000",
       googleAdSense: {
         id: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_ID || '',

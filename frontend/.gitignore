@@ -28,3 +28,6 @@ openapi.json
 
 # Agent
 .agent
+
+# public data
+public/data
