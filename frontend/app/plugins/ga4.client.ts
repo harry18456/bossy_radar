@@ -30,6 +30,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     }
   } else {
     // Real mode for Production
+    console.log('[GA4] Initializing Production Mode with ID:', gaId)
     addScript(`https://www.googletagmanager.com/gtag/js?id=${gaId}`)
     gtag = (...args: any[]) => {
       w.dataLayer.push(args)
