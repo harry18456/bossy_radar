@@ -18,20 +18,22 @@ const {
 
 const api = useApi()
 
-// Use useAsyncData to fetch companies based on reactive params
-// Using a computed key ensures it refetches when params change
+// Computed parameters for API to ensure reactivity is tracked precisely
+const queryParams = computed(() => ({
+  industry: [...(filters.industry || [])],
+  market_type: [...(filters.market_type || [])],
+  name: name.value,
+  sort: sort.value,
+  page: page.value,
+  limit: 12
+}))
+
+// Use useAsyncData with specific watcher on the computed params
 const { data, status, error, refresh } = await useAsyncData(
   'companies-list',
-  () => api.getCompanies({
-    industry: filters.industry,
-    market_type: filters.market_type,
-    name: name.value,
-    sort: sort.value,
-    page: page.value,
-    limit: 12
-  }),
+  () => api.getCompanies(queryParams.value),
   {
-    watch: [filters, name, sort, page], 
+    watch: [queryParams],
     deep: true
   }
 )
