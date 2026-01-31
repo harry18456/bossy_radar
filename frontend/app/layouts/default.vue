@@ -34,12 +34,12 @@ const route = useRoute()
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
       <!-- Top Ad -->
-      <CommonAdSenseUnit v-if="route.path !== '/'" slotKey="top" class="mb-8" />
+      <CommonAdSenseUnit v-if="route.path !== '/'" slotKey="top" adFormat="horizontal" class="mb-8" />
       
       <slot />
 
       <!-- Bottom Ad -->
-      <CommonAdSenseUnit v-if="route.path !== '/'" slotKey="bottom" class="mt-8" />
+      <CommonAdSenseUnit v-if="route.path !== '/'" slotKey="bottom" adFormat="horizontal" class="mt-8" />
     </main>
 
     <CommonAppFooter />

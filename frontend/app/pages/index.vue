@@ -13,7 +13,8 @@ usePageMeta({
     </h1>
     <p class="text-xl text-gray-500 dark:text-slate-400 mb-8 max-w-2xl">
       透明化職場資訊，避開慣老闆。<br>
-      首頁與各項分析、免責聲明等網頁規劃中，請先前往公司列表搜尋
+      首頁與各項分析、免責聲明等網頁規劃中，請先前往公司列表搜尋。<br>
+      <span class="text-sm text-red-400 mt-2 block">(目前數據仍有可能有錯誤，持續修復中)</span>
     </p>
     
     <div class="flex gap-4">

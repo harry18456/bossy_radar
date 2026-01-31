@@ -21,7 +21,10 @@ export const useStaticApi = () => {
     try {
       // In SSR, relative paths might fail to hit standard public assets in some envs.
       // Force absolute URL using current request origin.
-      if (import.meta.server) {
+      // In SSR (but not Prerender), relative paths might fail.
+      // During Prerender (npm run generate), standard fetch should work via Nitro-served assets or FS.
+      // Force absolute URL only when running as server (e.g. node entry) but not pre-rendering.
+      if (import.meta.server && !import.meta.prerender) {
         const { origin } = useRequestURL()
         return await $fetch<T>(`/data/${path}`, { baseURL: origin })
       }
