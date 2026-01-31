@@ -1,36 +1,41 @@
 <script setup lang="ts">
 import { INDUSTRY_OPTIONS, MARKET_TYPES } from '~/constants'
-import { useCompanyFilters } from '~/composables/useCompanyFilters'
+import type { CompanyFilters } from '~/composables/useCompanyFilters'
 
-const { filters } = useCompanyFilters()
+const props = defineProps<{
+  filters: CompanyFilters
+}>()
+
 const isExpanded = ref(true)
 
 // Local state for search to prevent live query
-const localSearchName = ref(filters.name || '')
-watch(() => filters.name, (newVal) => {
+const localSearchName = ref(props.filters.name || '')
+watch(() => props.filters.name, (newVal) => {
   localSearchName.value = newVal || ''
 })
 
 const handleSearch = (val: string) => {
-  filters.name = val
+  props.filters.name = val
 }
 
 // Helper for multi-select checkboxes
 const toggleIndustry = (value: string) => {
-  const index = filters.industry.indexOf(value)
+  if (!props.filters.industry) props.filters.industry = []
+  const index = props.filters.industry.indexOf(value)
   if (index === -1) {
-    filters.industry.push(value)
+    props.filters.industry.push(value)
   } else {
-    filters.industry.splice(index, 1)
+    props.filters.industry.splice(index, 1)
   }
 }
 
 const toggleMarket = (value: string) => {
-  const index = filters.market_type.indexOf(value)
+  if (!props.filters.market_type) props.filters.market_type = []
+  const index = props.filters.market_type.indexOf(value)
   if (index === -1) {
-    filters.market_type.push(value)
+    props.filters.market_type.push(value)
   } else {
-    filters.market_type.splice(index, 1)
+    props.filters.market_type.splice(index, 1)
   }
 }
 </script>
@@ -71,7 +76,7 @@ const toggleMarket = (value: string) => {
       <div class="flex items-center justify-between mb-4">
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">市場類別</h3>
         <button 
-          v-if="filters.market_type.length > 0"
+          v-if="(filters.market_type?.length || 0) > 0"
           @click="filters.market_type = []"
           class="text-xs text-gray-500 hover:text-red-500 transition-colors"
         >
@@ -87,7 +92,7 @@ const toggleMarket = (value: string) => {
           <input 
             type="checkbox" 
             :value="type.value" 
-            :checked="filters.market_type.includes(type.value)"
+            :checked="filters.market_type?.includes(type.value)"
             @change="toggleMarket(type.value)"
             class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:bg-slate-900 dark:border-slate-700"
           />
@@ -104,7 +109,7 @@ const toggleMarket = (value: string) => {
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">產業類別</h3>
         <div class="flex items-center space-x-3">
           <button 
-            v-if="filters.industry.length > 0"
+            v-if="(filters.industry?.length || 0) > 0"
             @click="filters.industry = []"
             class="text-xs text-gray-500 hover:text-red-500 transition-colors"
           >
@@ -131,7 +136,7 @@ const toggleMarket = (value: string) => {
           <input 
             type="checkbox" 
             :value="option.value" 
-            :checked="filters.industry.includes(option.value)"
+            :checked="filters.industry?.includes(option.value)"
             @change="toggleIndustry(option.value)"
             class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:bg-slate-900 dark:border-slate-700"
           />
