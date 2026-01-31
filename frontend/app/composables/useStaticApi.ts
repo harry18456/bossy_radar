@@ -17,6 +17,17 @@ import type {
 export const useStaticApi = () => {
   const { $toast } = useNuxtApp()
   
+  // Capture origin synchronously during composable initialization
+  // to avoid "Nuxt instance lost" errors in async contexts during SSR.
+  let ssrOrigin = ''
+  if (import.meta.server) {
+    try {
+      ssrOrigin = useRequestURL().origin
+    } catch (e) {
+      console.warn('[useStaticApi] Could not capture request origin synchronously')
+    }
+  }
+  
   // Helper for fetching JSON
   const fetchJson = async <T>(path: string): Promise<T> => {
     try {
@@ -39,9 +50,8 @@ export const useStaticApi = () => {
         }
       }
 
-      if (import.meta.server) {
-        const { origin } = useRequestURL()
-        return await $fetch<T>(`/data/${path}`, { baseURL: origin })
+      if (import.meta.server && ssrOrigin) {
+        return await $fetch<T>(`/data/${path}`, { baseURL: ssrOrigin })
       }
       return await $fetch<T>(`/data/${path}`)
     } catch (e) {
@@ -151,8 +161,6 @@ export const useStaticApi = () => {
     },
     
     getYearlySummary: async (params?: any) => {
-      // Try new split format first
-      try {
         const index = await fetchJson<{ years: number[] }>('yearly-summaries/index.json')
         
         // Determine which years to load
@@ -161,9 +169,8 @@ export const useStaticApi = () => {
           const requestedYears = Array.isArray(params.year) ? params.year : [params.year]
           yearsToLoad = requestedYears.map(Number).filter((y: number) => index.years.includes(y))
         } else {
-          // Default: load latest year only
-          const firstYear = index.years[0]
-          yearsToLoad = firstYear !== undefined ? [firstYear] : []
+          // Default: load all available years
+          yearsToLoad = [...index.years]
         }
         
         // Load data for each requested year
@@ -183,43 +190,18 @@ export const useStaticApi = () => {
           items,
           total: items.length
         } as YearlySummaryResponse
-      } catch {
-        // Fallback: load old single file format
-        let items = await fetchJson<YearlySummaryItem[]>('yearly-summaries.json')
-        
-        // Filter by Companies
-        if (params?.company_code) {
-          const codes = Array.isArray(params.company_code) ? params.company_code : [params.company_code]
-          items = items.filter(i => codes.includes(i.company_code))
-        }
-        
-        // Filter by Year
-        if (params?.year) {
-          const years = Array.isArray(params.year) ? params.year : [params.year]
-          items = items.filter(i => years.includes(Number(i.year)))
-        }
-
-        return {
-          items,
-          total: items.length
-        } as YearlySummaryResponse
-      }
     },
 
-    // Violations
+    // Violations (全站搜尋 - 目前暫無頁面使用，且靜態模式無全域導出)
     getViolations: async (params?: any) => {
-      // NOTE: Assuming violations-all.json exists. If split by pages, this logic needs change.
-      let items = await fetchJson<Violation[]>('violations-all.json')
-      
-      if (params?.search) {
-        const k = params.search.toLowerCase()
-        items = items.filter(v => 
-          v.company_name.toLowerCase().includes(k) ||
-          v.violation_content?.toLowerCase().includes(k)
-        )
-      }
-
-      return paginate(items, Number(params?.page) || 1, Number(params?.size) || 20)
+      // 若未來需要全站搜尋，需後端提供按年分拆的 violations/ 目錄
+      return {
+        items: [],
+        total: 0,
+        page: Number(params?.page) || 1,
+        size: Number(params?.size) || 20,
+        pages: 0
+      } as any
     },
 
     // MOPS Data

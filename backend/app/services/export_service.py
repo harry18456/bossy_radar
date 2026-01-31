@@ -328,6 +328,7 @@ class ExportService:
         status_response = SyncStatusResponse(
             companies={}, 
             violations={},
+            environmental_violations={},
             mops={}
         )
 

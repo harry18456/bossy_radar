@@ -10,6 +10,7 @@ from app.services.violation_service import ViolationService
 from app.services.mops_scraper import MopsScraper
 from app.services.export_service import ExportService
 from app.services.environmental_service import EnvironmentalService
+from app.services.company_detail_scraper import CompanyDetailScraper
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -240,6 +241,22 @@ def sync_env():
     typer.echo("Environmental Sync completed.")
 
 @app.command()
+def sync_company_details(
+    company_code: Optional[str] = typer.Option(None, "--code", help="Sync specific company code"),
+    limit: Optional[int] = typer.Option(None, "--limit", help="Limit number of companies to sync"),
+    force: bool = typer.Option(False, "--force", help="Force sync even if URLs already exist"),
+    retries: int = typer.Option(3, "--retries", help="Number of retries per request (-1 for infinite)"),
+    retry_delay: float = typer.Option(2.0, "--retry-delay", help="Initial delay between retries in seconds"),
+):
+    """
+    Sync additional company details (Stakeholder/Governance URLs) from MOPS t05st03.
+    """
+    scraper = CompanyDetailScraper()
+    typer.echo("--- Starting Company Detail Sync (t05st03) ---")
+    scraper.sync_all_details(limit=limit, force=force, company_code=company_code, retries=retries, delay=retry_delay)
+    typer.echo("Company Detail Sync completed.")
+
+@app.command()
 def sync_all(
     skip_download: bool = typer.Option(False, "--skip-download", help="Skip download step if files exist"),
 ):
@@ -254,6 +271,7 @@ def sync_all(
         ["sync_companies"],
         ["sync_violations"],
         ["sync_env"],
+        ["sync_company_details"],
         ["sync_mops"],
         ["export"],
     ]

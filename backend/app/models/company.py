@@ -27,5 +27,9 @@ class Company(SQLModel, table=True):
     website: Optional[str] = Field(default=None, description="網址")
     email: Optional[str] = Field(default=None, description="電子郵件")
     
+    # MOPS 補充資料 (t05st03)
+    stakeholder_url: Optional[str] = Field(default=None, description="利害關係人專區網址")
+    governance_url: Optional[str] = Field(default=None, description="公司治理資訊專區網址")
+    
     # 系統欄位
     last_updated: datetime = Field(default_factory=datetime.now, description="最後更新時間")

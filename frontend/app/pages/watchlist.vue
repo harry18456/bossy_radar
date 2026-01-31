@@ -22,13 +22,15 @@ const { data: allComparisonData, status, refresh } = await useAsyncData(
     
     const codes = companies.value.map(c => c.code)
     
-    // Fetch all available data for these companies
+    // Fetch data for these companies
     const response = await api.getYearlySummary({
       company_code: codes,
       include: ['all'] 
     })
     
-    return response.items
+    // Client-side filter to ensure we ONLY have data for companies currently in the watchlist
+    // (useful if the API returns more than requested or if we're using cached data)
+    return response.items.filter(item => codes.includes(item.company_code))
   },
   {
     watch: [companies],
@@ -56,9 +58,11 @@ watch(availableYears, (years) => {
 const sortedComparison = computed(() => {
   if (!allComparisonData.value || !selectedYear.value) return []
   
-  // Filter by selected year and sort by code
+  const currentCodes = companies.value.map(c => c.code)
+  
+  // Filter by selected year AND current watchlist, then sort by code
   return allComparisonData.value
-    .filter(item => item.year === selectedYear.value)
+    .filter(item => item.year === selectedYear.value && currentCodes.includes(item.company_code))
     .sort((a, b) => a.company_code.localeCompare(b.company_code))
 })
 

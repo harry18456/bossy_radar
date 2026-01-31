@@ -115,6 +115,7 @@
   | t100sb15 | 非擔任主管職務之全時員工薪資資訊 |
   | t100sb13 | 員工福利政策及權益維護措施揭露 |
   | t222sb01 | 基層員工調整薪資或分派酬勞 |
+  | t05st03 | 公司基本資料補充（利害關係人、公司治理連結）|
 
 - **架構**:
   - **主資料庫 (`bossy_radar.db`)**: 儲存與上市櫃、公開發行公司成功比對的薪資/福利資料
@@ -134,6 +135,10 @@
 
   # 同步指定資料類型
   uv run python -m app.cli.main sync-mops --data-type employee_benefit
+
+  # 同步公司詳細連結 (t05st03)
+  # 支援無限重試 (--retries -1)，適合擺著睡覺跑
+  uv run python -m app.cli.main sync-company-details --retries -1 --retry-delay 5
   ```
 
 - **API 端點**:
