@@ -10,6 +10,9 @@ watch(() => route.path, (newPath) => {
   if (newPath === '/' && import.meta.client) {
     // Aggressive cleanup for AdSense "Auto Ads" residues
     const cleanup = () => {
+      // Safety check: Stop if we navigated away from Home
+      if (route.path !== '/') return
+
        // 1. Remove padding/margin from body AND html
       document.body.style.removeProperty('padding-bottom')
       document.body.style.removeProperty('padding-top')
@@ -19,6 +22,7 @@ watch(() => route.path, (newPath) => {
       document.documentElement.style.removeProperty('height') // Reset if modified
 
       // 2. Hide specific AdSense containers that might be "invisible" but taking space
+      // Only target auto-ads, NOT manually placed units (which have specific IDs usually)
       const adContainers = document.querySelectorAll('.google-auto-placed, .adsbygoogle-noablate')
       adContainers.forEach((el) => {
         (el as HTMLElement).style.display = 'none';
@@ -36,7 +40,15 @@ watch(() => route.path, (newPath) => {
 
     // Run immediately and repeatedly for a few seconds to fight race conditions
     cleanup()
-    const interval = setInterval(cleanup, 200)
+    const interval = setInterval(() => {
+      if (route.path !== '/') {
+        clearInterval(interval)
+        return
+      }
+      cleanup()
+    }, 200)
+    
+    // Stop eventually
     setTimeout(() => clearInterval(interval), 2000)
   }
 })
