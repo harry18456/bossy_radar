@@ -5,6 +5,9 @@
 ### 1. 資料擷取 / ETL (CLI)
 
 - **角色**: 負責「準備資料」
+- **資料來源 (Source URLs)**:
+  - [公開資訊觀測站開放資料 (MOPS Open Data)](https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv) - 公司基本資料
+  - [MOL 勞動部開放資料](https://apiservice.mol.gov.tw/OdService/download/A17000000J-030225-QDf) - 勞動違規資料
 - **位置**: `app/cli`
 - **職責**:
   - 擷取外部資料（網頁爬蟲、API 呼叫）
@@ -85,7 +88,23 @@
     - `min_fine` / `max_fine`: 依罰款金額過濾
     - `start_date` / `end_date`: 依處分日期過濾
 
-### 3. MOPS 員工薪資/福利資料
+### 3. 環境違規資料
+
+從環境部開放資料同步違反環保法規記錄。
+
+- **資料來源**: [EMS_P_46 環境部開放資料](https://data.moenv.gov.tw/api/v2/EMS_P_46)
+- **架構**:
+  - **主資料庫 (`bossy_radar.db`)**: 儲存與上市櫃公司成功比對的違規資料
+  - **歸檔資料庫 (`archive.db`)**: 儲存無法比對的資料
+- **CLI 指令**:
+  ```bash
+  # 同步環境違規資料
+  uv run python -m app.cli.main sync-env
+  ```
+- **API**: `GET /api/v1/environmental-violations`
+  - 支援過濾：`min_fine`, `max_fine`, `start_date`, `end_date`, `violation_type`, `authority`
+
+### 4. MOPS 員工薪資/福利資料
 
 從公開資訊觀測站同步上市櫃公司員工薪資與福利資料。
 
@@ -131,7 +150,7 @@
   - `sort`: 多欄位排序（如 `-year`、`company_code`）
   - `company_code`、`year`、`market_type`: 多值過濾
 
-### 4. 公司聚合 API
+### 5. 公司聚合 API
 
 提供公司綜合資料查詢，整合違規、薪資、福利等關聯資料。
 
@@ -147,7 +166,7 @@
   | 不設定 | 只有公司基本資料 + year |
   | `violations` | + 違規統計（當年度/歷年累計） |
   | `employee_benefit` | + 員工福利完整資料 (t100sb14) |
-  | `non_manager_salary` | + 非主管薪資完整資料 (t100sb15) |
+  | `non_manager_salary` | + 非主管全時員工薪資完整資料 (t100sb15) |
   | `welfare_policy` | + 福利政策完整資料 (t100sb13) |
   | `salary_adjustment` | + 調薪完整資料 (t222sb01) |
   | `all` | 包含所有資料 |
@@ -159,7 +178,7 @@
   - `year`、`company_code`、`market_type`、`industry`: 多值過濾
   - `include`: 選擇要回傳的資料（可多選）
 
-### 5. 資料匯出服務 (SSG)
+### 6. 資料匯出服務 (SSG)
 
 將資料庫內容匯出為靜態 JSON 檔案供前端 SSG (Static Site Generation) 使用。
 

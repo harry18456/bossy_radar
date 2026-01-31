@@ -47,19 +47,35 @@ class NonManagerSalaryResponse(BaseModel):
     market_type: str
     industry: Optional[str] = None
     employee_count: Optional[int] = None
+    
+    # 薪資統計
+    total_salary: Optional[int] = None  # 員工薪資總額(仟元)
     avg_salary: Optional[int] = None
     median_salary: Optional[int] = None
+    
+    # 年度比較
     avg_salary_previous_year: Optional[int] = None
     avg_salary_change: Optional[float] = None
     median_salary_previous_year: Optional[int] = None
     median_salary_change: Optional[float] = None
+    
+    # 同業比較
+    industry_avg_salary: Optional[int] = None  # 同產業平均薪資(仟元)
+    industry_median_salary: Optional[int] = None  # 同產業薪資中位數(仟元)
+    
+    # EPS 相關
     eps: Optional[float] = None
     industry_avg_eps: Optional[float] = None
+    
+    # 薪資統計情形 (Y/N flags)
     is_avg_salary_under_500k: Optional[str] = None
     is_better_eps_lower_salary: Optional[str] = None
     is_eps_growth_salary_decrease: Optional[str] = None
+    
+    # 經營績效與薪酬關聯 (質化指標)
     performance_salary_relation_note: Optional[str] = None
     improvement_measures_note: Optional[str] = None
+    
     created_at: datetime
     last_updated: datetime
 

@@ -5,12 +5,11 @@ from datetime import datetime
 from typing import Optional
 
 from app.services.crawler_service import CrawlerService
-from app.services.crawler_service import CrawlerService
 from app.services.company_service import CompanyService
-from app.services.violation_service import ViolationService
 from app.services.violation_service import ViolationService
 from app.services.mops_scraper import MopsScraper
 from app.services.export_service import ExportService
+from app.services.environmental_service import EnvironmentalService
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -210,6 +209,80 @@ def export(
     """
     service = ExportService(output_dir)
     service.export_all()
+
+@app.command()
+def sync_env():
+    """
+    Sync environmental violation data from MOENV Open Data.
+    """
+    service = EnvironmentalService()
+    
+    # Data Dir
+    today_str = datetime.now().strftime("%Y%m%d")
+    data_dir = Path(f"data/raw/environmental/{today_str}")
+    data_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_path = data_dir / "EMS_P_46.json"
+    
+    # 1. Download
+    typer.echo("--- Starting Environmental Data Download ---")
+    if not file_path.exists():
+        success = service.download_data(file_path)
+        if not success:
+            typer.echo("Failed to download environmental data")
+            raise typer.Exit(code=1)
+    else:
+        typer.echo(f"File already exists: {file_path}")
+    
+    # 2. Sync
+    typer.echo("--- Starting Environmental Data Sync ---")
+    service.sync_data(data_dir)
+    typer.echo("Environmental Sync completed.")
+
+@app.command()
+def sync_all(
+    skip_download: bool = typer.Option(False, "--skip-download", help="Skip download step if files exist"),
+):
+    """
+    Run all sync commands in sequence:
+    Companies -> Violations -> Environmental -> MOPS -> Export
+    """
+    import subprocess
+    import sys
+    
+    commands = [
+        ["sync_companies"],
+        ["sync_violations"],
+        ["sync_env"],
+        ["sync_mops"],
+        ["export"],
+    ]
+    
+    for cmd in commands:
+        typer.echo(f"\n{'='*50}")
+        typer.echo(f"Running: {' '.join(cmd)}")
+        typer.echo(f"{'='*50}")
+        
+        # Call the command directly via typer context
+        try:
+            ctx = typer.Context(app)
+            app.invoke(ctx)
+        except Exception:
+            pass
+        
+        # Use subprocess for proper isolation
+        result = subprocess.run(
+            [sys.executable, "-m", "app.cli.main"] + cmd,
+            cwd=Path.cwd()
+        )
+        
+        if result.returncode != 0:
+            typer.echo(f"Command {cmd} failed with code {result.returncode}")
+            raise typer.Exit(code=result.returncode)
+    
+    typer.echo("\n" + "="*50)
+    typer.echo("All sync commands completed successfully!")
+    typer.echo("="*50)
 
 if __name__ == "__main__":
     app()

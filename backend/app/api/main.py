@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.routes import companies, violations, mops, aggregation, system
+from app.api.routes import companies, violations, mops, aggregation, system, environmental_violations
 
 api_router = APIRouter()
 
@@ -8,5 +8,6 @@ api_router = APIRouter()
 api_router.include_router(aggregation.router, prefix="/companies", tags=["aggregation"])
 api_router.include_router(companies.router, prefix="/companies", tags=["companies"])
 api_router.include_router(violations.router, prefix="/violations", tags=["violations"])
+api_router.include_router(environmental_violations.router, prefix="/environmental-violations", tags=["environmental-violations"])
 api_router.include_router(mops.router, prefix="/mops", tags=["mops"])
 api_router.include_router(system.router, prefix="/system", tags=["system"])

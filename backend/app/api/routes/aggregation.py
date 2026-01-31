@@ -20,6 +20,7 @@ from app.models.employee_benefit import EmployeeBenefit
 from app.models.non_manager_salary import NonManagerSalary
 from app.models.welfare_policy import WelfarePolicy
 from app.models.salary_adjustment import SalaryAdjustment
+from app.models.environmental_violation import EnvironmentalViolation
 from app.schemas.aggregation import (
     CompanyProfileResponse,
     YearlySummaryItem,
@@ -89,6 +90,13 @@ def get_company_profile(
         .order_by(SalaryAdjustment.year.desc())
     ).all()
     
+    # 查詢環境違規
+    environmental_violations = session.exec(
+        select(EnvironmentalViolation)
+        .where(EnvironmentalViolation.company_code == company_code)
+        .order_by(EnvironmentalViolation.penalty_date.desc())
+    ).all()
+    
     return CompanyProfileResponse(
         company=company,
         violations=violations,
@@ -96,6 +104,7 @@ def get_company_profile(
         non_manager_salaries=non_manager_salaries,
         welfare_policies=welfare_policies,
         salary_adjustments=salary_adjustments,
+        environmental_violations=environmental_violations,
     )
 
 

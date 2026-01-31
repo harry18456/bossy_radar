@@ -1,5 +1,6 @@
 import json
 import logging
+import shutil
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -13,6 +14,7 @@ from app.models.employee_benefit import EmployeeBenefit
 from app.models.non_manager_salary import NonManagerSalary
 from app.models.welfare_policy import WelfarePolicy
 from app.models.salary_adjustment import SalaryAdjustment
+from app.models.environmental_violation import EnvironmentalViolation
 
 from app.schemas.company import CompanyCatalogItem, CompanyResponse
 from app.schemas.aggregation import (
@@ -27,6 +29,8 @@ from app.schemas.mops import (
     WelfarePolicyResponse,
     SalaryAdjustmentResponse,
 )
+
+from app.schemas.environmental_violation import EnvironmentalViolationPublic
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +58,19 @@ class ExportService:
                 
             json.dump(json_data, f, ensure_ascii=False, indent=2)
 
+    def _clean_output_dir(self):
+        """Clean the output directory before exporting"""
+        if self.output_dir.exists():
+            logger.info(f"Cleaning output directory: {self.output_dir}")
+            shutil.rmtree(self.output_dir)
+        
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        self.companies_dir.mkdir(exist_ok=True)
+
     def export_all(self):
+        # Clean directory first
+        self._clean_output_dir()
+        
         with Session(engine) as session:
             logger.info("Starting Full Export...")
             self.export_company_catalog(session)
@@ -129,6 +145,12 @@ class ExportService:
             .order_by(SalaryAdjustment.year.desc())
         ).all()
         
+        environmental_violations = session.exec(
+            select(EnvironmentalViolation)
+            .where(EnvironmentalViolation.company_code == company_code)
+            .order_by(EnvironmentalViolation.penalty_date.desc())
+        ).all()
+        
         return CompanyProfileResponse(
             company=CompanyResponse.model_validate(company),
             violations=violations,
@@ -136,12 +158,17 @@ class ExportService:
             non_manager_salaries=[NonManagerSalaryResponse.model_validate(x) for x in non_manager_salaries],
             welfare_policies=[WelfarePolicyResponse.model_validate(x) for x in welfare_policies],
             salary_adjustments=[SalaryAdjustmentResponse.model_validate(x) for x in salary_adjustments],
+            environmental_violations=[EnvironmentalViolationPublic.model_validate(x) for x in environmental_violations],
         )
 
     def export_yearly_summaries(self, session: Session):
         logger.info("Exporting Yearly Summaries...")
         # Adapted from app/api/routes/aggregation.py get_yearly_summary
         # But we want ALL data, so no pagination filters
+        
+        # Create yearly-summaries directory
+        yearly_summaries_dir = self.output_dir / "yearly-summaries"
+        yearly_summaries_dir.mkdir(exist_ok=True)
         
         # Step 1: Get all years
         years_query = select(EmployeeBenefit.year).distinct()
@@ -183,6 +210,35 @@ class ExportService:
             key = (row[0], int(row[1]) - 1911 if row[1] else None)
             violations_by_year[key] = {"count": row[2], "fine": row[3] or 0}
 
+        # Environmental Violations (Total & Yearly)
+        env_violations_total = {}
+        env_violations_total_query = session.exec(
+            select(
+                EnvironmentalViolation.company_code,
+                func.count(EnvironmentalViolation.id).label("count"),
+                func.sum(EnvironmentalViolation.fine_amount).label("fine")
+            )
+            .where(col(EnvironmentalViolation.company_code).in_(company_codes))
+            .group_by(EnvironmentalViolation.company_code)
+        ).all()
+        for row in env_violations_total_query:
+            env_violations_total[row[0]] = {"count": row[1], "fine": row[2] or 0}
+            
+        env_violations_by_year = {}
+        env_violations_year_query = session.exec(
+            select(
+                EnvironmentalViolation.company_code,
+                extract('year', EnvironmentalViolation.penalty_date).label("year"),
+                func.count(EnvironmentalViolation.id).label("count"),
+                func.sum(EnvironmentalViolation.fine_amount).label("fine")
+            )
+            .where(col(EnvironmentalViolation.company_code).in_(company_codes))
+            .group_by(EnvironmentalViolation.company_code, extract('year', EnvironmentalViolation.penalty_date))
+        ).all()
+        for row in env_violations_year_query:
+            key = (row[0], int(row[1]) - 1911 if row[1] else None)
+            env_violations_by_year[key] = {"count": row[2], "fine": row[3] or 0}
+
         # MOPS Data Maps
         def fetch_map(model):
             result_map = {}
@@ -196,9 +252,12 @@ class ExportService:
         policies_map = fetch_map(WelfarePolicy)
         adjustments_map = fetch_map(SalaryAdjustment)
 
-        # Step 5: Assemble
-        items = []
+        # Step 5: Assemble items by year
+        items_by_year: Dict[int, List[YearlySummaryItem]] = {}
+        total_count = 0
+        
         for y in available_years:
+            items_by_year[y] = []
             for code in company_codes:
                 company = company_map.get(code)
                 if not company: continue
@@ -227,16 +286,41 @@ class ExportService:
                 item.violations_year_fine = vio_year["fine"]
                 item.violations_total_count = vio_total["count"]
                 item.violations_total_fine = vio_total["fine"]
+                
+                # Env Violations
+                env_year = env_violations_by_year.get((code, y), {"count": 0, "fine": 0})
+                env_total = env_violations_total.get(code, {"count": 0, "fine": 0})
+                item.env_violations_year_count = env_year["count"]
+                item.env_violations_year_fine = env_year["fine"]
+                item.env_violations_total_count = env_total["count"]
+                item.env_violations_total_fine = env_total["fine"]
 
                 if benefit: item.employee_benefit = EmployeeBenefitResponse.model_validate(benefit)
                 if salary: item.non_manager_salary = NonManagerSalaryResponse.model_validate(salary)
                 if policy: item.welfare_policy = WelfarePolicyResponse.model_validate(policy)
                 if adjustment: item.salary_adjustment = SalaryAdjustmentResponse.model_validate(adjustment)
 
-                items.append(item)
+                items_by_year[y].append(item)
+                total_count += 1
 
-        self._save_json(self.output_dir / "yearly-summaries.json", items)
-        logger.info(f"Exported {len(items)} yearly summary items.")
+        # Step 6: Save per-year files
+        year_stats = []
+        for year, items in items_by_year.items():
+            if items:  # Only save if there are items
+                self._save_json(yearly_summaries_dir / f"{year}.json", items)
+                year_stats.append({"year": year, "count": len(items)})
+                logger.info(f"Exported {len(items)} items for year {year}")
+
+        # Step 7: Save index.json with metadata
+        index_data = {
+            "years": available_years,
+            "year_stats": year_stats,
+            "total_count": total_count,
+            "generated_at": datetime.now().isoformat()
+        }
+        self._save_json(yearly_summaries_dir / "index.json", index_data)
+        
+        logger.info(f"Exported {total_count} yearly summary items across {len(available_years)} years.")
 
     def export_system_status(self, session: Session):
         logger.info("Exporting System Status...")
@@ -261,6 +345,14 @@ class ExportService:
         status_response.violations["all"] = SyncStatusItem(
             last_updated=last_violation.last_updated if last_violation else None,
             count=violation_count
+        )
+        
+        # Check environmental violations
+        last_env = session.exec(select(EnvironmentalViolation).order_by(EnvironmentalViolation.last_updated.desc())).first()
+        env_count = session.exec(select(func.count(EnvironmentalViolation.id))).one()
+        status_response.environmental_violations["all"] = SyncStatusItem(
+            last_updated=last_env.last_updated if last_env else None,
+            count=env_count
         )
 
         # Check MOPS

@@ -421,7 +421,10 @@ class MopsScraper:
                         "improvement_measures_note": self._clean_text(cells[18]),
                     })
                 elif num_cells >= 16:
-                    # V2 (110-112)
+                    # V2 (108-112): 16 columns
+                    # 0-Industry, 1-Code, 2-Name, 3-Total, 4-Count, 5-AvgSal, 6-AvgSalPrev
+                    # 7-Median, 8-MedianPrev, 9-EPS, 10-IndAvgSal, 11-IndAvgEPS
+                    # 12-IsUnder500k, 13-IsBetterEpsLower, 14-IsEpsGrowthDecrease, 15-Note
                     record.update({
                         "avg_salary_previous_year": self._parse_number(cells[6]),
                         "median_salary": self._parse_number(cells[7]),
@@ -432,10 +435,11 @@ class MopsScraper:
                         "is_avg_salary_under_500k": self._clean_text(cells[12]),
                         "is_better_eps_lower_salary": self._clean_text(cells[13]),
                         "is_eps_growth_salary_decrease": self._clean_text(cells[14]),
-                        # Note column is at 15 but often empty or combined
+                        "performance_salary_relation_note": self._clean_text(cells[15]) if num_cells > 15 else None,
                     })
                 elif num_cells >= 13:
-                    # V1 (107-109)
+                    # V1 (107): 13 columns
+                    # ... 9-IsUnder500k, 10-IsBetterEpsLower, 11-IsEpsGrowthDecrease, 12-Note
                     record.update({
                         "eps": self._parse_float(cells[6]),
                         "industry_avg_salary": self._parse_number(cells[7]),
@@ -443,6 +447,7 @@ class MopsScraper:
                         "is_avg_salary_under_500k": self._clean_text(cells[9]),
                         "is_better_eps_lower_salary": self._clean_text(cells[10]),
                         "is_eps_growth_salary_decrease": self._clean_text(cells[11]),
+                        "performance_salary_relation_note": self._clean_text(cells[12]) if num_cells > 12 else None,
                     })
                 else:
                     logger.warning(f"Skipping row with unexpected column count {num_cells}: {self._clean_text(cells[1])}")

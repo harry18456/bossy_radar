@@ -13,7 +13,7 @@ class Company(SQLModel, table=True):
     industry: Optional[str] = Field(default=None, description="產業別")
     
     # 聯絡/官方資料
-    tax_id: Optional[str] = Field(default=None, description="營利事業統一編號")
+    tax_id: Optional[str] = Field(default=None, index=True, description="營利事業統一編號")
     chairman: Optional[str] = Field(default=None, description="董事長")
     manager: Optional[str] = Field(default=None, description="總經理")
     

@@ -3,7 +3,7 @@
 """
 from datetime import datetime
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.schemas.company import CompanyResponse
 from app.schemas.violation import ViolationPublic
@@ -13,6 +13,7 @@ from app.schemas.mops import (
     WelfarePolicyResponse,
     SalaryAdjustmentResponse,
 )
+from app.schemas.environmental_violation import EnvironmentalViolationPublic
 
 
 # ========== Company Profile ==========
@@ -24,6 +25,7 @@ class CompanyProfileResponse(BaseModel):
     non_manager_salaries: List[NonManagerSalaryResponse]
     welfare_policies: List[WelfarePolicyResponse]
     salary_adjustments: List[SalaryAdjustmentResponse]
+    environmental_violations: List[EnvironmentalViolationPublic] = Field(description="環境違規紀錄")
 
 
 # ========== Yearly Summary ==========
@@ -41,6 +43,12 @@ class YearlySummaryItem(BaseModel):
     violations_year_fine: Optional[int] = None
     violations_total_count: Optional[int] = None
     violations_total_fine: Optional[int] = None
+    
+    # 環境違規統計
+    env_violations_year_count: Optional[int] = None
+    env_violations_year_fine: Optional[int] = None
+    env_violations_total_count: Optional[int] = None
+    env_violations_total_fine: Optional[int] = None
     
     # 完整 MOPS 物件（根據 include 參數回傳）
     employee_benefit: Optional[EmployeeBenefitResponse] = None

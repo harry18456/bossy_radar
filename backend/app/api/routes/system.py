@@ -3,6 +3,7 @@ from sqlmodel import select, func
 from app.api.deps import SessionDep
 from app.models.company import Company
 from app.models.violation import Violation
+from app.models.environmental_violation import EnvironmentalViolation
 from app.models.employee_benefit import EmployeeBenefit
 from app.models.non_manager_salary import NonManagerSalary
 from app.models.welfare_policy import WelfarePolicy
@@ -68,8 +69,23 @@ def get_sync_status(session: SessionDep):
     if adjustment_data:
         mops_status["Adjustment"] = SyncStatusItem(last_updated=adjustment_data[0], count=adjustment_data[1])
 
+    # Environmental Violation Sync Status
+    env_status = {}
+    env_query = session.exec(
+        select(
+            EnvironmentalViolation.violation_type,
+            func.max(EnvironmentalViolation.last_updated).label("last_updated"),
+            func.count(EnvironmentalViolation.id).label("count")
+        ).group_by(EnvironmentalViolation.violation_type)
+    ).all()
+    for row in env_query:
+        # violation_type might be None, handle gracefully
+        key = row[0] or "Unknown"
+        env_status[key] = SyncStatusItem(last_updated=row[1], count=row[2])
+
     return SyncStatusResponse(
         companies=companies_status,
         violations=violations_status,
+        environmental_violations=env_status,
         mops=mops_status
     )
