@@ -8,7 +8,9 @@ from app.services.crawler_service import CrawlerService
 from app.services.crawler_service import CrawlerService
 from app.services.company_service import CompanyService
 from app.services.violation_service import ViolationService
+from app.services.violation_service import ViolationService
 from app.services.mops_scraper import MopsScraper
+from app.services.export_service import ExportService
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -198,6 +200,16 @@ def sync_mops(
         scraper.sync_all(start_year=start_year, end_year=end_year)
     
     typer.echo("MOPS Sync completed.")
+
+@app.command()
+def export(
+    output_dir: Path = typer.Option("frontend/public/data", "--output-dir", help="Output directory for generated JSON files"),
+):
+    """
+    Export all data to static JSON files for SSG.
+    """
+    service = ExportService(output_dir)
+    service.export_all()
 
 if __name__ == "__main__":
     app()

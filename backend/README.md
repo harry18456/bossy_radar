@@ -159,6 +159,21 @@
   - `year`、`company_code`、`market_type`、`industry`: 多值過濾
   - `include`: 選擇要回傳的資料（可多選）
 
+### 5. 資料匯出服務 (SSG)
+
+將資料庫內容匯出為靜態 JSON 檔案供前端 SSG (Static Site Generation) 使用。
+
+- **CLI 指令**:
+  ```bash
+  # 匯出所有資料至指定目錄 (預設: frontend/public/data)
+  uv run python -m app.cli.main export --output-dir frontend/public/data
+  ```
+- **產出檔案**:
+  - `company-catalog.json`: 公司目錄
+  - `yearly-summaries.json`: 年度摘要總表
+  - `system-status.json`: 系統更新狀態
+  - `companies/{code}.json`: 各公司詳細資料
+
 ## 本地開發
 
 ### 前置需求
