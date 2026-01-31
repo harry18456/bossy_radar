@@ -19,6 +19,12 @@ export const useStaticApi = () => {
   // Helper for fetching JSON
   const fetchJson = async <T>(path: string): Promise<T> => {
     try {
+      // In SSR, relative paths might fail to hit standard public assets in some envs.
+      // Force absolute URL using current request origin.
+      if (import.meta.server) {
+        const { origin } = useRequestURL()
+        return await $fetch<T>(`/data/${path}`, { baseURL: origin })
+      }
       return await $fetch<T>(`/data/${path}`)
     } catch (e) {
       console.error(`Failed to fetch static data: ${path}`, e)
@@ -51,22 +57,56 @@ export const useStaticApi = () => {
     getCompanies: async (params?: any) => {
       let items = await fetchJson<CompanyCatalog[]>('company-catalog.json')
       
+      
+      
       // Filter Logic
-      if (params?.keyword) {
-        const k = params.keyword.toLowerCase()
+      // Check for 'name' (used by companies page) or 'keyword' (fallback)
+      const search = params?.name || params?.keyword
+      if (search) {
+        const k = search.toLowerCase()
         items = items.filter(c => 
           c.name.toLowerCase().includes(k) || 
           c.code.includes(k)
         )
       }
       
+      // Handle Industry Filter (Array or String)
       if (params?.industry) {
-        items = items.filter(c => c.industry === params.industry)
+        const industries = Array.isArray(params.industry) ? params.industry : [params.industry]
+        // Filter out empty strings
+        const validIndustries = industries.filter(i => i !== '')
+        
+        if (validIndustries.length > 0) {
+           items = items.filter(c => validIndustries.includes(c.industry))
+        }
       }
       
+      // Handle Market Type Filter (Array or String)
       if (params?.market_type) {
-        items = items.filter(c => c.market_type === params.market_type)
+        const markets = Array.isArray(params.market_type) ? params.market_type : [params.market_type]
+        const validMarkets = markets.filter(m => m !== '')
+        
+        if (validMarkets.length > 0) {
+          // Mapping frontend values to possible backend values
+          // Listed -> listed, sii
+          // OTC -> otc
+          // Emerging -> rotc
+          // Public -> pub, public
+          const marketMapping: Record<string, string[]> = {
+            'Listed': ['Listed', 'sii', 'SII'],
+            'OTC': ['OTC', 'otc', 'OTC'],
+            'Emerging': ['Emerging', 'rotc', 'ROTC'],
+            'Public': ['Public', 'pub', 'PUB']
+          }
+
+          const targetValues = validMarkets.flatMap(m => marketMapping[m] || [m])
+          
+          console.log('Filtering by markets (mapped):', targetValues)
+          items = items.filter(c => targetValues.includes(c.market_type))
+        }
       }
+      
+      console.log('Filtered items:', items.length)
 
       // Convert Catalog to basic Company objects (missing fields will be undefined, but acceptable for list view)
       // Ideally catalog should match Company lists, or we map it. 
