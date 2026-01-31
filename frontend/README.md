@@ -85,3 +85,37 @@ frontend/
 ├── utils/               # 工具函式 (formatCurrency, formatDate)
 └── nuxt.config.ts       # Nuxt 設定
 ```
+
+---
+
+## 📦 部署 (Deployment)
+
+本專案目前採用 **Static Site Generation (SSG)** 模式部署至 Vercel。
+因資料庫龐大且未上雲端，目前建議使用 **Local Build** 方式部署。
+
+### 部署步驟 (Vercel)
+
+1.  **確認環境變數 (.env)**
+    確保本地 `.env` 包含正式環境需要的設定 (因為打包時會將變數寫入)：
+
+    ```properties
+    NUXT_PUBLIC_API_BASE=http://localhost:8000
+    NUXT_PUBLIC_DATA_MODE=static
+    NUXT_PUBLIC_GA4_ID=G-XXXXXXXXXX
+    NUXT_PUBLIC_GOOGLE_ADSENSE_ID=ca-pub-XXXXXXXX
+    ```
+
+2.  **打包靜態網頁**
+    此指令會生成 `.output/public` 資料夾，內含 HTML/JS 與 `public/data` 所有資料。
+
+    ```bash
+    npm run generate
+    ```
+
+3.  **推送到 Vercel**
+    使用 Vercel CLI 將打包好的資料夾推上去 (無需在 Vercel 雲端 Build)。
+    ```bash
+    npx vercel deploy .output/public --prod
+    ```
+
+> **注意**：每次更新資料或程式碼時，都需重複步驟 2 與 3。
