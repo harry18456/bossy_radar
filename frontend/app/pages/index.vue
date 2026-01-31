@@ -10,15 +10,14 @@ usePageMeta({
 </script>
 
 <template>
-  <div class="flex flex-col items-center justify-center min-h-[60vh] text-center">
+  <div class="relative z-10 flex flex-col items-center justify-center min-h-[60vh] text-center">
     <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
 
       慣老闆雷達 <span class="text-2xl text-gray-500 font-normal">(Bossy Radar)</span>
     </h1>
     <p class="text-xl text-gray-500 dark:text-slate-400 mb-8 max-w-2xl">
       透明化職場資訊，避開慣老闆。<br>
-      首頁與各項分析、免責聲明等網頁規劃中，請先前往公司列表搜尋。<br>
-      <span class="text-sm text-red-400 mt-2 block">(目前數據仍有可能有錯誤，持續修復中)</span>
+      首頁與各項分析等網頁規劃中，請先前往公司列表搜尋。<br>
     </p>
     
     <div class="flex gap-4">

@@ -3,9 +3,11 @@ import { Toaster } from 'vue-sonner'
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-slate-50 transition-colors duration-300">
+  <div class="min-h-screen flex flex-col bg-gray-50 dark:bg-slate-950 text-gray-900 dark:text-slate-50 transition-colors duration-300 relative">
+    <HomeBackground />
+    <div class="relative z-10 flex flex-col min-h-screen">
     <!-- Header -->
-    <header class="border-b border-gray-200 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md sticky top-0 z-50">
+    <header class="border-b border-gray-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md sticky top-0 z-50">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
         <div class="flex items-center space-x-3">
           <NuxtLink to="/" class="text-xl font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent">
@@ -42,5 +44,6 @@ import { Toaster } from 'vue-sonner'
     <CommonAppFooter />
     
     <Toaster position="top-right" richColors />
+    </div>
   </div>
 </template>

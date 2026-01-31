@@ -60,20 +60,21 @@ export const useCompanyFilters = () => {
     filters,
     (newFilters) => {
       // Clean up empty/default values to keep URL clean
+      // Construct query from filters only (to ensure we are source of truth)
+      // Preserving other query params might be needed later, but for now let's ensure filters work.
       const query: Record<string, any> = {
-        ...route.query,
         page: newFilters.page > 1 ? newFilters.page : undefined,
         size: newFilters.size !== 20 ? newFilters.size : undefined,
         sort: newFilters.sort,
         name: newFilters.name || undefined,
-        industry: newFilters.industry.length > 0 ? newFilters.industry : undefined,
-        market_type: newFilters.market_type.length > 0 ? newFilters.market_type : undefined,
+        industry: newFilters.industry.length > 0 ? [...newFilters.industry] : undefined,
+        market_type: newFilters.market_type.length > 0 ? [...newFilters.market_type] : undefined,
       }
 
       // Remove undefined keys
       Object.keys(query).forEach(key => query[key] === undefined && delete query[key])
-
-      router.push({ query })
+      
+      router.replace({ query })
     },
     { deep: true }
   )
@@ -81,12 +82,27 @@ export const useCompanyFilters = () => {
   watch(
     () => route.query,
     (newQuery) => {
-      filters.page = Number(newQuery.page) || 1
-      filters.size = Number(newQuery.size) || 20
-      filters.sort = (newQuery.sort as string) || undefined
-      filters.name = (newQuery.name as string) || undefined
-      filters.industry = parseArray(newQuery.industry as string | string[])
-      filters.market_type = parseArray(newQuery.market_type as string | string[])
+      const newPage = Number(newQuery.page) || 1
+      if (filters.page !== newPage) filters.page = newPage
+
+      const newSize = Number(newQuery.size) || 20
+      if (filters.size !== newSize) filters.size = newSize
+
+      const newSort = (newQuery.sort as string) || undefined
+      if (filters.sort !== newSort) filters.sort = newSort
+
+      const newName = (newQuery.name as string) || undefined
+      if (filters.name !== newName) filters.name = newName
+
+      const newIndustry = parseArray(newQuery.industry as string | string[])
+      if (JSON.stringify(newIndustry) !== JSON.stringify(filters.industry)) {
+        filters.industry = newIndustry
+      }
+
+      const newMarketType = parseArray(newQuery.market_type as string | string[])
+      if (JSON.stringify(newMarketType) !== JSON.stringify(filters.market_type)) {
+        filters.market_type = newMarketType
+      }
     }
   )
 

@@ -30,9 +30,7 @@ const formatDate = (dateStr: string | null) => {
   })
 }
 
-const formatNumber = (num: number) => {
-  return new Intl.NumberFormat().format(num)
-}
+
 
 const aggregatedStatus = computed(() => {
   if (!status.value) return null
@@ -58,7 +56,7 @@ const aggregatedStatus = computed(() => {
 </script>
 
 <template>
-  <footer class="mt-auto border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 transition-colors py-6">
+  <footer class="mt-auto border-t border-gray-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md transition-colors py-6">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
         <!-- Brand and About -->
@@ -77,31 +75,31 @@ const aggregatedStatus = computed(() => {
         <div class="bg-gray-50 dark:bg-slate-800/50 rounded-xl p-3 border border-gray-100 dark:border-slate-700/50">
           <div v-if="aggregatedStatus" class="grid grid-cols-3 gap-2">
             <div class="space-y-0.5">
-              <span class="block text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-widest">公司</span>
-              <span class="block text-sm font-mono font-bold text-gray-700 dark:text-slate-200 leading-tight">
-                {{ formatNumber(aggregatedStatus.companies.count) }}
+              <span class="block text-xs text-gray-500 dark:text-slate-400 uppercase tracking-widest font-medium">公司</span>
+              <span class="block text-sm font-mono font-bold text-blue-600 dark:text-cyan-400 leading-tight">
+                <CommonAnimatedNumber :value="aggregatedStatus.companies.count" />
               </span>
-              <span class="block text-[8px] text-gray-400 dark:text-slate-600 truncate">
+              <span class="block text-[10px] text-gray-500 dark:text-slate-500 truncate">
                 {{ formatDate(aggregatedStatus.companies.last_updated) }}
               </span>
             </div>
             
-            <div class="space-y-0.5 border-x border-gray-200 dark:border-slate-700 px-3">
-              <span class="block text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-widest">違規</span>
-              <span class="block text-sm font-mono font-bold text-gray-700 dark:text-slate-200 leading-tight">
-                {{ formatNumber(aggregatedStatus.violations.count) }}
+            <div class="space-y-0.5 border-x border-gray-300 dark:border-slate-700 px-3">
+              <span class="block text-xs text-gray-500 dark:text-slate-400 uppercase tracking-widest font-medium">違規</span>
+              <span class="block text-sm font-mono font-bold text-blue-600 dark:text-cyan-400 leading-tight">
+                <CommonAnimatedNumber :value="aggregatedStatus.violations.count" />
               </span>
-              <span class="block text-[8px] text-gray-400 dark:text-slate-600 truncate">
+              <span class="block text-[10px] text-gray-500 dark:text-slate-500 truncate">
                 {{ formatDate(aggregatedStatus.violations.last_updated) }}
               </span>
             </div>
 
             <div class="space-y-0.5">
-              <span class="block text-[10px] text-gray-400 dark:text-slate-500 uppercase tracking-widest">財報</span>
-              <span class="block text-sm font-mono font-bold text-gray-700 dark:text-slate-200 leading-tight">
-                {{ formatNumber(aggregatedStatus.mops.count) }}
+              <span class="block text-xs text-gray-500 dark:text-slate-400 uppercase tracking-widest font-medium">財報</span>
+              <span class="block text-sm font-mono font-bold text-blue-600 dark:text-cyan-400 leading-tight">
+                <CommonAnimatedNumber :value="aggregatedStatus.mops.count" />
               </span>
-              <span class="block text-[8px] text-gray-400 dark:text-slate-600 truncate">
+              <span class="block text-[10px] text-gray-500 dark:text-slate-500 truncate">
                 {{ formatDate(aggregatedStatus.mops.last_updated) }}
               </span>
             </div>
@@ -114,13 +112,24 @@ const aggregatedStatus = computed(() => {
       </div>
 
       <div class="mt-4 pt-4 border-t border-gray-100 dark:border-slate-800 flex justify-between items-center gap-4">
-        <p class="text-[10px] text-gray-400 dark:text-slate-600">
-          © 2026 Bossy Radar Project.
+        <p class="text-xs text-gray-500 dark:text-slate-400 flex items-center gap-3">
+          <span>© 2026 Bossy Radar Project.</span>
+          <NuxtLink to="/privacy" class="hover:text-gray-900 dark:hover:text-white transition-colors">
+            隱私權政策
+          </NuxtLink>
+          <span class="text-gray-300 dark:text-gray-600">|</span>
+          <NuxtLink to="/data-sources" class="hover:text-gray-900 dark:hover:text-white transition-colors">
+            資料來源與說明
+          </NuxtLink>
         </p>
-        <div class="flex items-center space-x-3 text-[10px] text-gray-300 dark:text-slate-700">
+        <div class="flex items-center space-x-3 text-xs text-gray-500 dark:text-slate-400">
           <span>v{{ config.public.appVersion }} ({{ config.public.dataMode }})</span>
-          <span class="border-l border-gray-200 dark:border-slate-800 h-3"></span>
-          <a href="https://github.com/harry18456/bossy_radar" target="_blank" class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
+          <span class="border-l border-gray-300 dark:border-slate-700 h-3"></span>
+          <a href="https://buymeacoffee.com/harry18456" target="_blank" class="text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors" title="請我喝杯咖啡">
+            <Icon name="simple-icons:buymeacoffee" class="w-3.5 h-3.5" />
+          </a>
+          <span class="border-l border-gray-300 dark:border-slate-700 h-3"></span>
+          <a href="https://github.com/harry18456/bossy_radar" target="_blank" class="text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white transition-colors">
             <Icon name="brandico:github" class="w-3.5 h-3.5" />
           </a>
         </div>
