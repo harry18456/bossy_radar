@@ -32,16 +32,14 @@ onMounted(() => {
       // Ensure element exists and hasn't been pushed yet
       if (adElement.value && !adElement.value.getAttribute('data-adsbygoogle-status')) {
         try {
-          // Check parent width (basic check for visibility/layout readiness)
-          const parentWidth = adElement.value.parentElement?.offsetWidth ?? 0
-          
-          if (parentWidth === 0) {
+          // Check visibility (offsetParent is null if display:none) and width
+          if (adElement.value.offsetParent === null || adElement.value.offsetWidth === 0) {
+            console.warn(`[AdSense] Ad container hidden or 0 width (Attempt ${retryCount + 1}/${maxRetries}). Retrying...`)
             if (retryCount < maxRetries) {
               retryCount++
               setTimeout(pushAd, 500)
               return
             }
-            // Give up after retries
             return
           }
 
