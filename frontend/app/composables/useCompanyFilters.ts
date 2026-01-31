@@ -103,7 +103,8 @@ export const useCompanyFilters = () => {
       if (JSON.stringify(newMarketType) !== JSON.stringify(filters.market_type)) {
         filters.market_type = newMarketType
       }
-    }
+    },
+    { immediate: true }
   )
 
   const resetFilters = () => {

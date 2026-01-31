@@ -29,8 +29,9 @@ const queryParams = computed(() => ({
 }))
 
 // Use useAsyncData with specific watcher on the computed params
+// Key includes stringified params to ensure unique caching/hydration and force update
 const { data, status, error, refresh } = await useAsyncData(
-  'companies-list',
+  () => `companies-list-${JSON.stringify(queryParams.value)}`,
   () => api.getCompanies(queryParams.value),
   {
     watch: [queryParams],
