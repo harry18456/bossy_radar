@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { Toaster } from 'vue-sonner'
+
+// Home Layout: Pure layout without any AdSense logic or placeholders.
+// This ensures separate logic from content pages.
 </script>
 
 <template>
@@ -30,13 +33,9 @@ import { Toaster } from 'vue-sonner'
     </header>
 
     <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
-      <!-- Top Ad (Always show on Default/Inner Layout) -->
-      <CommonAdSenseUnit slotKey="top" adFormat="horizontal" class="mb-8" />
-      
+      <!-- No Ads here -->
       <slot />
-
-      <!-- Bottom Ad (Always show on Default/Inner Layout) -->
-      <CommonAdSenseUnit slotKey="bottom" adFormat="horizontal" class="mt-8" />
+      <!-- No Ads here -->
     </main>
 
     <CommonAppFooter />

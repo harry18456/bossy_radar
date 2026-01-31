@@ -1,4 +1,8 @@
 <script setup lang="ts">
+definePageMeta({
+  layout: 'home'
+})
+
 usePageMeta({
   title: 'Bossy Radar',
   description: '台灣上市櫃公司薪資福利與違規紀錄查詢'
