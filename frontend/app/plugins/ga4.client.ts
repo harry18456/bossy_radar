@@ -7,12 +7,6 @@ export default defineNuxtPlugin((nuxtApp) => {
     return
   }
 
-  // Disable in development
-  if (import.meta.dev) {
-    console.log('[GA4] Disabled in development mode')
-    return
-  }
-
   // Helper to append script
   const addScript = (src: string) => {
     const script = document.createElement('script')
@@ -21,15 +15,28 @@ export default defineNuxtPlugin((nuxtApp) => {
     document.head.appendChild(script)
   }
 
-  // Load gtag.js
-  addScript(`https://www.googletagmanager.com/gtag/js?id=${gaId}`)
-
   // Initialize dataLayer
   const w = window as any
   w.dataLayer = w.dataLayer || []
-  function gtag(...args: any[]) {
-    w.dataLayer.push(args)
+
+  // Define gtag function (Real vs Mock)
+  let gtag: (...args: any[]) => void
+
+  if (import.meta.dev) {
+    // Mock mode for Development
+    console.log('[GA4] running in Dev Mode (events will be logged to console)')
+    gtag = (...args: any[]) => {
+      console.log('[GA4 Event]:', ...args)
+    }
+  } else {
+    // Real mode for Production
+    addScript(`https://www.googletagmanager.com/gtag/js?id=${gaId}`)
+    gtag = (...args: any[]) => {
+      w.dataLayer.push(args)
+    }
   }
+
+  // Initialize
   gtag('js', new Date())
   gtag('config', gaId)
 
