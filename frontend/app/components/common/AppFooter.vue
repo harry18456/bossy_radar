@@ -2,6 +2,7 @@
 import type { SystemSyncStatus } from '~/types/api'
 
 const api = useApi()
+const config = useRuntimeConfig()
 const status = ref<SystemSyncStatus | null>(null)
 const isLoading = ref(true)
 
@@ -116,7 +117,9 @@ const aggregatedStatus = computed(() => {
         <p class="text-[10px] text-gray-400 dark:text-slate-600">
           © 2026 Bossy Radar Project.
         </p>
-        <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-3 text-[10px] text-gray-300 dark:text-slate-700">
+          <span>v{{ config.public.appVersion }} ({{ config.public.dataMode }})</span>
+          <span class="border-l border-gray-200 dark:border-slate-800 h-3"></span>
           <a href="https://github.com/harry18456/bossy_radar" target="_blank" class="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors">
             <Icon name="brandico:github" class="w-3.5 h-3.5" />
           </a>
