@@ -21,10 +21,24 @@ export const useStaticApi = () => {
     try {
       // In SSR, relative paths might fail to hit standard public assets in some envs.
       // Force absolute URL using current request origin.
-      // In SSR (but not Prerender), relative paths might fail.
-      // During Prerender (npm run generate), standard fetch should work via Nitro-served assets or FS.
-      // Force absolute URL only when running as server (e.g. node entry) but not pre-rendering.
-      if (import.meta.server && !import.meta.prerender) {
+      // Strategy:
+      // 1. Prerender (npm run generate): Read from FS directly to avoid 404s.
+      // 2. SSR (node server): Use absolute URL.
+      // 3. Client: Use relative URL.
+      
+      if (import.meta.prerender) {
+        try {
+          const fs = await import('node:fs/promises')
+          const { resolve } = await import('node:path')
+          const filePath = resolve(process.cwd(), 'public', 'data', path)
+          const content = await fs.readFile(filePath, 'utf-8')
+          return JSON.parse(content)
+        } catch (err) {
+          console.warn(`[StaticApi] FS read failed for ${path}, falling back to fetch.`, err)
+        }
+      }
+
+      if (import.meta.server) {
         const { origin } = useRequestURL()
         return await $fetch<T>(`/data/${path}`, { baseURL: origin })
       }

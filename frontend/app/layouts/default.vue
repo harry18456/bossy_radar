@@ -2,6 +2,24 @@
 import { Toaster } from 'vue-sonner'
 
 const route = useRoute()
+
+// Fix: AdSense Auto Ads (Anchor) assigns padding to body. 
+// When causing SPA navigation to Home (no ads), this padding remains, leaving blank space.
+// We force remove it when entering Home.
+watch(() => route.path, (newPath) => {
+  if (newPath === '/' && import.meta.client) {
+    // Small delay to ensure AdSense script doesn't re-apply it immediately if it was racing
+    setTimeout(() => {
+      document.body.style.removeProperty('padding-bottom')
+      document.body.style.removeProperty('padding-top')
+      // Optional: Hide any auto-placed ads container if standard logic doesn't catch them
+      const autoAds = document.getElementsByClassName('google-auto-placed')
+      for (const ad of autoAds) {
+        (ad as HTMLElement).style.display = 'none'
+      }
+    }, 100)
+  }
+})
 </script>
 
 

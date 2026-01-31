@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.4.4",
+  "version": "0.4.7",
   "type": "module",
   "private": true,
   "scripts": {
@@ -30,6 +30,7 @@
   },
   "devDependencies": {
     "@iconify-json/heroicons": "^1.2.3",
-    "@iconify-json/lucide": "^1.2.87"
+    "@iconify-json/lucide": "^1.2.87",
+    "@types/node": "^25.1.0"
   }
 }

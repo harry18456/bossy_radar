@@ -50,4 +50,9 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
   },
+  nitro: {
+    prerender: {
+      failOnError: false
+    }
+  }
 });
