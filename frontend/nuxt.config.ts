@@ -19,6 +19,7 @@ export default defineNuxtConfig({
           bottom: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_SLOT_BOTTOM || ''
         }
       },
+      googleAnalyticsId: process.env.NUXT_PUBLIC_GA4_ID || '',
     },
   },
   app: {

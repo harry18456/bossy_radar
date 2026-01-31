@@ -5,7 +5,7 @@ interface PageMetaOptions {
 }
 
 export const usePageMeta = ({ title, description, image }: PageMetaOptions) => {
-  const siteName = 'Bossy Radar'
+  const siteName = '慣老闆雷達 | Bossy Radar'
   const defaultDescription = '查詢台灣上市櫃公司薪資、福利與勞動違規紀錄，透明化職場資訊。'
   const defaultImage = '/og-image.png' // Make sure to add this file to public/ later
 

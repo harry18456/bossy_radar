@@ -64,7 +64,7 @@ const aggregatedStatus = computed(() => {
         <!-- Brand and About -->
         <div>
           <h3 class="text-lg font-bold bg-gradient-to-r from-blue-600 to-cyan-500 bg-clip-text text-transparent mb-1">
-            Bossy Radar
+            慣老闆雷達 (Bossy Radar)
           </h3>
           <p class="text-xs text-gray-500 dark:text-slate-400 max-w-md hidden md:block">
             透過公開資料透明化，我們致力於建立一個更具勞權意識的職場。

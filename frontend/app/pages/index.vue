@@ -8,7 +8,8 @@ usePageMeta({
 <template>
   <div class="flex flex-col items-center justify-center min-h-[60vh] text-center">
     <h1 class="text-4xl font-bold text-gray-900 dark:text-white mb-4">
-      Bossy Radar
+
+      慣老闆雷達 <span class="text-2xl text-gray-500 font-normal">(Bossy Radar)</span>
     </h1>
     <p class="text-xl text-gray-500 dark:text-slate-400 mb-8 max-w-2xl">
       透明化職場資訊，避開慣老闆。<br>
