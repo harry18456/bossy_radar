@@ -9,5 +9,5 @@ class SyncStatusItem(BaseModel):
 class SyncStatusResponse(BaseModel):
     companies: Dict[str, SyncStatusItem]
     violations: Dict[str, SyncStatusItem]
-    environmental_violations: Dict[str, SyncStatusItem] = {}
+    environmental_violations: Dict[str, SyncStatusItem]
     mops: Dict[str, SyncStatusItem]

@@ -165,6 +165,7 @@
   |----|----------|
   | 不設定 | 只有公司基本資料 + year |
   | `violations` | + 違規統計（當年度/歷年累計） |
+  | `env_violations` | + 環境違規統計（當年度/歷年累計） |
   | `employee_benefit` | + 員工福利完整資料 (t100sb14) |
   | `non_manager_salary` | + 非主管全時員工薪資完整資料 (t100sb15) |
   | `welfare_policy` | + 福利政策完整資料 (t100sb13) |

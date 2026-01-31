@@ -140,6 +140,7 @@ def get_yearly_summary(
     include_set = set(include) if include else set()
     include_all = "all" in include_set
     include_violations = include_all or "violations" in include_set
+    include_env_violations = include_all or "env_violations" in include_set
     include_employee_benefit = include_all or "employee_benefit" in include_set
     include_non_manager_salary = include_all or "non_manager_salary" in include_set
     include_welfare_policy = include_all or "welfare_policy" in include_set
@@ -203,6 +204,38 @@ def get_yearly_summary(
         for row in violations_year_query:
             key = (row[0], int(row[1]) - 1911 if row[1] else None)  # 西元轉民國
             violations_by_year[key] = {"count": row[2], "fine": row[3] or 0}
+            
+    # 環境違規
+    env_violations_total = {}
+    env_violations_by_year = {}
+    if include_env_violations:
+        # 環境違規 - 歷年累計
+        env_violations_total_query = session.exec(
+            select(
+                EnvironmentalViolation.company_code,
+                func.count(EnvironmentalViolation.id).label("count"),
+                func.sum(EnvironmentalViolation.fine_amount).label("fine")
+            )
+            .where(col(EnvironmentalViolation.company_code).in_(company_codes))
+            .group_by(EnvironmentalViolation.company_code)
+        ).all()
+        for row in env_violations_total_query:
+            env_violations_total[row[0]] = {"count": row[1], "fine": row[2] or 0}
+        
+        # 環境違規 - 按年度
+        env_violations_year_query = session.exec(
+            select(
+                EnvironmentalViolation.company_code,
+                extract('year', EnvironmentalViolation.penalty_date).label("year"),
+                func.count(EnvironmentalViolation.id).label("count"),
+                func.sum(EnvironmentalViolation.fine_amount).label("fine")
+            )
+            .where(col(EnvironmentalViolation.company_code).in_(company_codes))
+            .group_by(EnvironmentalViolation.company_code, extract('year', EnvironmentalViolation.penalty_date))
+        ).all()
+        for row in env_violations_year_query:
+            key = (row[0], int(row[1]) - 1911 if row[1] else None)  # 西元轉民國
+            env_violations_by_year[key] = {"count": row[2], "fine": row[3] or 0}
     
     # 員工福利（必須查詢用於判斷資料是否存在）
     benefits_map = {}
@@ -275,6 +308,15 @@ def get_yearly_summary(
                 item.violations_year_fine = vio_year["fine"]
                 item.violations_total_count = vio_total["count"]
                 item.violations_total_fine = vio_total["fine"]
+                
+             # 加入環境違規統計
+            if include_env_violations:
+                env_year = env_violations_by_year.get((code, y), {"count": 0, "fine": 0})
+                env_total = env_violations_total.get(code, {"count": 0, "fine": 0})
+                item.env_violations_year_count = env_year["count"]
+                item.env_violations_year_fine = env_year["fine"]
+                item.env_violations_total_count = env_total["count"]
+                item.env_violations_total_fine = env_total["fine"]
             
             # 加入 MOPS 完整物件
             if include_employee_benefit and benefit:
