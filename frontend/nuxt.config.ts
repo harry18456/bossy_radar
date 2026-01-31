@@ -30,7 +30,22 @@ export default defineNuxtConfig({
           async: true,
           crossorigin: "anonymous",
           tagPosition: 'bodyClose'
-        }
+        },
+        // GA4 - Production Only (Baked into HTML like Tools project)
+        ...(process.env.NODE_ENV === 'production' && process.env.NUXT_PUBLIC_GA4_ID ? [
+          {
+            src: `https://www.googletagmanager.com/gtag/js?id=${process.env.NUXT_PUBLIC_GA4_ID}`,
+            async: true
+          },
+          {
+            innerHTML: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', '${process.env.NUXT_PUBLIC_GA4_ID}');
+            `
+          }
+        ] : [])
       ]
     }
   },

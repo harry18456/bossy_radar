@@ -7,19 +7,7 @@ export default defineNuxtPlugin((nuxtApp) => {
     return
   }
 
-  // Helper to append script
-  const addScript = (src: string) => {
-    const script = document.createElement('script')
-    script.async = true
-    script.src = src
-    document.head.appendChild(script)
-  }
-
-  // Initialize dataLayer
-  const w = window as any
-  w.dataLayer = w.dataLayer || []
-
-  // Define gtag function (Real vs Mock)
+  // Define local gtag interface
   let gtag: (...args: any[]) => void
 
   if (import.meta.dev) {
@@ -29,20 +17,25 @@ export default defineNuxtPlugin((nuxtApp) => {
       console.log('[GA4 Event]:', ...args)
     }
   } else {
-    // Real mode for Production
-    addScript(`https://www.googletagmanager.com/gtag/js?id=${gaId}`)
+    // Production: Use global gtag function (injected by nuxt.config.ts)
+    // If initialization hasn't run yet for some reason, we fallback to dataLayer push
+    const w = window as any
+    w.dataLayer = w.dataLayer || []
+    
     gtag = (...args: any[]) => {
-      w.dataLayer.push(args)
+       if (typeof w.gtag === 'function') {
+         w.gtag(...args)
+       } else {
+         w.dataLayer.push(args)
+       }
     }
   }
-
-  // Initialize
-  gtag('js', new Date())
-  gtag('config', gaId)
 
   // Track route changes
   const router = useRouter()
   router.afterEach((to) => {
+    // We don't need to re-initialize config here (done in head), just page_view updates
+    // But Google convention says sending 'config' again with page_path updates the page view.
     gtag('config', gaId, {
       page_path: to.fullPath,
       page_title: document.title
