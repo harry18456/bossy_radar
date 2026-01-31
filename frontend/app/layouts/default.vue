@@ -8,16 +8,36 @@ const route = useRoute()
 // We force remove it when entering Home.
 watch(() => route.path, (newPath) => {
   if (newPath === '/' && import.meta.client) {
-    // Small delay to ensure AdSense script doesn't re-apply it immediately if it was racing
-    setTimeout(() => {
+    // Aggressive cleanup for AdSense "Auto Ads" residues
+    const cleanup = () => {
+       // 1. Remove padding/margin from body AND html
       document.body.style.removeProperty('padding-bottom')
       document.body.style.removeProperty('padding-top')
-      // Optional: Hide any auto-placed ads container if standard logic doesn't catch them
-      const autoAds = document.getElementsByClassName('google-auto-placed')
-      for (const ad of autoAds) {
-        (ad as HTMLElement).style.display = 'none'
+      document.body.style.removeProperty('margin-bottom')
+      document.documentElement.style.removeProperty('padding-bottom')
+      document.documentElement.style.removeProperty('margin-bottom')
+      document.documentElement.style.removeProperty('height') // Reset if modified
+
+      // 2. Hide specific AdSense containers that might be "invisible" but taking space
+      const adContainers = document.querySelectorAll('.google-auto-placed, .adsbygoogle-noablate')
+      adContainers.forEach((el) => {
+        (el as HTMLElement).style.display = 'none';
+        (el as HTMLElement).style.height = '0';
+        (el as HTMLElement).style.overflow = 'hidden';
+      })
+      
+      // 3. Reset __nuxt height if forced
+      const nuxtApp = document.getElementById('__nuxt')
+      if (nuxtApp) {
+         nuxtApp.style.removeProperty('height')
+         nuxtApp.style.height = '100%' // Force it back to full height
       }
-    }, 100)
+    }
+
+    // Run immediately and repeatedly for a few seconds to fight race conditions
+    cleanup()
+    const interval = setInterval(cleanup, 200)
+    setTimeout(() => clearInterval(interval), 2000)
   }
 })
 </script>
