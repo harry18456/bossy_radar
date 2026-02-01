@@ -77,6 +77,15 @@ const toggleWatch = () => {
     $toast.info(`已取消追蹤: ${company.value.name}`)
   }
 }
+
+// Ensure URL has protocol prefix (safety for dirty data)
+const ensureProtocol = (url: string) => {
+  if (!url) return ''
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url
+  }
+  return `https://${url}`
+}
 </script>
 
 <template>
@@ -129,7 +138,7 @@ const toggleWatch = () => {
               </span>
               <a 
                 v-if="company.website"
-                :href="company.website" 
+                :href="ensureProtocol(company.website)" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 class="flex items-center text-blue-600 dark:text-blue-400 hover:underline"

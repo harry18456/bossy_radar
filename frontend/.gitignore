@@ -31,3 +31,4 @@ openapi.json
 
 # public data
 public/data
+.vercel

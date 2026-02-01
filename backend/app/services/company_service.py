@@ -156,26 +156,44 @@ class CompanyService:
         
         for row in reader:
             try:
-                code = row.get("公司代號")
+                code = row.get("公司代號", "").strip()
                 if not code:
+                    continue
+                
+                # Validate company code format (must be alphanumeric, no dots or URL-like strings)
+                if not re.match(r'^[A-Za-z0-9]+$', code):
+                    logger.warning(f"Skipping invalid company code: {code}")
+                    continue
+                
+                # Sanitize string fields (strip whitespace and hidden characters)
+                def clean_str(val: str) -> str:
+                    return val.strip() if val else ""
+                
+                # Validate website field - must look like a URL or be empty
+                website = clean_str(row.get("網址", ""))
+                address = clean_str(row.get("住址", ""))
+                
+                # Check for data corruption: if address looks like a URL, log and skip
+                if address and re.match(r'^(https?://|www\.)', address, re.IGNORECASE):
+                    logger.warning(f"Possible data corruption for {code}: address contains URL-like content, skipping: {address}")
                     continue
                 
                 # Basic Mapping
                 company = Company(
                     code=code,
-                    name=row.get("公司名稱", ""),
-                    abbreviation=row.get("公司簡稱", ""),
-                    market_type=market_type,
-                    industry=row.get("產業別", ""),
-                    tax_id=row.get("營利事業統一編號", ""),
-                    chairman=row.get("董事長", ""),
-                    manager=row.get("總經理", ""),
+                    name=clean_str(row.get("公司名稱", "")),
+                    abbreviation=clean_str(row.get("公司簡稱", "")),
+                    market_type=market_type,  # Always use the parameter, never from CSV
+                    industry=clean_str(row.get("產業別", "")),
+                    tax_id=clean_str(row.get("營利事業統一編號", "")),
+                    chairman=clean_str(row.get("董事長", "")),
+                    manager=clean_str(row.get("總經理", "")),
                     establishment_date=self._parse_roc_date(row.get("成立日期", "")),
                     listing_date=self._parse_roc_date(row.get("上市日期") or row.get("上櫃日期", "")),
                     capital=self._parse_money(row.get("實收資本額", "")),
-                    address=row.get("住址", ""),
-                    website=row.get("網址", ""),
-                    email=row.get("電子郵件信箱", "")
+                    address=address,
+                    website=website,
+                    email=clean_str(row.get("電子郵件信箱", ""))
                 )
                 companies.append(company)
             except Exception as e:

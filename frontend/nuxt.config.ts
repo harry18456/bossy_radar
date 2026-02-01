@@ -1,7 +1,32 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
+import { readFileSync, existsSync } from 'fs';
+import { resolve } from 'path';
 
 import pkg from './package.json'
+
+// Read company catalog at build time for sitemap generation
+function getCompanyUrls(): string[] {
+  const catalogPath = resolve(__dirname, 'public/data/company-catalog.json');
+  if (!existsSync(catalogPath)) {
+    console.warn('[Sitemap] company-catalog.json not found, skipping dynamic routes');
+    return [];
+  }
+  
+  try {
+    const catalog = JSON.parse(readFileSync(catalogPath, 'utf-8')) as { code: string }[];
+    // Filter out invalid codes (must be alphanumeric, no dots/slashes)
+    const validCodes = catalog
+      .map(c => c.code)
+      .filter(code => code && /^[A-Za-z0-9]+$/.test(code));
+    
+    console.log(`[Sitemap] Loaded ${validCodes.length} company codes for sitemap`);
+    return validCodes.map(code => `/companies/${code}`);
+  } catch (e) {
+    console.error('[Sitemap] Failed to read company catalog:', e);
+    return [];
+  }
+}
 
 export default defineNuxtConfig({
   future: {
@@ -74,6 +99,7 @@ export default defineNuxtConfig({
     classSuffix: "",
   },
   sitemap: {
+    urls: getCompanyUrls(),
     exclude: ['/privacy', '/data-sources'],
   },
   vite: {
@@ -89,4 +115,5 @@ export default defineNuxtConfig({
     }
   }
 });
+
 
