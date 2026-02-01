@@ -7,7 +7,7 @@
 ### 1. 公司基本資料
 
 - **資料權管單位**：台灣證券交易所 (TWSE) 與 證券櫃檯買賣中心 (TPEX)。
-- **技術來源平台**：[公開資訊觀測站 (MOPS) 開放資料平台](https://mopsov.twse.com.tw/mops/web/t187sb03)。
+- **技術來源平台**：[公開資訊觀測站 (MOPS)](https://mops.twse.com.tw)。
   - 上市公司 (SII): [CSV 下載](https://mopsfin.twse.com.tw/opendata/t187ap03_L.csv)
   - 上櫃公司 (OTC): [CSV 下載](https://mopsfin.twse.com.tw/opendata/t187ap03_O.csv)
   - 興櫃公司 (Emerging): [CSV 下載](https://mopsfin.twse.com.tw/opendata/t187ap03_R.csv)

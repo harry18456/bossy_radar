@@ -39,7 +39,7 @@ definePageMeta({
                   <strong>資料權管單位</strong>：<a href="https://www.twse.com.tw/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">台灣證券交易所 (TWSE)</a> 與 <a href="https://www.tpex.org.tw/" target="_blank" rel="noopener" class="text-blue-600 hover:underline">證券櫃檯買賣中心 (TPEX)</a>。
                 </p>
                 <p>
-                  <strong>技術來源平台</strong>：<a href="https://mopsov.twse.com.tw/mops/web/t187sb03" target="_blank" rel="noopener" class="text-blue-600 hover:underline">公開資訊觀測站 (MOPS) 開放資料平台</a>。
+                  <strong>技術來源平台</strong>：<a href="https://mops.twse.com.tw" target="_blank" rel="noopener" class="text-blue-600 hover:underline">公開資訊觀測站 (MOPS)</a>。
                 </p>
                 <ul class="list-disc pl-5 mt-2">
                   <li><strong>TWSE</strong>：負責上市公司 (SII)。</li>
@@ -47,6 +47,9 @@ definePageMeta({
                 </ul>
                 <p class="mt-2">
                   本站整合上述四類公司之基本資訊（代號、名稱、產業別、董事長等），資料源自 MOPS 開放資料之 CSV 檔案。
+                </p>
+                <p class="mt-2 text-xs text-green-600 dark:text-green-400">
+                  💡 <strong>補充資料 (t05st03)</strong>：本站額外爬取了每一間公司的「<strong>利害關係人專區</strong>」與「<strong>公司治理專區</strong>」連結，提供更深度的透明度資訊。
                 </p>
               </div>
             </div>

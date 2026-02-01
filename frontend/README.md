@@ -116,6 +116,7 @@ frontend/
     使用 Vercel CLI 將打包好的資料夾推上去 (無需在 Vercel 雲端 Build)。
     ```bash
     npx vercel deploy .output/public --prod
+    npx vercel deploy .output/public --prod --archive=tgz
     ```
 
 > **注意**：每次更新資料或程式碼時，都需重複步驟 2 與 3。
