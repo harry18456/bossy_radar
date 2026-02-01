@@ -7,6 +7,16 @@ const getIndustryLabel = (code: string | null | undefined) => {
   return INDUSTRIES[code] || code
 }
 
+const getMarketLabel = (type: string | null | undefined) => {
+  if (!type) return '-'
+  const t = type.toLowerCase()
+  if (['listed', 'sii'].includes(t)) return '上市'
+  if (['otc'].includes(t)) return '上櫃'
+  if (['emerging', 'rotc'].includes(t)) return '興櫃'
+  if (['public', 'pub'].includes(t)) return '公開發行'
+  return type
+}
+
 const route = useRoute()
 const api = useApi()
 const id = route.params.id as string
@@ -87,6 +97,9 @@ const toggleWatch = () => {
               </span>
             </div>
             <div class="flex flex-wrap items-center gap-4 text-sm text-gray-500 dark:text-slate-400">
+              <span class="flex items-center px-2 py-0.5 rounded bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-300 font-medium text-xs">
+                {{ getMarketLabel(company.market_type) }}
+              </span>
               <span class="flex items-center">
                 <Icon name="lucide:building-2" class="w-4 h-4 mr-1" />
                 {{ getIndustryLabel(company.industry) }}
