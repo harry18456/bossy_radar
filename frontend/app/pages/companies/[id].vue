@@ -29,7 +29,7 @@ const { data: profile, status, error } = await useAsyncData(
 const company = computed(() => profile.value?.company)
 
 usePageMeta({
-  title: company.value?.name || '公司詳情',
+  title: company.value ? `${company.value.name} (${company.value.code})` : '公司詳情',
   description: company.value ? `${company.value.name} (${company.value.code}) 的薪資福利與違規紀錄。` : undefined
 })
 
