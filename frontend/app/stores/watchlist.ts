@@ -3,30 +3,43 @@ import type { Company } from '~/types/api'
 
 export const useWatchlistStore = defineStore('watchlist', {
   state: () => ({
-    // Store saved companies
-    companies: [] as Company[],
+    // Only persist company codes - this is what gets saved to localStorage
+    codes: [] as string[],
+    // Hydrated company data - populated from API/catalog on page load
+    // This is NOT persisted
+    _companies: [] as Company[],
   }),
   
   getters: {
-    count: (state) => state.companies.length,
+    count: (state) => state.codes.length,
+    
+    // Get hydrated companies (populated after fetch)
+    companies: (state) => state._companies,
     
     // Check if a company is already in the watchlist
     isWatching: (state) => (companyCode: string) => {
-      return state.companies.some(c => c.code === companyCode)
+      return state.codes.includes(companyCode)
     }
   },
 
   actions: {
     addCompany(company: Company) {
       if (!this.isWatching(company.code)) {
-        this.companies.push(company)
+        this.codes.push(company.code)
+        // Also add to hydrated list for immediate UI update
+        this._companies.push(company)
       }
     },
 
     removeCompany(companyCode: string) {
-      const index = this.companies.findIndex(c => c.code === companyCode)
-      if (index !== -1) {
-        this.companies.splice(index, 1)
+      const codeIndex = this.codes.indexOf(companyCode)
+      if (codeIndex !== -1) {
+        this.codes.splice(codeIndex, 1)
+      }
+      // Also remove from hydrated list
+      const companyIndex = this._companies.findIndex(c => c.code === companyCode)
+      if (companyIndex !== -1) {
+        this._companies.splice(companyIndex, 1)
       }
     },
 
@@ -36,8 +49,17 @@ export const useWatchlistStore = defineStore('watchlist', {
       } else {
         this.addCompany(company)
       }
+    },
+
+    // Called by watchlist page to hydrate companies from fresh data
+    hydrateCompanies(companies: Company[]) {
+      this._companies = companies
     }
   },
 
-  persist: true
+  persist: {
+    // Only persist the codes array, not the hydrated companies
+    pick: ['codes']
+  }
 })
+

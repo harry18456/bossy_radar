@@ -25,6 +25,24 @@ export default defineNuxtConfig({
   app: {
     head: {
       script: [
+        // Inline blocking script to prevent dark mode flash
+        // This runs BEFORE any CSS is applied
+        {
+          innerHTML: `
+            (function() {
+              try {
+                var colorMode = localStorage.getItem('nuxt-color-mode');
+                if (colorMode === 'dark' || 
+                    (!colorMode && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                  document.documentElement.classList.add('dark');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                }
+              } catch (e) {}
+            })();
+          `,
+          tagPosition: 'head',
+        },
         {
           src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_ID}`,
           async: true,

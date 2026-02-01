@@ -90,7 +90,10 @@ class ExportService:
                     name=c.name,
                     abbreviation=c.abbreviation,
                     market_type=c.market_type,
-                    industry=c.industry
+                    industry=c.industry,
+                    capital=float(c.capital) if c.capital is not None else None,
+                    establishment_date=c.establishment_date.isoformat() if c.establishment_date else None,
+                    listing_date=c.listing_date.isoformat() if c.listing_date else None
                 )
             )
         

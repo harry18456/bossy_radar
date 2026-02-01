@@ -13,6 +13,8 @@ export interface Company {
   address?: string | null;
   website?: string | null;
   email?: string | null;
+  stakeholder_url?: string | null;
+  governance_url?: string | null;
   last_updated: string;
 }
 

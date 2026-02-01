@@ -83,14 +83,29 @@ class CompanyService:
             Company.name,
             Company.abbreviation,
             Company.market_type,
-            Company.industry
+            Company.industry,
+            Company.capital,
+            Company.establishment_date,
+            Company.listing_date
         ).order_by(Company.code)
         
-        # When using select(col1, col2), SQLModel returns rows (tuples)
-        # But we can map them back to models or just return as is if the caller handles it.
-        # Here we return the list of tuples/objects. 
-        # API will handle the mapping to CompanyCatalogItem.
-        return session.exec(query).all()
+        # When selecting specific columns, SQLModel returns rows (tuples)
+        results = session.exec(query).all()
+        
+        # Map to dictionaries for Pydantic compatibility
+        catalog = []
+        for row in results:
+            catalog.append({
+                "code": row.code,
+                "name": row.name,
+                "abbreviation": row.abbreviation,
+                "market_type": row.market_type,
+                "industry": row.industry,
+                "capital": float(row.capital) if row.capital is not None else None,
+                "establishment_date": row.establishment_date.isoformat() if row.establishment_date else None,
+                "listing_date": row.listing_date.isoformat() if row.listing_date else None
+            })
+        return catalog
 
     def sync_companies(self, data_dir: Path, target_types: List[str]):
         """

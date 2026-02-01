@@ -176,6 +176,38 @@ const toggleWatch = () => {
               <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">實收資本額</dt>
               <dd class="mt-1 text-sm text-gray-900 dark:text-white">{{ company.capital ? `$${formatCurrency(company.capital)}` : '-' }}</dd>
             </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">利害關係人專區</dt>
+              <dd class="mt-1 text-sm">
+                <a 
+                  v-if="company.stakeholder_url"
+                  :href="company.stakeholder_url" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  <Icon name="lucide:external-link" class="w-4 h-4 mr-1" />
+                  前往專區
+                </a>
+                <span v-else class="text-gray-400 dark:text-slate-500">-</span>
+              </dd>
+            </div>
+            <div>
+              <dt class="text-sm font-medium text-gray-500 dark:text-slate-400">公司治理專區</dt>
+              <dd class="mt-1 text-sm">
+                <a 
+                  v-if="company.governance_url"
+                  :href="company.governance_url" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
+                >
+                  <Icon name="lucide:external-link" class="w-4 h-4 mr-1" />
+                  前往專區
+                </a>
+                <span v-else class="text-gray-400 dark:text-slate-500">-</span>
+              </dd>
+            </div>
           </dl>
         </div>
 

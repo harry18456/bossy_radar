@@ -85,7 +85,17 @@ export const useStaticApi = () => {
     getCompanies: async (params?: any) => {
       let items = await fetchJson<CompanyCatalog[]>('company-catalog.json')
       
-      
+      // Filter by company codes (used by watchlist)
+      // Support both 'company_code' (matching backend API) and 'code' (backwards compat)
+      const codeFilter = params?.company_code || params?.code
+      if (codeFilter) {
+        const codes = Array.isArray(codeFilter) ? codeFilter : [codeFilter]
+        const validCodes = codes.filter((c: string) => c !== '')
+        
+        if (validCodes.length > 0) {
+          items = items.filter(c => validCodes.includes(c.code))
+        }
+      }
       
       // Filter Logic
       // Check for 'name' (used by companies page) or 'keyword' (fallback)
