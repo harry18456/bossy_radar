@@ -33,6 +33,25 @@ usePageMeta({
   description: company.value ? `${company.value.name} (${company.value.code}) 的薪資福利與違規紀錄。` : undefined
 })
 
+// Inject structured data for SEO
+const { injectCompanySchema, injectBreadcrumbSchema } = useStructuredData()
+
+// Only inject if company data is loaded
+if (company.value) {
+  injectCompanySchema({
+    name: `${company.value.name} (${company.value.code})`,
+    description: `${company.value.name} - ${getIndustryLabel(company.value.industry)} - ${getMarketLabel(company.value.market_type)}`,
+    url: company.value.website || undefined,
+    address: company.value.address || undefined
+  })
+  
+  injectBreadcrumbSchema([
+    { name: '首頁', url: '/' },
+    { name: '公司列表', url: '/companies' },
+    { name: company.value.name, url: `/companies/${company.value.code}` }
+  ])
+}
+
 const activeTab = ref<'overview' | 'stats' | 'violations' | 'welfare'>('overview')
 const violationType = ref<'labor' | 'env'>('labor')
 

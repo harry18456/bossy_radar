@@ -1,6 +1,6 @@
 {
   "name": "frontend",
-  "version": "0.6.6",
+  "version": "0.6.7",
   "type": "module",
   "private": true,
   "scripts": {
@@ -13,6 +13,7 @@
   "dependencies": {
     "@nuxt/icon": "^2.2.1",
     "@nuxtjs/color-mode": "^4.0.0",
+    "@nuxtjs/sitemap": "^7.6.0",
     "@pinia/nuxt": "^0.11.3",
     "@tailwindcss/vite": "^4.1.18",
     "@vueuse/core": "^14.1.0",

@@ -22,8 +22,15 @@ export default defineNuxtConfig({
       googleAnalyticsId: process.env.NUXT_PUBLIC_GA4_ID || '',
     },
   },
+  site: {
+    url: 'https://www.bossy.eraser.tw',
+    name: '慣老闆雷達 | Bossy Radar',
+  },
   app: {
     head: {
+      htmlAttrs: {
+        lang: 'zh-TW',
+      },
       script: [
         // Inline blocking script to prevent dark mode flash
         // This runs BEFORE any CSS is applied
@@ -61,9 +68,13 @@ export default defineNuxtConfig({
     "@nuxt/icon",
     "@nuxtjs/color-mode",
     "@vueuse/nuxt",
+    "@nuxtjs/sitemap",
   ],
   colorMode: {
     classSuffix: "",
+  },
+  sitemap: {
+    exclude: ['/privacy', '/data-sources'],
   },
   vite: {
     plugins: [tailwindcss()],
@@ -78,3 +89,4 @@ export default defineNuxtConfig({
     }
   }
 });
+
