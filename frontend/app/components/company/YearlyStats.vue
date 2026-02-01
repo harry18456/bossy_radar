@@ -27,12 +27,20 @@ ChartJS.register(
   Legend
 )
 
-const props = defineProps<{
-  stats: any[] // NonManagerSalary[]
-}>()
+const props = withDefaults(defineProps<{
+  stats: any[], // NonManagerSalary[]
+  adjustments?: any[] // SalaryAdjustment[]
+}>(), {
+  stats: () => [],
+  adjustments: () => []
+})
 
 const sortedStats = computed(() => {
   return [...props.stats].sort((a, b) => a.year - b.year)
+})
+
+const sortedAdjustments = computed(() => {
+  return [...props.adjustments].sort((a, b) => a.year - b.year)
 })
 
 const isDark = useDark()
@@ -134,7 +142,22 @@ const salaryData = computed(() => ({
     }
   ]
 }))
+
+// Adjustment Data
+const adjustmentData = computed(() => ({
+  labels: sortedAdjustments.value.map(s => s.year + '年'),
+  datasets: [
+    {
+      label: '提撥金額 (元)',
+      data: sortedAdjustments.value.map(s => s.total_allocation_amount),
+      backgroundColor: '#8b5cf6', // Violet
+      borderRadius: 4,
+    }
+  ]
+}))
 </script>
+
+
 
 <template>
   <!-- Warning Alerts -->
@@ -192,16 +215,84 @@ const salaryData = computed(() => ({
     <!-- EPS Chart -->
     <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6">歷年 EPS 趨勢</h3>
-      <div class="h-64">
+      <div v-if="sortedStats.length > 0" class="h-64">
         <Chart type="bar" :data="epsData" :options="chartOptions" />
+      </div>
+       <div v-else class="h-64 flex items-center justify-center text-gray-400 dark:text-slate-500">
+        暫無 EPS 資料
       </div>
     </div>
 
     <!-- Salary Chart -->
     <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm">
       <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6">非主管薪資趨勢</h3>
-      <div class="h-64">
+      <div v-if="sortedStats.length > 0" class="h-64">
         <Line :data="salaryData" :options="chartOptions" />
+      </div>
+      <div v-else class="h-64 flex items-center justify-center text-gray-400 dark:text-slate-500">
+        暫無薪資資料
+      </div>
+    </div>
+
+    <!-- Salary Adjustment Chart (New) -->
+    <div class="lg:col-span-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm">
+      <h3 class="text-lg font-bold text-gray-900 dark:text-white mb-6">員工酬勞分派</h3>
+      <div v-if="sortedAdjustments.length > 0">
+        <div class="h-64 mb-6">
+           <Bar :data="adjustmentData" :options="chartOptions" />
+        </div>
+        
+        <!-- Detailed Adjustments List -->
+        <div class="mt-8 space-y-4">
+          <h4 class="font-bold text-gray-900 dark:text-white mb-4">詳細分派資訊</h4>
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm text-left text-gray-500 dark:text-slate-400">
+              <thead class="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-slate-800 dark:text-slate-300">
+                <tr>
+                  <th scope="col" class="px-6 py-3 whitespace-nowrap">年度</th>
+                  <th scope="col" class="px-6 py-3 whitespace-nowrap text-right">稅前淨利 (元)</th>
+                  <th scope="col" class="px-6 py-3 whitespace-nowrap text-right">提撥金額 (元)</th>
+                  <th scope="col" class="px-6 py-3 whitespace-nowrap text-right">實際比例 (%)</th>
+                   <th scope="col" class="px-6 py-3 min-w-[200px]">認定範圍</th>
+                  <th scope="col" class="px-6 py-3 min-w-[200px]">差異說明</th>
+                  <th scope="col" class="px-6 py-3 min-w-[150px]">備註</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="adj in sortedAdjustments" :key="adj.id" class="bg-white border-b dark:bg-slate-900 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                  <td class="px-6 py-4 font-medium text-gray-900 dark:text-white whitespace-nowrap">
+                    {{ adj.year }}
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    {{ adj.pretax_net_profit ? adj.pretax_net_profit.toLocaleString() : '-' }}
+                  </td>
+                  <td class="px-6 py-4 text-right font-bold text-blue-600 dark:text-blue-400">
+                    {{ adj.total_allocation_amount ? adj.total_allocation_amount.toLocaleString() : '-' }}
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    {{ adj.actual_allocation_ratio || '-' }}
+                  </td>
+                  <td class="px-6 py-4">
+                    <span v-if="adj.basic_employee_definition" class="text-xs text-gray-600 dark:text-slate-400 block whitespace-pre-wrap leading-relaxed">{{ adj.basic_employee_definition }}</span>
+                    <span v-else class="text-gray-300 dark:text-slate-600">-</span>
+                  </td>
+                   <td class="px-6 py-4">
+                    <span v-if="adj.difference_reason" class="text-xs text-gray-600 dark:text-slate-400 block whitespace-pre-wrap leading-relaxed">{{ adj.difference_reason }}</span>
+                    <span v-else class="text-gray-300 dark:text-slate-600">-</span>
+                  </td>
+                  <td class="px-6 py-4">
+                    <span v-if="adj.note" class="text-xs text-gray-600 dark:text-slate-400 block whitespace-pre-wrap leading-relaxed">{{ adj.note }}</span>
+                    <span v-else class="text-gray-300 dark:text-slate-600">-</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <div v-else class="h-48 flex flex-col items-center justify-center text-gray-400 dark:text-slate-500 border border-dashed border-gray-200 dark:border-slate-800 rounded-lg bg-gray-50/50 dark:bg-slate-900/50">
+        <Icon name="lucide:file-question" class="w-10 h-10 mb-2 opacity-50" />
+        <p>公司尚未揭露此類資訊</p>
       </div>
     </div>
   </div>

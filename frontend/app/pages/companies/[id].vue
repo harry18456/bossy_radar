@@ -213,11 +213,14 @@ const toggleWatch = () => {
 
         <!-- Stats Tab -->
         <div v-else-if="activeTab === 'stats'">
-           <div v-if="profile.non_manager_salaries && profile.non_manager_salaries.length > 0">
-              <CompanyYearlyStats :stats="profile.non_manager_salaries" />
+           <div v-if="(profile.non_manager_salaries && profile.non_manager_salaries.length > 0) || (profile.salary_adjustments && profile.salary_adjustments.length > 0)">
+              <CompanyYearlyStats 
+                :stats="profile.non_manager_salaries || []" 
+                :adjustments="profile.salary_adjustments || []"
+              />
            </div>
            <div v-else class="text-center py-12 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800">
-             <p class="text-gray-500 dark:text-slate-400">暫無薪資統計資料</p>
+             <p class="text-gray-500 dark:text-slate-400">暫無薪資與分派統計資料</p>
            </div>
         </div>
 
@@ -381,10 +384,91 @@ const toggleWatch = () => {
         <!-- Welfare Tab -->
         <div v-else-if="activeTab === 'welfare'">
           <div class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6">
+             <!-- Data Source Note -->
+             <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-lg flex items-start gap-3">
+               <Icon name="lucide:info" class="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0 mt-0.5" />
+               <div class="text-sm text-blue-800 dark:text-blue-300">
+                 <p class="mb-2">此頁面資料彙整自公開資訊觀測站「員工福利政策及權益維護措施揭露-彙總資料查詢」。部分公司可能未完整填寫特定欄位導致資訊顯示不全。</p>
+                 <a 
+                   href="https://mopsov.twse.com.tw/mops/web/t100sb12" 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   class="inline-flex items-center font-medium hover:underline text-blue-700 dark:text-blue-400"
+                 >
+                   前往「員工福利政策及權益維護措施揭露-個別公司查詢」
+                   <Icon name="lucide:external-link" class="w-3.5 h-3.5 ml-1" />
+                 </a>
+               </div>
+             </div>
+
              <div v-if="profile.welfare_policies && profile.welfare_policies.length > 0">
-               <div v-for="policy in profile.welfare_policies" :key="policy.id" class="prose dark:prose-invert max-w-none">
-                 <h4 class="font-bold mb-2">{{ policy.year }}年 福利政策</h4>
-                 <div class="whitespace-pre-line text-sm text-gray-700 dark:text-slate-300">{{ policy.actual_salary_increase_note || '無詳細內容' }}</div>
+               <div v-for="policy in profile.welfare_policies" :key="policy.id" class="mb-8 last:mb-0 border-b border-gray-100 dark:border-slate-800 last:border-0 pb-8 last:pb-0">
+                 <div class="flex items-center gap-3 mb-6">
+                    <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm font-bold">
+                      {{ policy.year }}年度
+                    </span>
+                    <h4 class="font-bold text-lg text-gray-900 dark:text-white">福利與薪資政策</h4>
+                 </div>
+
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 調薪情形 -->
+                    <div class="space-y-4">
+                      <h5 class="flex items-center text-sm font-bold text-gray-900 dark:text-white pb-2 border-b border-gray-100 dark:border-slate-800">
+                        <Icon name="lucide:trending-up" class="w-4 h-4 mr-2 text-green-500" />
+                        調薪情形
+                      </h5>
+                      
+                      <div class="grid grid-cols-2 gap-4">
+                         <div class="bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg">
+                            <span class="text-xs text-gray-500 dark:text-slate-400 block mb-1">預計調薪</span>
+                            <div class="font-medium text-gray-900 dark:text-white">{{ policy.planned_salary_increase || '-' }}</div>
+                            <p v-if="policy.planned_salary_increase_note && policy.planned_salary_increase_note !== policy.planned_salary_increase" class="text-xs text-gray-400 mt-1">{{ policy.planned_salary_increase_note }}</p>
+                         </div>
+                          <div class="bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg">
+                            <span class="text-xs text-gray-500 dark:text-slate-400 block mb-1">實際調薪</span>
+                             <div class="font-medium text-gray-900 dark:text-white">{{ policy.actual_salary_increase || '-' }}</div>
+                             <p v-if="policy.actual_salary_increase_note" class="text-xs text-gray-400 mt-1">{{ policy.actual_salary_increase_note }}</p>
+                         </div>
+                         <div class="bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg">
+                            <span class="text-xs text-gray-500 dark:text-slate-400 block mb-1">非主管調薪</span>
+                             <div class="font-medium text-gray-900 dark:text-white">{{ policy.non_manager_salary_increase || '-' }}</div>
+                             <p v-if="policy.non_manager_salary_increase_note" class="text-xs text-gray-400 mt-1">{{ policy.non_manager_salary_increase_note }}</p>
+                         </div>
+                         <div class="bg-gray-50 dark:bg-slate-800/50 p-3 rounded-lg">
+                            <span class="text-xs text-gray-500 dark:text-slate-400 block mb-1">經理人調薪</span>
+                             <div class="font-medium text-gray-900 dark:text-white">{{ policy.manager_salary_increase || '-' }}</div>
+                             <p v-if="policy.manager_salary_increase_note" class="text-xs text-gray-400 mt-1">{{ policy.manager_salary_increase_note }}</p>
+                         </div>
+                      </div>
+                    </div>
+
+                    <!-- 起薪標準 -->
+                    <div class="space-y-4">
+                       <h5 class="flex items-center text-sm font-bold text-gray-900 dark:text-white pb-2 border-b border-gray-100 dark:border-slate-800">
+                        <Icon name="lucide:graduation-cap" class="w-4 h-4 mr-2 text-blue-500" />
+                        社會新鮮人起薪標準
+                      </h5>
+                      
+                      <div class="space-y-3">
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+                          <span class="text-sm text-gray-600 dark:text-slate-400">研究所</span>
+                          <span class="font-medium text-gray-900 dark:text-white">{{ policy.entry_salary_master ? `$${policy.entry_salary_master}` : '-' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+                          <span class="text-sm text-gray-600 dark:text-slate-400">大學</span>
+                          <span class="font-medium text-gray-900 dark:text-white">{{ policy.entry_salary_bachelor ? `$${policy.entry_salary_bachelor}` : '-' }}</span>
+                        </div>
+                        <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-slate-800/50 rounded-lg">
+                          <span class="text-sm text-gray-600 dark:text-slate-400">高中</span>
+                          <span class="font-medium text-gray-900 dark:text-white">{{ policy.entry_salary_highschool ? `$${policy.entry_salary_highschool}` : '-' }}</span>
+                        </div>
+                        
+                        <div v-if="policy.entry_salary_note" class="p-3 bg-blue-50 dark:bg-blue-900/10 text-xs text-blue-700 dark:text-blue-300 rounded-lg">
+                          <span class="font-bold mr-1">備註:</span>{{ policy.entry_salary_note }}
+                        </div>
+                      </div>
+                    </div>
+                 </div>
                </div>
              </div>
              <div v-else class="text-center py-12">
