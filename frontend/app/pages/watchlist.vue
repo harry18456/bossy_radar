@@ -22,28 +22,32 @@ const { data: catalogData, status: catalogStatus } = await useAsyncData(
   "watchlist-catalog",
   async () => {
     if (watchedCodes.value.length === 0) return [];
-    
+
     // Fetch company catalog to get fresh company data
     const response = await api.getCompanies({
       company_code: watchedCodes.value,
       page_size: watchedCodes.value.length,
     });
-    
+
     return response.items;
   },
   {
     watch: [watchedCodes],
     immediate: true,
     server: false, // Skip SSR - codes come from localStorage
-  }
+  },
 );
 
 // Hydrate store when catalog data is loaded
-watch(catalogData, (freshCompanies) => {
-  if (freshCompanies && freshCompanies.length > 0) {
-    watchlistStore.hydrateCompanies(freshCompanies);
-  }
-}, { immediate: true });
+watch(
+  catalogData,
+  (freshCompanies) => {
+    if (freshCompanies && freshCompanies.length > 0) {
+      watchlistStore.hydrateCompanies(freshCompanies);
+    }
+  },
+  { immediate: true },
+);
 
 // Comparison Data
 const {
@@ -62,7 +66,9 @@ const {
     });
 
     // Client-side filter to ensure we ONLY have data for companies currently in the watchlist
-    return response.items.filter((item) => watchedCodes.value.includes(item.company_code));
+    return response.items.filter((item) =>
+      watchedCodes.value.includes(item.company_code),
+    );
   },
   {
     watch: [watchedCodes],
@@ -158,66 +164,82 @@ const clearWatchlist = () => {
         </div>
       </div>
 
-    <!-- Empty State -->
-    <div
-      v-if="watchedCodes.length === 0"
-      class="text-center py-24 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 border-dashed"
-    >
-      <Icon
-        name="lucide:heart-off"
-        class="w-16 h-16 text-gray-300 dark:text-slate-600 mx-auto mb-4"
-      />
-      <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
-        清單是空的
-      </h3>
-      <p class="text-gray-500 dark:text-slate-400 mb-6">
-        快去搜尋並加入感興趣的公司吧！
-      </p>
-      <NuxtLink
-        to="/companies"
-        class="inline-flex items-center px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
+      <!-- Empty State -->
+      <div
+        v-if="watchedCodes.length === 0"
+        class="text-center py-24 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800 border-dashed"
       >
-        前往搜尋
-        <Icon name="lucide:arrow-right" class="w-4 h-4 ml-2" />
-      </NuxtLink>
-    </div>
-
-    <div v-else class="space-y-12">
-      <!-- Grid View - wrapped in ClientOnly to prevent hydration mismatch -->
-      <section>
-        <h2
-          class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"
+        <Icon
+          name="lucide:heart-off"
+          class="w-16 h-16 text-gray-300 dark:text-slate-600 mx-auto mb-4"
+        />
+        <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">
+          清單是空的
+        </h3>
+        <p class="text-gray-500 dark:text-slate-400 mb-6">
+          快去搜尋並加入感興趣的公司吧！
+        </p>
+        <NuxtLink
+          to="/companies"
+          class="inline-flex items-center px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white transition-colors"
         >
-          <Icon name="lucide:grid" class="w-5 h-5 mr-2" />
-          公司列表
-        </h2>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <!-- Loading skeleton while companies are being hydrated -->
-          <template v-if="catalogStatus === 'pending' && companies.length === 0">
-            <div
-              v-for="i in Math.min(watchedCodes.length, 6)"
-              :key="i"
-              class="p-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl animate-pulse"
-            >
-              <div class="h-4 w-24 bg-gray-200 dark:bg-slate-700 rounded mb-4"></div>
-              <div class="h-6 w-48 bg-gray-200 dark:bg-slate-700 rounded mb-4"></div>
-              <div class="space-y-2">
-                <div class="h-4 w-full bg-gray-200 dark:bg-slate-700 rounded"></div>
-                <div class="h-4 w-full bg-gray-200 dark:bg-slate-700 rounded"></div>
-              </div>
-            </div>
-          </template>
-          <CompanyCard
-            v-else
-            v-for="company in companies"
-            :key="company.code"
-            :company="company"
-          />
-        </div>
-      </section>
+          前往搜尋
+          <Icon name="lucide:arrow-right" class="w-4 h-4 ml-2" />
+        </NuxtLink>
+      </div>
 
-      <!-- Comparison Section -->
-      <section v-if="sortedComparison.length > 0">
+      <div v-else class="space-y-12">
+        <!-- Grid View - wrapped in ClientOnly to prevent hydration mismatch -->
+        <section>
+          <h2
+            class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"
+          >
+            <Icon name="lucide:grid" class="w-5 h-5 mr-2" />
+            公司列表
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Loading skeleton while companies are being hydrated -->
+            <template
+              v-if="catalogStatus === 'pending' && companies.length === 0"
+            >
+              <div
+                v-for="i in Math.min(watchedCodes.length, 6)"
+                :key="i"
+                class="p-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl animate-pulse"
+              >
+                <div
+                  class="h-4 w-24 bg-gray-200 dark:bg-slate-700 rounded mb-4"
+                ></div>
+                <div
+                  class="h-6 w-48 bg-gray-200 dark:bg-slate-700 rounded mb-4"
+                ></div>
+                <div class="space-y-2">
+                  <div
+                    class="h-4 w-full bg-gray-200 dark:bg-slate-700 rounded"
+                  ></div>
+                  <div
+                    class="h-4 w-full bg-gray-200 dark:bg-slate-700 rounded"
+                  ></div>
+                </div>
+              </div>
+            </template>
+            <CompanyCard
+              v-else
+              v-for="company in companies"
+              :key="company.code"
+              :company="company"
+            />
+          </div>
+        </section>
+
+        <!-- Comparison Section -->
+        <section v-if="sortedComparison.length > 0">
+          <!-- Salary Comparison Chart -->
+          <WatchlistSalaryComparison
+            :data="sortedComparison"
+            :year="selectedYear"
+          />
+
           <div class="flex items-center justify-between mb-6">
             <h2
               class="text-xl font-bold text-gray-900 dark:text-white flex items-center"
@@ -389,35 +411,39 @@ const clearWatchlist = () => {
           </p>
         </section>
 
-      <!-- Error state for no comparison data -->
-      <div
-        v-if="
-          watchedCodes.length > 0 &&
-          sortedComparison.length === 0 &&
-          status !== 'pending'
-        "
-        class="text-center py-12 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800"
-      >
-        <p class="text-gray-500 dark:text-slate-400">
-          無法取得比較資料，請稍後再試。
-        </p>
+        <!-- Error state for no comparison data -->
+        <div
+          v-if="
+            watchedCodes.length > 0 &&
+            sortedComparison.length === 0 &&
+            status !== 'pending'
+          "
+          class="text-center py-12 bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-slate-800"
+        >
+          <p class="text-gray-500 dark:text-slate-400">
+            無法取得比較資料，請稍後再試。
+          </p>
+        </div>
       </div>
-    </div>
 
-    <!-- Fallback for ClientOnly - shown during SSR -->
-    <template #fallback>
-      <div class="space-y-8">
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="h-8 w-48 bg-gray-200 dark:bg-slate-700 rounded animate-pulse"></div>
-            <div class="h-4 w-32 bg-gray-200 dark:bg-slate-700 rounded mt-2 animate-pulse"></div>
+      <!-- Fallback for ClientOnly - shown during SSR -->
+      <template #fallback>
+        <div class="space-y-8">
+          <div class="flex items-center justify-between">
+            <div>
+              <div
+                class="h-8 w-48 bg-gray-200 dark:bg-slate-700 rounded animate-pulse"
+              ></div>
+              <div
+                class="h-4 w-32 bg-gray-200 dark:bg-slate-700 rounded mt-2 animate-pulse"
+              ></div>
+            </div>
+          </div>
+          <div class="text-center py-12 text-gray-500 dark:text-slate-400">
+            載入中...
           </div>
         </div>
-        <div class="text-center py-12 text-gray-500 dark:text-slate-400">
-          載入中...
-        </div>
-      </div>
-    </template>
+      </template>
     </ClientOnly>
   </div>
 </template>
