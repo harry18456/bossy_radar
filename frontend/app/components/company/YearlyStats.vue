@@ -394,6 +394,11 @@ const adjustmentData = computed(() => ({
     <!-- Industry Comparison Chart -->
     <CompanyIndustryComparison :stats="stats" />
 
+    <!-- Salary Metrics (Disparity + Employee Count) -->
+    <div class="lg:col-span-2">
+      <CompanySalaryMetrics :stats="stats" />
+    </div>
+
     <!-- Salary Adjustment Chart (New) -->
     <div
       class="lg:col-span-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm"
