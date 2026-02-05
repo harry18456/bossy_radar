@@ -325,6 +325,13 @@ const ensureProtocol = (url: string) => {
 
         <!-- Stats Tab -->
         <div v-else-if="activeTab === 'stats'">
+          <!-- KPI Alert Cards -->
+          <CompanyKpiAlerts
+            :stats="profile.non_manager_salaries || []"
+            :violations="profile.violations || []"
+            :environmental-violations="profile.environmental_violations || []"
+          />
+
           <div
             v-if="
               (profile.non_manager_salaries &&
