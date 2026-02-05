@@ -240,6 +240,12 @@ const clearWatchlist = () => {
             :year="selectedYear"
           />
 
+          <!-- EPS vs Salary Scatter Chart -->
+          <WatchlistEpsScatter :data="sortedComparison" :year="selectedYear" />
+
+          <!-- Multi-dimension Radar Chart -->
+          <WatchlistRadarChart :data="sortedComparison" :year="selectedYear" />
+
           <div class="flex items-center justify-between mb-6">
             <h2
               class="text-xl font-bold text-gray-900 dark:text-white flex items-center"
