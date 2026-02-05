@@ -259,6 +259,65 @@ const totalEnvFine = computed(() =>
     0,
   ),
 );
+
+// Stacked bar chart options
+const stackedChartOptions = computed<ChartOptions<"bar">>(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: "top",
+      labels: {
+        color: isDark.value ? "#e2e8f0" : "#475569",
+      },
+    },
+    tooltip: {
+      mode: "index",
+      intersect: false,
+    },
+  },
+  scales: {
+    x: {
+      stacked: true,
+      grid: {
+        color: isDark.value ? "#334155" : "#e2e8f0",
+      },
+      ticks: {
+        color: isDark.value ? "#94a3b8" : "#64748b",
+      },
+    },
+    y: {
+      stacked: true,
+      grid: {
+        color: isDark.value ? "#334155" : "#e2e8f0",
+      },
+      ticks: {
+        color: isDark.value ? "#94a3b8" : "#64748b",
+        stepSize: 1,
+      },
+      beginAtZero: true,
+    },
+  },
+}));
+
+// Stacked violation data
+const stackedViolationData = computed(() => ({
+  labels: yearlyData.value.labels,
+  datasets: [
+    {
+      label: "勞動違規",
+      data: yearlyData.value.labor,
+      backgroundColor: "#ef4444",
+      borderRadius: 2,
+    },
+    {
+      label: "環保違規",
+      data: yearlyData.value.env,
+      backgroundColor: "#22c55e",
+      borderRadius: 2,
+    },
+  ],
+}));
 </script>
 
 <template>
@@ -336,6 +395,20 @@ const totalEnvFine = computed(() =>
         </h3>
         <div class="h-64">
           <Line :data="cumulativeFineData" :options="areaChartOptions" />
+        </div>
+      </div>
+      <!-- Stacked Violation Comparison -->
+      <div
+        class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm lg:col-span-2"
+      >
+        <h3
+          class="text-lg font-bold text-gray-900 dark:text-white mb-6 flex items-center"
+        >
+          <Icon name="lucide:layers" class="w-5 h-5 mr-2 text-purple-500" />
+          勞動 vs 環保違規比例
+        </h3>
+        <div class="h-64">
+          <Bar :data="stackedViolationData" :options="stackedChartOptions" />
         </div>
       </div>
     </div>
