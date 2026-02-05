@@ -45,10 +45,28 @@ injectOrganizationSchema();
       </div>
     </div>
 
-    <!-- Leaderboard Section -->
-    <div class="max-w-2xl mx-auto">
+    <!-- Leaderboards Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-6xl mx-auto">
       <ClientOnly>
         <HomeViolationLeaderboard />
+        <template #fallback>
+          <div
+            class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
+          >
+            <div class="animate-pulse space-y-4">
+              <div
+                class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"
+              ></div>
+              <div
+                class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"
+              ></div>
+            </div>
+          </div>
+        </template>
+      </ClientOnly>
+
+      <ClientOnly>
+        <HomeSalaryRanking />
         <template #fallback>
           <div
             class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
