@@ -48,12 +48,15 @@ class IndustrySalaryLeaderboardItem(LeaderboardItem):
     industry: str
     avg_salary: Optional[int] = None
     median_salary: Optional[int] = None
+    eps: Optional[float] = None
 
 
 class IndustrySalaryLeaderboard(BaseModel):
     """同產業薪資排行榜"""
-    top_by_avg: List[IndustrySalaryLeaderboardItem]
-    bottom_by_avg: List[IndustrySalaryLeaderboardItem]
+    top_by_median: List[IndustrySalaryLeaderboardItem]
+    bottom_by_median: List[IndustrySalaryLeaderboardItem]
+    top_by_eps: List[IndustrySalaryLeaderboardItem]
+    bottom_by_eps: List[IndustrySalaryLeaderboardItem]
 
 
 class LeaderboardResponse(BaseModel):

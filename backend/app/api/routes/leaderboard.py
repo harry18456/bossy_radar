@@ -226,8 +226,8 @@ def get_leaderboards(session: SessionDep):
                 .where(NonManagerSalary.company_code.isnot(None))
                 .where(NonManagerSalary.year == year_roc)
                 .where(NonManagerSalary.industry == industry)
-                .where(NonManagerSalary.avg_salary.isnot(None))
-                .order_by(NonManagerSalary.avg_salary.desc())
+                .where(NonManagerSalary.median_salary.isnot(None))
+                .order_by(NonManagerSalary.median_salary.desc())
                 .limit(LIMIT)
             ).all()
             
@@ -236,16 +236,38 @@ def get_leaderboards(session: SessionDep):
                 .where(NonManagerSalary.company_code.isnot(None))
                 .where(NonManagerSalary.year == year_roc)
                 .where(NonManagerSalary.industry == industry)
-                .where(NonManagerSalary.avg_salary.isnot(None))
-                .order_by(NonManagerSalary.avg_salary.asc())
+                .where(NonManagerSalary.median_salary.isnot(None))
+                .order_by(NonManagerSalary.median_salary.asc())
+                .limit(LIMIT)
+            ).all()
+            
+            ind_top_eps = session.exec(
+                select(NonManagerSalary)
+                .where(NonManagerSalary.company_code.isnot(None))
+                .where(NonManagerSalary.year == year_roc)
+                .where(NonManagerSalary.industry == industry)
+                .where(NonManagerSalary.eps.isnot(None))
+                .order_by(NonManagerSalary.eps.desc())
+                .limit(LIMIT)
+            ).all()
+            
+            ind_bottom_eps = session.exec(
+                select(NonManagerSalary)
+                .where(NonManagerSalary.company_code.isnot(None))
+                .where(NonManagerSalary.year == year_roc)
+                .where(NonManagerSalary.industry == industry)
+                .where(NonManagerSalary.eps.isnot(None))
+                .order_by(NonManagerSalary.eps.asc())
                 .limit(LIMIT)
             ).all()
             
             salary_by_industry_data[year_roc][industry] = {
                 "top": ind_top,
                 "bottom": ind_bottom,
+                "top_eps": ind_top_eps,
+                "bottom_eps": ind_bottom_eps,
             }
-            for s in ind_top + ind_bottom:
+            for s in ind_top + ind_bottom + ind_top_eps + ind_bottom_eps:
                 company_codes_with_data.add(s.company_code)
     
     # ========== Step 5: 只查詢需要的公司名稱 ==========
@@ -310,8 +332,10 @@ def get_leaderboards(session: SessionDep):
         salary_by_industry[year_roc] = {}
         for industry, data in industries.items():
             salary_by_industry[year_roc][industry] = IndustrySalaryLeaderboard(
-                top_by_avg=[_to_industry_salary_item(s, company_map) for s in data["top"]],
-                bottom_by_avg=[_to_industry_salary_item(s, company_map) for s in data["bottom"]],
+                top_by_median=[_to_industry_salary_item(s, company_map) for s in data["top"]],
+                bottom_by_median=[_to_industry_salary_item(s, company_map) for s in data["bottom"]],
+                top_by_eps=[_to_industry_salary_item(s, company_map) for s in data["top_eps"]],
+                bottom_by_eps=[_to_industry_salary_item(s, company_map) for s in data["bottom_eps"]],
             )
     
     return LeaderboardResponse(
@@ -367,4 +391,5 @@ def _to_industry_salary_item(s: NonManagerSalary, company_map: Dict[str, Company
         industry=s.industry or "",
         avg_salary=s.avg_salary,
         median_salary=s.median_salary,
+        eps=s.eps,
     )
