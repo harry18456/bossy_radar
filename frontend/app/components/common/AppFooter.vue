@@ -141,7 +141,7 @@ const aggregatedStatus = computed(() => {
           </a>
           <span class="border-l border-gray-300 dark:border-slate-700 h-3"></span>
           <a href="https://github.com/harry18456/bossy_radar" target="_blank" class="text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white transition-colors">
-            <Icon name="brandico:github" class="w-3.5 h-3.5" />
+            <Icon name="lucide:github" class="w-3.5 h-3.5" />
           </a>
         </div>
       </div>

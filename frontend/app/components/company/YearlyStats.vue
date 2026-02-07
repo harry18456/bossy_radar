@@ -146,35 +146,61 @@ const salaryData = computed(() => ({
   ],
 }));
 
-// Check if we have growth rate data
+// Check if we have growth rate data (at least 2 years of salary data)
 const hasGrowthData = computed(() => {
-  return sortedStats.value.some(
-    (s) => s.avg_salary_change != null || s.median_salary_change != null,
-  );
+  const stats = sortedStats.value;
+  // Need at least 2 years with salary data to calculate growth
+  const yearsWithSalary = stats.filter(s => s.avg_salary != null || s.median_salary != null);
+  return yearsWithSalary.length >= 2;
 });
 
-// Salary Growth Rate Data
-const salaryGrowthData = computed(() => ({
-  labels: sortedStats.value.map((s) => s.year + "年"),
-  datasets: [
-    {
-      label: "平均薪資成長率 (%)",
-      data: sortedStats.value.map((s) => s.avg_salary_change),
-      borderColor: "#22c55e",
-      backgroundColor: "rgba(34, 197, 94, 0.1)",
-      fill: true,
-      tension: 0.3,
-    },
-    {
-      label: "中位數薪資成長率 (%)",
-      data: sortedStats.value.map((s) => s.median_salary_change),
-      borderColor: "#eab308",
-      backgroundColor: "rgba(234, 179, 8, 0.1)",
-      fill: true,
-      tension: 0.3,
-    },
-  ],
-}));
+// Salary Growth Rate Data - Calculate YoY growth from salary values
+const salaryGrowthData = computed(() => {
+  const stats = sortedStats.value;
+  
+  // Calculate YoY growth rates from actual salary data
+  const avgGrowthRates = stats.map((s, i) => {
+    if (i === 0) return null; // First year has no previous year to compare
+    const prev = stats[i - 1];
+    if (prev.avg_salary && s.avg_salary && prev.avg_salary > 0) {
+      return ((s.avg_salary - prev.avg_salary) / prev.avg_salary) * 100;
+    }
+    // Fallback to backend-provided value if available
+    return s.avg_salary_change ?? null;
+  });
+  
+  const medianGrowthRates = stats.map((s, i) => {
+    if (i === 0) return null; // First year has no previous year to compare
+    const prev = stats[i - 1];
+    if (prev.median_salary && s.median_salary && prev.median_salary > 0) {
+      return ((s.median_salary - prev.median_salary) / prev.median_salary) * 100;
+    }
+    // Fallback to backend-provided value if available
+    return s.median_salary_change ?? null;
+  });
+  
+  return {
+    labels: stats.map((s) => s.year + "年"),
+    datasets: [
+      {
+        label: "平均薪資成長率 (%)",
+        data: avgGrowthRates,
+        borderColor: "#22c55e",
+        backgroundColor: "rgba(34, 197, 94, 0.1)",
+        fill: true,
+        tension: 0.3,
+      },
+      {
+        label: "中位數薪資成長率 (%)",
+        data: medianGrowthRates,
+        borderColor: "#eab308",
+        backgroundColor: "rgba(234, 179, 8, 0.1)",
+        fill: true,
+        tension: 0.3,
+      },
+    ],
+  };
+});
 
 // Growth rate chart options (with percentage display)
 const growthChartOptions = computed<any>(() => ({

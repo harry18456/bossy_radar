@@ -11,7 +11,8 @@ import type {
   SalaryAdjustment,
   CompanyCatalog,
   SystemSyncStatus,
-  YearlySummaryItem
+  YearlySummaryItem,
+  LeaderboardsResponse
 } from '~/types/api'
 
 export const useStaticApi = () => {
@@ -255,6 +256,9 @@ export const useStaticApi = () => {
        const items = await fetchJson<SalaryAdjustment[]>('mops/salary-adjustments.json')
        return paginate(items, Number(params?.page) || 1, Number(params?.size) || 20)
     },
+
+    getLeaderboards: () =>
+      fetchJson<LeaderboardsResponse>('leaderboards.json'),
 
     getSystemSyncStatus: () =>
       fetchJson<SystemSyncStatus>('system-status.json'),

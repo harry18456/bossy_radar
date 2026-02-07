@@ -1,36 +1,58 @@
 <script setup lang="ts">
-import type { LeaderboardsResponse, SalaryLeaderboardItem } from "~/types/api";
+import type { LeaderboardsResponse, IndustrySalaryLeaderboardItem } from "~/types/api";
 
 const props = defineProps<{
   data: LeaderboardsResponse | null;
 }>();
 
-// Get latest year from salary data (find max year key that has actual data)
-const latestSalaryYear = computed(() => {
-  if (!props.data?.salary) return null;
-  const years = Object.keys(props.data.salary)
+// Get latest year from salary_by_industry data (find year with actual data)
+const latestYear = computed(() => {
+  if (!props.data?.salary_by_industry) return null;
+  const years = Object.keys(props.data.salary_by_industry)
     .map(Number)
     .sort((a, b) => b - a);
-  // Find first year that has actual data (non-empty top_by_median)
+  // Find first year that has actual industry data
   const yearWithData = years.find(year => {
-    const yearData = props.data?.salary?.[String(year)];
-    return yearData?.top_by_median && yearData.top_by_median.length > 0;
+    const yearData = props.data?.salary_by_industry?.[String(year)];
+    return yearData && Object.keys(yearData).length > 0;
   });
   return yearWithData || null;
 });
 
-// Top by median salary
-const topBySalary = computed(() => {
-  if (!latestSalaryYear.value) return [];
-  const yearData = props.data?.salary?.[String(latestSalaryYear.value)];
-  return yearData?.top_by_median || [];
+// Get available industries for the latest year
+const industries = computed(() => {
+  if (!latestYear.value || !props.data?.salary_by_industry) return [];
+  const yearData = props.data.salary_by_industry[String(latestYear.value)];
+  return Object.keys(yearData || {}).sort();
 });
 
-// Bottom by median salary
+// Selected industry
+const selectedIndustry = ref<string>("");
+
+// Set default industry when data loads
+watch(industries, (newIndustries) => {
+  if (newIndustries.length > 0 && !selectedIndustry.value) {
+    // Default to 半導體業 if exists, otherwise first industry
+    selectedIndustry.value = newIndustries.includes("半導體業") 
+      ? "半導體業" 
+      : newIndustries[0] || "";
+  }
+}, { immediate: true });
+
+// Top by median salary in selected industry
+const topBySalary = computed(() => {
+  if (!latestYear.value || !selectedIndustry.value || !props.data?.salary_by_industry) return [];
+  const yearData = props.data.salary_by_industry[String(latestYear.value)];
+  const industryData = yearData?.[selectedIndustry.value];
+  return industryData?.top_by_median || [];
+});
+
+// Bottom by median salary in selected industry  
 const bottomBySalary = computed(() => {
-  if (!latestSalaryYear.value) return [];
-  const yearData = props.data?.salary?.[String(latestSalaryYear.value)];
-  return yearData?.bottom_by_median || [];
+  if (!latestYear.value || !selectedIndustry.value || !props.data?.salary_by_industry) return [];
+  const yearData = props.data.salary_by_industry[String(latestYear.value)];
+  const industryData = yearData?.[selectedIndustry.value];
+  return industryData?.bottom_by_median || [];
 });
 
 const activeTab = ref<"top" | "bottom">("top");
@@ -41,22 +63,22 @@ const activeTab = ref<"top" | "bottom">("top");
     class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm overflow-hidden"
   >
     <div class="p-4 md:p-6 border-b border-gray-200 dark:border-slate-800">
-      <div class="flex items-center justify-between">
+      <div class="flex flex-col gap-3">
         <h3
           class="text-lg font-bold text-gray-900 dark:text-white flex items-center"
         >
-          <Icon name="lucide:medal" class="w-5 h-5 mr-2 text-green-500" />
-          薪資排行榜
+          <Icon name="lucide:building-2" class="w-5 h-5 mr-2 text-blue-500" />
+          產業薪資排行 (中位數)
         </h3>
 
         <!-- Tab Toggle -->
-        <div class="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5">
+        <div class="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5 w-fit">
           <button
             @click="activeTab = 'top'"
             class="px-3 py-1.5 text-xs font-medium rounded-md transition-all"
             :class="
               activeTab === 'top'
-                ? 'bg-white dark:bg-slate-700 text-green-600 dark:text-green-400 shadow-sm'
+                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-400 shadow-sm'
                 : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
             "
           >
@@ -75,9 +97,22 @@ const activeTab = ref<"top" | "bottom">("top");
           </button>
         </div>
       </div>
-      <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">
-        {{ latestSalaryYear || "-" }} 年度非主管中位數薪資
-      </p>
+      
+      <!-- Industry Selector -->
+      <div class="mt-3 flex items-center gap-2">
+        <span class="text-sm text-gray-500 dark:text-slate-400">產業：</span>
+        <select
+          v-model="selectedIndustry"
+          class="text-sm bg-gray-100 dark:bg-slate-800 border-none rounded-lg px-3 py-1.5 text-gray-700 dark:text-slate-300 focus:ring-2 focus:ring-blue-500"
+        >
+          <option v-for="industry in industries" :key="industry" :value="industry">
+            {{ industry }}
+          </option>
+        </select>
+        <span class="text-xs text-gray-400 dark:text-slate-500">
+          {{ latestYear }} 年度中位數
+        </span>
+      </div>
     </div>
 
     <!-- Loading state when data is null -->
@@ -110,11 +145,11 @@ const activeTab = ref<"top" | "bottom">("top");
           class="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold mr-3 shrink-0"
           :class="[
             index === 0
-              ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+              ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
               : index === 1
-                ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
+                ? 'bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400'
                 : index === 2
-                  ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400'
+                  ? 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400'
                   : 'bg-gray-50 text-gray-500 dark:bg-slate-800 dark:text-slate-400',
           ]"
         >
@@ -129,8 +164,8 @@ const activeTab = ref<"top" | "bottom">("top");
           </div>
         </div>
         <div class="text-right ml-4">
-          <div class="text-lg font-bold text-green-600 dark:text-green-400">
-            {{ item.median_salary.toLocaleString() }}
+          <div class="text-lg font-bold text-blue-600 dark:text-blue-400">
+            {{ item.median_salary?.toLocaleString() }}
           </div>
           <div class="text-xs text-gray-400 dark:text-slate-500">仟元</div>
         </div>
@@ -166,7 +201,7 @@ const activeTab = ref<"top" | "bottom">("top");
         </div>
         <div class="text-right ml-4">
           <div class="text-lg font-bold text-amber-600 dark:text-amber-400">
-            {{ item.median_salary.toLocaleString() }}
+            {{ item.median_salary?.toLocaleString() }}
           </div>
           <div class="text-xs text-gray-400 dark:text-slate-500">仟元</div>
         </div>

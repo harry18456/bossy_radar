@@ -225,3 +225,56 @@ export interface SystemSyncStatus {
   mops: Record<string, CategorySyncStatus>;
   environmental_violations: Record<string, CategorySyncStatus>;
 }
+
+// Leaderboards API Types
+export interface ViolationLeaderboardItem {
+  company_code: string;
+  company_name: string;
+  labor_count: number;
+  labor_fine: number;
+  env_count: number;
+  env_fine: number;
+  total_count: number;
+  total_fine: number;
+}
+
+export interface SalaryLeaderboardItem {
+  company_code: string;
+  company_name: string;
+  avg_salary: number;
+  median_salary: number;
+  eps?: number;
+}
+
+export interface IndustrySalaryLeaderboardItem extends SalaryLeaderboardItem {
+  industry: string;
+}
+
+export interface ViolationLeaderboardSet {
+  top_by_count: ViolationLeaderboardItem[];
+  bottom_by_count: ViolationLeaderboardItem[];
+  top_by_fine: ViolationLeaderboardItem[];
+  bottom_by_fine: ViolationLeaderboardItem[];
+}
+
+export interface SalaryLeaderboardSet {
+  top_by_avg: SalaryLeaderboardItem[];
+  bottom_by_avg: SalaryLeaderboardItem[];
+  top_by_median: SalaryLeaderboardItem[];
+  bottom_by_median: SalaryLeaderboardItem[];
+}
+
+export interface IndustrySalaryLeaderboardSet {
+  top_by_median: IndustrySalaryLeaderboardItem[];
+  bottom_by_median: IndustrySalaryLeaderboardItem[];
+  top_by_eps: IndustrySalaryLeaderboardItem[];
+  bottom_by_eps: IndustrySalaryLeaderboardItem[];
+}
+
+export interface LeaderboardsResponse {
+  latest_year: number;
+  violation_all_time: ViolationLeaderboardSet;
+  violation_yearly: Record<string, ViolationLeaderboardSet>;
+  salary: Record<string, SalaryLeaderboardSet>;
+  salary_by_industry: Record<string, Record<string, IndustrySalaryLeaderboardSet>>;
+}

@@ -411,12 +411,6 @@ const stackedViolationData = computed(() => ({
           <Bar :data="stackedViolationData" :options="stackedChartOptions" />
         </div>
       </div>
-
-      <!-- Violation Law Article Distribution -->
-      <CompanyViolationDonut
-        :violations="violations"
-        :environmental-violations="environmentalViolations"
-      />
     </div>
   </div>
 </template>
