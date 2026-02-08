@@ -107,7 +107,11 @@ export default defineNuxtConfig({
   },
   nitro: {
     prerender: {
-      failOnError: false
+      failOnError: false,
+      // Ignore invalid company routes (non-alphanumeric codes)
+      ignore: [
+        /^\/companies\/[^A-Za-z0-9\/]+$/,
+      ],
     },
     compressPublicAssets: {
       gzip: true,

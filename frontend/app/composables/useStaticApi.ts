@@ -57,7 +57,7 @@ export const useStaticApi = () => {
       return await $fetch<T>(`/data/${path}`)
     } catch (e) {
       console.error(`Failed to fetch static data: ${path}`, e)
-      $toast.error('無法讀取靜態資料，請稍後再試')
+      $toast?.error('無法讀取靜態資料，請稍後再試')
       throw e
     }
   }
