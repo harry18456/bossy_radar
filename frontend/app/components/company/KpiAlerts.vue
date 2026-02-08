@@ -10,20 +10,8 @@ interface NonManagerSalary {
   is_eps_growth_salary_decrease?: string | null;
 }
 
-interface Violation {
-  id: number;
-  fine_amount: number;
-}
-
-interface EnvironmentalViolation {
-  id: number;
-  fine_amount: number;
-}
-
 const props = defineProps<{
   stats: NonManagerSalary[];
-  violations: Violation[];
-  environmentalViolations: EnvironmentalViolation[];
 }>();
 
 // Get latest year stats
@@ -42,28 +30,12 @@ const hasWarnings = computed(() => {
     ["Y", "V"].includes(s.is_eps_growth_salary_decrease || "")
   );
 });
-
-// KPI calculations
-const totalViolations = computed(
-  () => props.violations.length + props.environmentalViolations.length,
-);
-const totalFines = computed(() => {
-  const laborFines = props.violations.reduce(
-    (sum, v) => sum + (v.fine_amount || 0),
-    0,
-  );
-  const envFines = props.environmentalViolations.reduce(
-    (sum, v) => sum + (v.fine_amount || 0),
-    0,
-  );
-  return laborFines + envFines;
-});
 </script>
 
 <template>
   <div
-    v-if="latestStats || totalViolations > 0"
-    class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8"
+    v-if="latestStats"
+    class="grid grid-cols-3 gap-4 mb-8"
   >
     <!-- Latest Year Salary -->
     <div
@@ -134,66 +106,12 @@ const totalFines = computed(() => {
       <div class="text-xs text-blue-600 dark:text-blue-400">每股盈餘 (EPS)</div>
     </div>
 
-    <!-- Violations Count with Warning -->
-    <div
-      class="border rounded-xl p-4"
-      :class="
-        totalViolations > 0
-          ? 'bg-gradient-to-br from-red-50 to-rose-100 dark:from-red-900/30 dark:to-rose-900/20 border-red-200 dark:border-red-800'
-          : 'bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-900/30 dark:to-slate-900/20 border-gray-200 dark:border-gray-800'
-      "
-    >
-      <div class="flex items-center justify-between mb-2">
-        <Icon
-          :name="
-            totalViolations > 0
-              ? 'lucide:alert-triangle'
-              : 'lucide:check-circle'
-          "
-          class="w-5 h-5"
-          :class="
-            totalViolations > 0
-              ? 'text-red-600 dark:text-red-400'
-              : 'text-gray-600 dark:text-gray-400'
-          "
-        />
-        <span
-          class="text-xs"
-          :class="
-            totalViolations > 0
-              ? 'text-red-600 dark:text-red-400'
-              : 'text-gray-600 dark:text-gray-400'
-          "
-        >
-          累計
-        </span>
-      </div>
-      <div
-        class="text-2xl font-bold"
-        :class="
-          totalViolations > 0
-            ? 'text-red-700 dark:text-red-300'
-            : 'text-gray-700 dark:text-gray-300'
-        "
-      >
-        {{ totalViolations }}
-      </div>
-      <div
-        class="text-xs"
-        :class="
-          totalViolations > 0
-            ? 'text-red-600 dark:text-red-400'
-            : 'text-gray-600 dark:text-gray-400'
-        "
-      >
-        違規紀錄
-      </div>
-    </div>
+
 
     <!-- Warning Alert -->
     <div
       v-if="hasWarnings"
-      class="col-span-2 md:col-span-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
+      class="col-span-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
     >
       <div class="flex items-center gap-3">
         <Icon

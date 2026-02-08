@@ -118,6 +118,12 @@ const latestDiff = computed(() => {
   if (!latest?.avg_salary || !latest?.industry_avg_salary) return null;
   return latest.avg_salary - latest.industry_avg_salary;
 });
+
+// Get the latest year for display
+const latestYear = computed(() => {
+  const latest = sortedStats.value[sortedStats.value.length - 1];
+  return latest?.year ?? null;
+});
 </script>
 
 <template>
@@ -133,7 +139,7 @@ const latestDiff = computed(() => {
         同業薪資比較
       </h3>
       <span
-        v-if="latestDiff !== null"
+        v-if="latestDiff !== null && latestYear !== null"
         class="text-sm font-medium px-2 py-1 rounded"
         :class="
           latestDiff >= 0
@@ -141,7 +147,7 @@ const latestDiff = computed(() => {
             : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
         "
       >
-        {{ latestDiff >= 0 ? "+" : "" }}{{ latestDiff.toLocaleString() }} 仟元
+        {{ latestYear }}年：{{ latestDiff >= 0 ? "+" : "" }}{{ latestDiff.toLocaleString() }} 仟元
       </span>
     </div>
     <div class="h-64">

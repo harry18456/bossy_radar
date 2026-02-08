@@ -34,7 +34,7 @@ const hasData = computed(() => {
   return (
     props.data.filter(
       (item) =>
-        item.non_manager_salary?.avg_salary &&
+        item.non_manager_salary?.median_salary &&
         item.non_manager_salary?.eps != null,
     ).length >= 2
   );
@@ -51,11 +51,11 @@ const scatterOptions = computed<ChartOptions<"scatter">>(() => ({
     tooltip: {
       callbacks: {
         label: (context) => {
-          const item = props.data[context.dataIndex];
+          const item = filteredData.value[context.dataIndex];
           return [
             item?.company_name || "",
             `EPS: ${context.parsed.x}`,
-            `薪資: ${context.parsed.y.toLocaleString()} 仟元`,
+            `薪資: ${context.parsed.y?.toLocaleString() ?? "-"} 仟元`,
           ];
         },
       },
@@ -85,29 +85,32 @@ const scatterOptions = computed<ChartOptions<"scatter">>(() => ({
       },
       title: {
         display: true,
-        text: "平均薪資 (仟元)",
+        text: "中位數薪資 (仟元)",
         color: isDark.value ? "#94a3b8" : "#64748b",
       },
     },
   },
 }));
 
+// Filtered data with valid values (used for both scatter and tooltip)
+const filteredData = computed(() =>
+  props.data.filter(
+    (item) =>
+      item.non_manager_salary?.median_salary &&
+      item.non_manager_salary?.eps != null,
+  ),
+);
+
 // Scatter data - EPS vs Salary
 const scatterData = computed(() => ({
   datasets: [
     {
       label: "公司",
-      data: props.data
-        .filter(
-          (item) =>
-            item.non_manager_salary?.avg_salary &&
-            item.non_manager_salary?.eps != null,
-        )
-        .map((item) => ({
-          x: item.non_manager_salary?.eps || 0,
-          y: item.non_manager_salary?.avg_salary || 0,
-        })),
-      backgroundColor: props.data.map((_, i) => {
+      data: filteredData.value.map((item) => ({
+        x: item.non_manager_salary?.eps || 0,
+        y: item.non_manager_salary?.median_salary || 0,
+      })),
+      backgroundColor: filteredData.value.map((_, i) => {
         const colors = [
           "#ef4444",
           "#3b82f6",
@@ -142,7 +145,7 @@ const scatterData = computed(() => ({
       <Scatter :data="scatterData" :options="scatterOptions" />
     </div>
     <p class="mt-4 text-xs text-gray-500 dark:text-slate-400 text-center">
-      * 圓點顏色代表不同公司，X軸為EPS、Y軸為平均薪資
+      * 圓點顏色代表不同公司，X軸為EPS、Y軸為中位數薪資
     </p>
   </div>
 </template>

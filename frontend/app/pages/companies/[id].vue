@@ -328,8 +328,6 @@ const ensureProtocol = (url: string) => {
           <!-- KPI Alert Cards -->
           <CompanyKpiAlerts
             :stats="profile.non_manager_salaries || []"
-            :violations="profile.violations || []"
-            :environmental-violations="profile.environmental_violations || []"
           />
 
           <div
