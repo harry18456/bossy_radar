@@ -146,12 +146,39 @@ def get_yearly_summary(
     include_welfare_policy = include_all or "welfare_policy" in include_set
     include_salary_adjustment = include_all or "salary_adjustment" in include_set
     
-    # Step 1: 取得所有年份（從 employee_benefit 和 non_manager_salary）
-    years_query = select(EmployeeBenefit.year).distinct()
+    # Step 1: 取得所有年份（從 MOPS + 違規資料）
+    years_set: set[int] = set()
+
+    # 從 EmployeeBenefit 取得年份
+    eb_years_query = select(EmployeeBenefit.year).distinct()
     if year:
-        years_query = years_query.where(col(EmployeeBenefit.year).in_(year))
-    available_years = [r for r in session.exec(years_query).all()]
-    
+        eb_years_query = eb_years_query.where(col(EmployeeBenefit.year).in_(year))
+    years_set.update(session.exec(eb_years_query).all())
+
+    # 從 Violation 取得年份（西元轉民國）
+    if include_violations:
+        vio_years_query = select(
+            extract('year', Violation.penalty_date).label("year")
+        ).distinct().where(Violation.penalty_date.is_not(None))
+        vio_years_raw = session.exec(vio_years_query).all()
+        vio_years_roc = {int(y) - 1911 for y in vio_years_raw if y}
+        if year:
+            vio_years_roc = {y for y in vio_years_roc if y in year}
+        years_set.update(vio_years_roc)
+
+    # 從 EnvironmentalViolation 取得年份（西元轉民國）
+    if include_env_violations:
+        env_years_query = select(
+            extract('year', EnvironmentalViolation.penalty_date).label("year")
+        ).distinct().where(EnvironmentalViolation.penalty_date.is_not(None))
+        env_years_raw = session.exec(env_years_query).all()
+        env_years_roc = {int(y) - 1911 for y in env_years_raw if y}
+        if year:
+            env_years_roc = {y for y in env_years_roc if y in year}
+        years_set.update(env_years_roc)
+
+    available_years = sorted(years_set, reverse=True)
+
     if not available_years:
         return YearlySummaryResponse(items=[], total=0, page=page, size=size, total_pages=0)
     
@@ -287,8 +314,12 @@ def get_yearly_summary(
             policy = policies_map.get((code, y))
             adjustment = adjustments_map.get((code, y))
             
+            # 檢查是否有違規資料
+            has_violations = violations_by_year.get((code, y), {}).get("count", 0) > 0
+            has_env_violations = env_violations_by_year.get((code, y), {}).get("count", 0) > 0
+
             # 如果沒有任何資料，跳過
-            if not benefit and not salary and not policy and not adjustment:
+            if not benefit and not salary and not policy and not adjustment and not has_violations and not has_env_violations:
                 continue
             
             # 建立基本資料

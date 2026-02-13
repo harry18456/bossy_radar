@@ -24,8 +24,8 @@ ChartJS.register(
 interface ComparisonItem {
   company_code: string;
   company_name: string;
-  violations_total_count?: number | null;
-  env_violations_total_count?: number | null;
+  violations_year_count?: number | null;
+  env_violations_year_count?: number | null;
   non_manager_salary?: {
     avg_salary?: number | null;
     median_salary?: number | null;
@@ -47,7 +47,7 @@ const hasData = computed(() => props.data.length >= 2);
 // Normalize values to 0-100 scale for radar
 const normalize = (values: number[], invert = false) => {
   const max = Math.max(...values);
-  if (max === 0) return values.map(() => 0);
+  if (max === 0) return values.map(() => (invert ? 100 : 0));
   return values.map((v) => {
     const normalized = (v / max) * 100;
     return invert ? 100 - normalized : normalized;
@@ -77,8 +77,8 @@ const radarData = computed(() => {
   const eps = props.data.map((item) => item.non_manager_salary?.eps || 0);
   const violations = props.data.map(
     (item) =>
-      (item.violations_total_count || 0) +
-      (item.env_violations_total_count || 0),
+      (item.violations_year_count || 0) +
+      (item.env_violations_year_count || 0),
   );
 
   // Normalize all values

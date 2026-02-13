@@ -234,27 +234,14 @@ const clearWatchlist = () => {
 
         <!-- Comparison Section -->
         <section v-if="sortedComparison.length > 0">
-          <!-- Salary Comparison Chart -->
-          <WatchlistSalaryComparison
-            :data="sortedComparison"
-            :year="selectedYear"
-          />
-
-          <!-- EPS vs Salary Scatter Chart -->
-          <WatchlistEpsScatter :data="sortedComparison" :year="selectedYear" />
-
-          <!-- Multi-dimension Radar Chart -->
-          <WatchlistRadarChart :data="sortedComparison" :year="selectedYear" />
-
+          <!-- Year Selector (controls all charts) -->
           <div class="flex items-center justify-between mb-6">
             <h2
               class="text-xl font-bold text-gray-900 dark:text-white flex items-center"
             >
-              <Icon name="lucide:bar-chart-2" class="w-5 h-5 mr-2" />
-              薪資比較 ({{ selectedYear }}年)
+              <Icon name="lucide:git-compare" class="w-5 h-5 mr-2" />
+              綜合比較
             </h2>
-
-            <!-- Year Selector -->
             <div class="flex items-center space-x-2">
               <label
                 for="year-select"
@@ -276,6 +263,25 @@ const clearWatchlist = () => {
               </select>
             </div>
           </div>
+
+          <!-- Salary Comparison Chart -->
+          <WatchlistSalaryComparison
+            :data="sortedComparison"
+            :year="selectedYear"
+          />
+
+          <!-- EPS vs Salary Scatter Chart -->
+          <WatchlistEpsScatter :data="sortedComparison" :year="selectedYear" />
+
+          <!-- Multi-dimension Radar Chart -->
+          <WatchlistRadarChart :data="sortedComparison" :year="selectedYear" />
+
+          <h2
+            class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-6"
+          >
+            <Icon name="lucide:bar-chart-2" class="w-5 h-5 mr-2" />
+            薪資比較
+          </h2>
 
           <div
             class="overflow-x-auto bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl shadow-sm"

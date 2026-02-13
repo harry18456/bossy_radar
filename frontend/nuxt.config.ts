@@ -1,29 +1,35 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
-import { readFileSync, existsSync } from 'fs';
-import { resolve } from 'path';
+import { readFileSync, existsSync } from "fs";
+import { resolve } from "path";
 
-import pkg from './package.json'
+import pkg from "./package.json";
 
 // Read company catalog at build time for sitemap generation
 function getCompanyUrls(): string[] {
-  const catalogPath = resolve(__dirname, 'public/data/company-catalog.json');
+  const catalogPath = resolve(__dirname, "public/data/company-catalog.json");
   if (!existsSync(catalogPath)) {
-    console.warn('[Sitemap] company-catalog.json not found, skipping dynamic routes');
+    console.warn(
+      "[Sitemap] company-catalog.json not found, skipping dynamic routes",
+    );
     return [];
   }
-  
+
   try {
-    const catalog = JSON.parse(readFileSync(catalogPath, 'utf-8')) as { code: string }[];
+    const catalog = JSON.parse(readFileSync(catalogPath, "utf-8")) as {
+      code: string;
+    }[];
     // Filter out invalid codes (must be alphanumeric, no dots/slashes)
     const validCodes = catalog
-      .map(c => c.code)
-      .filter(code => code && /^[A-Za-z0-9]+$/.test(code));
-    
-    console.log(`[Sitemap] Loaded ${validCodes.length} company codes for sitemap`);
-    return validCodes.map(code => `/companies/${code}`);
+      .map((c) => c.code)
+      .filter((code) => code && /^[A-Za-z0-9]+$/.test(code));
+
+    console.log(
+      `[Sitemap] Loaded ${validCodes.length} company codes for sitemap`,
+    );
+    return validCodes.map((code) => `/companies/${code}`);
   } catch (e) {
-    console.error('[Sitemap] Failed to read company catalog:', e);
+    console.error("[Sitemap] Failed to read company catalog:", e);
     return [];
   }
 }
@@ -35,26 +41,26 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       appVersion: pkg.version,
-      dataMode: process.env.NUXT_PUBLIC_DATA_MODE || 'dynamic',
+      dataMode: process.env.NUXT_PUBLIC_DATA_MODE || "dynamic",
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8000",
       googleAdSense: {
-        id: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_ID || '',
+        id: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_ID || "",
         slots: {
-          top: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_SLOT_TOP || '',
-          bottom: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_SLOT_BOTTOM || ''
-        }
+          top: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_SLOT_TOP || "",
+          bottom: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_SLOT_BOTTOM || "",
+        },
       },
-      googleAnalyticsId: process.env.NUXT_PUBLIC_GA4_ID || '',
+      googleAnalyticsId: process.env.NUXT_PUBLIC_GA4_ID || "",
     },
   },
   site: {
-    url: 'https://www.bossy.eraser.tw',
-    name: '慣老闆雷達 | Bossy Radar',
+    url: "https://www.bossy.eraser.tw",
+    name: "慣老闆雷達 | Bossy Radar",
   },
   app: {
     head: {
       htmlAttrs: {
-        lang: 'zh-TW',
+        lang: "zh-TW",
       },
       script: [
         // Inline blocking script to prevent dark mode flash
@@ -73,16 +79,16 @@ export default defineNuxtConfig({
               } catch (e) {}
             })();
           `,
-          tagPosition: 'head',
+          tagPosition: "head",
         },
         {
           src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_ID}`,
           async: true,
           crossorigin: "anonymous",
-          tagPosition: 'bodyClose'
-        }
-      ]
-    }
+          tagPosition: "bodyClose",
+        },
+      ],
+    },
   },
   compatibilityDate: "2025-07-15",
   devtools: { enabled: true },
@@ -100,7 +106,7 @@ export default defineNuxtConfig({
   },
   sitemap: {
     urls: getCompanyUrls(),
-    exclude: ['/privacy', '/data-sources'],
+    exclude: ["/privacy", "/data-sources"],
   },
   vite: {
     plugins: [tailwindcss()],
@@ -108,16 +114,14 @@ export default defineNuxtConfig({
   nitro: {
     prerender: {
       failOnError: false,
+      // Pre-render all company detail pages for SEO and crawler accessibility
+      routes: getCompanyUrls(),
       // Ignore invalid company routes (non-alphanumeric codes)
-      ignore: [
-        /^\/companies\/[^A-Za-z0-9\/]+$/,
-      ],
+      ignore: [/^\/companies\/[^A-Za-z0-9\/]+$/],
     },
     compressPublicAssets: {
       gzip: true,
-      brotli: true
-    }
-  }
+      brotli: true,
+    },
+  },
 });
-
-

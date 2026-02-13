@@ -184,10 +184,30 @@ class ExportService:
         yearly_summaries_dir = self.output_dir / "yearly-summaries"
         yearly_summaries_dir.mkdir(exist_ok=True)
         
-        # Step 1: Get all years
-        years_query = select(EmployeeBenefit.year).distinct()
-        available_years = [r for r in session.exec(years_query).all()]
-        available_years.sort(reverse=True)
+        # Step 1: Get all years (from MOPS + violations)
+        years_set: set[int] = set()
+
+        # From EmployeeBenefit
+        eb_years = session.exec(select(EmployeeBenefit.year).distinct()).all()
+        years_set.update(eb_years)
+
+        # From Violation (AD -> ROC)
+        vio_years_raw = session.exec(
+            select(extract('year', Violation.penalty_date).label("year"))
+            .distinct()
+            .where(Violation.penalty_date.is_not(None))
+        ).all()
+        years_set.update(int(y) - 1911 for y in vio_years_raw if y)
+
+        # From EnvironmentalViolation (AD -> ROC)
+        env_years_raw = session.exec(
+            select(extract('year', EnvironmentalViolation.penalty_date).label("year"))
+            .distinct()
+            .where(EnvironmentalViolation.penalty_date.is_not(None))
+        ).all()
+        years_set.update(int(y) - 1911 for y in env_years_raw if y)
+
+        available_years = sorted(years_set, reverse=True)
         
         # Step 2: Get all companies
         companies = session.exec(select(Company)).all()
@@ -281,8 +301,12 @@ class ExportService:
                 policy = policies_map.get((code, y))
                 adjustment = adjustments_map.get((code, y))
 
+                # Check violation data for this year
+                has_violations = violations_by_year.get((code, y), {}).get("count", 0) > 0
+                has_env_violations = env_violations_by_year.get((code, y), {}).get("count", 0) > 0
+
                 # If no data for this year, skip
-                if not benefit and not salary and not policy and not adjustment:
+                if not benefit and not salary and not policy and not adjustment and not has_violations and not has_env_violations:
                     continue
 
                 item = YearlySummaryItem(

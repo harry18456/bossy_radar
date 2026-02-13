@@ -24,3 +24,6 @@ frontend/.nuxt/
 frontend/.output/
 frontend/dist/
 frontend/.env
+
+# Claude
+.claude/
