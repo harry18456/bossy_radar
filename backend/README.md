@@ -191,7 +191,7 @@
 - **CLI 指令**:
   ```bash
   # 匯出所有資料至指定目錄 (預設: frontend/public/data)
-  uv run python -m app.cli.main export --output-dir frontend/public/data
+  uv run python -m app.cli.main export --output-dir ../frontend/public/data
   ```
 - **產出檔案**:
   - `company-catalog.json`: 公司目錄

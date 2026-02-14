@@ -268,11 +268,11 @@ def sync_all(
     import sys
     
     commands = [
-        ["sync_companies"],
-        ["sync_violations"],
-        ["sync_env"],
-        ["sync_company_details"],
-        ["sync_mops"],
+        ["sync-companies"],
+        ["sync-violations"],
+        ["sync-env"],
+        ["sync-company-details"],
+        ["sync-mops"],
         ["export"],
     ]
     
@@ -281,14 +281,6 @@ def sync_all(
         typer.echo(f"Running: {' '.join(cmd)}")
         typer.echo(f"{'='*50}")
         
-        # Call the command directly via typer context
-        try:
-            ctx = typer.Context(app)
-            app.invoke(ctx)
-        except Exception:
-            pass
-        
-        # Use subprocess for proper isolation
         result = subprocess.run(
             [sys.executable, "-m", "app.cli.main"] + cmd,
             cwd=Path.cwd()
