@@ -46,9 +46,6 @@
         if (item.name) nameIndex.set(item.name, item)
       }
 
-      console.log(
-        `[Bossy Radar] Catalog: ${catalog.length} companies, ${taxIdIndex.size} with tax_id`
-      )
       return true
     } catch (err) {
       console.error('[Bossy Radar] Failed to load catalog:', err)
@@ -178,7 +175,6 @@
         const res = await fetch(`https://www.104.com.tw${endpoint}`, {
           headers: commonHeaders,
         })
-        console.log(`[Bossy Radar] 嘗試 ${endpoint}: ${res.status}`)
         if (!res.ok) continue
 
         const text = await res.text()
@@ -202,20 +198,19 @@
           const match = text.match(pattern)
           if (match) return match[1].substring(0, 8)
         }
-      } catch (err) {
-        console.log(`[Bossy Radar] ${endpoint} 失敗:`, err.message)
+      } catch {
+        // ignore
       }
     }
 
     // 最後手段：fetch 公司頁 HTML
     try {
-      console.log(`[Bossy Radar] 嘗試 fetch 公司頁 HTML...`)
       const htmlRes = await fetch(`https://www.104.com.tw/company/${slug}`)
       const html = await htmlRes.text()
       const custMatch = html.match(/custNo[=:"'\s]+(\d{8,})/i)
       if (custMatch) return custMatch[1].substring(0, 8)
-    } catch (err) {
-      console.log('[Bossy Radar] HTML fetch 失敗:', err.message)
+    } catch {
+      // ignore
     }
 
     return null
@@ -400,25 +395,18 @@
     if (currentMatch?.code === catalogItem.code) return
     currentMatch = catalogItem
 
-    createWidget()
+    if (!document.getElementById('bossy-radar-widget')) createWidget()
     const data = await loadCompanyData(catalogItem.code)
     renderCompanyData(catalogItem, data)
   }
 
   const tryMatchFromDOM = () => {
     const rawName = getCompanyNameFromDOM()
-    if (!rawName) {
-      console.log('[Bossy Radar] DOM 未抓到公司名')
-      return false
-    }
-
-    console.log(`[Bossy Radar] DOM 抓到名稱: "${rawName}"`)
-    console.log(`[Bossy Radar] 偵測到統編: ${detectedTaxId || '無'}`)
+    if (!rawName) return false
 
     // 直接比對
     const directMatch = matchByName(rawName)
     if (directMatch) {
-      console.log(`[Bossy Radar] 名稱精確比對: "${rawName}" -> ${directMatch.code}`)
       matchMethod = 'name'
       handleMatch(directMatch)
       return true
@@ -431,14 +419,12 @@
       if (!trimmed) continue
       const match = matchByName(trimmed)
       if (match) {
-        console.log(`[Bossy Radar] 名稱分段比對: "${trimmed}" -> ${match.code}`)
         matchMethod = 'name_split'
         handleMatch(match)
         return true
       }
     }
 
-    console.log(`[Bossy Radar] 名稱比對失敗: "${rawName}"`)
     return false
   }
 
@@ -461,56 +447,18 @@
     return location.pathname.startsWith('/job/')
   }
 
-  const debugGoSite = () => {
-    console.log('[Bossy Radar] === go.104 DEBUG ===')
-    console.log('[Bossy Radar] URL:', location.href)
-    console.log('[Bossy Radar] pathname:', location.pathname)
-    console.log('[Bossy Radar] search params:', location.search)
-
-    // URL 參數
-    const params = new URLSearchParams(location.search)
-    for (const [k, v] of params) {
-      console.log(`[Bossy Radar] param: ${k} = ${v}`)
-    }
-
-    // h1
-    const h1 = document.querySelector('h1')
-    console.log('[Bossy Radar] h1:', h1?.textContent?.trim())
-
-    // meta
-    const ogTitle = document.querySelector('meta[property="og:title"]')?.content
-    console.log('[Bossy Radar] og:title:', ogTitle)
-    const desc = document.querySelector('meta[name="description"]')?.content
-    console.log('[Bossy Radar] description:', desc)
-
-    // 所有連結含 company
-    const companyLinks = document.querySelectorAll('a[href*="company"]')
-    console.log(`[Bossy Radar] company 相關連結: ${companyLinks.length} 個`)
-    companyLinks.forEach((link, i) => {
-      if (i < 15) {
-        console.log(`  [${i}] href="${link.getAttribute('href')}" text="${link.textContent.trim().substring(0, 60)}"`)
-      }
-    })
-
-    // 所有連結含 custno
-    const custLinks = document.querySelectorAll('a[href*="custno"]')
-    console.log(`[Bossy Radar] custno 相關連結: ${custLinks.length} 個`)
-    custLinks.forEach((link, i) => {
-      console.log(`  [${i}] href="${link.getAttribute('href')}" text="${link.textContent.trim().substring(0, 60)}"`)
-    })
-
-    // ld+json
-    const ldJson = document.querySelector('script[type="application/ld+json"]')
-    if (ldJson) console.log('[Bossy Radar] ld+json:', ldJson.textContent.substring(0, 300))
-  }
-
   const init = async () => {
     if (!isCompanyOrJobPage()) return
 
     // go.104: 只能用名稱比對（custno 是加密的）
 
+    createWidget() // 立刻顯示 loading
+
     const ok = await loadCatalog()
-    if (!ok) return
+    if (!ok) {
+      renderNotFound('載入失敗', null)
+      return
+    }
 
     // 讀取 interceptor 已偵測到的 taxId（透過 DOM attribute 跨 world）
     const readTaxIdFromDOM = () =>
@@ -521,7 +469,6 @@
       detectedTaxId = taxId
       const match = matchByTaxId(taxId)
       if (match) {
-        console.log(`[Bossy Radar] 統一編號比對: ${taxId} -> ${match.code}`)
         matchMethod = 'tax_id'
         handleMatch(match)
         return true
@@ -562,10 +509,8 @@
           // Job 頁面：先試 slug → 統編，再 fallback 名稱
           const slug = getCompanySlugFromDOM()
           if (slug) {
-            console.log(`[Bossy Radar] Job 頁面偵測到公司 slug: ${slug}，查詢統編...`)
             const taxId = await fetchTaxIdBySlug(slug)
             if (taxId) {
-              console.log(`[Bossy Radar] 從 104 API 取得統編: ${taxId}`)
               if (tryMatchByTaxId(taxId)) return
             }
           }
@@ -583,14 +528,30 @@
 
     // 還沒命中就觀察 DOM 變化
     if (!currentMatch) {
+      let contentSeenAt = 0
+
+      const showNotFound = () => {
+        if (currentMatch) return
+        const finalTaxId = detectedTaxId || readTaxIdFromDOM()
+        renderNotFound(getCompanyNameFromDOM(), finalTaxId)
+      }
+
       const domObserver = new MutationObserver(() => {
-        // 偵測到關鍵元素出現就嘗試比對
-        const hasContent = isJobPage
+        if (currentMatch) { domObserver.disconnect(); return }
+
+        const hasContent = jobPage
           ? !!getCompanySlugFromDOM()
           : !!document.querySelector('h1')?.textContent?.trim()
 
-        if (hasContent && !currentMatch) {
-          tryMatch()
+        if (hasContent) {
+          if (!contentSeenAt) contentSeenAt = Date.now()
+          tryMatch().then(() => {
+            // 內容出現 2 秒後仍比對不到 → 顯示 not found
+            if (!currentMatch && Date.now() - contentSeenAt > 2000) {
+              domObserver.disconnect()
+              showNotFound()
+            }
+          })
         }
       })
       domObserver.observe(document.body, {
@@ -598,19 +559,13 @@
         subtree: true,
       })
 
-      // 安全網：最多等 8 秒，顯示 not found
+      // 安全網：最多等 5 秒
       setTimeout(() => {
         domObserver.disconnect()
         if (!currentMatch) {
-          tryMatch().then(() => {
-            if (!currentMatch) {
-              const finalTaxId = detectedTaxId || readTaxIdFromDOM()
-              createWidget()
-              renderNotFound(getCompanyNameFromDOM(), finalTaxId)
-            }
-          })
+          tryMatch().then(() => showNotFound())
         }
-      }, 8000)
+      }, 5000)
     }
   }
 

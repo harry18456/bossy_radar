@@ -4,8 +4,8 @@
  */
 
 const BOSSY_RADAR_URL = 'https://www.bossy.eraser.tw'
-const CATALOG_CACHE_KEY = 'bossy_radar_catalog'
-const CATALOG_TTL = 7 * 24 * 60 * 60 * 1000 // 7 days
+const CATALOG_CACHE_KEY = 'bossy_radar_catalog_v2' // v2: 包含 tax_id
+const CATALOG_TTL = 24 * 60 * 60 * 1000 // 1 day
 
 const fetchCatalog = async () => {
   const cached = await chrome.storage.local.get([

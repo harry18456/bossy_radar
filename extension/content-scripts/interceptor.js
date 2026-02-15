@@ -35,7 +35,6 @@
     if (!taxId || seen.has(taxId)) return
 
     seen.add(taxId)
-    console.log(`[Bossy Radar] ${source}: custNo=${custNo} → 統一編號=${taxId}`)
     // 存到 DOM data attribute，讓 content script 跨 world 讀取
     document.documentElement.setAttribute('data-bossy-tax-id', taxId)
     dispatchTaxId(taxId, source)
@@ -56,5 +55,4 @@
     return originalOpen.call(this, method, url, ...rest)
   }
 
-  console.log('[Bossy Radar] 攔截器已啟動')
 })()
