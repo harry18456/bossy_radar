@@ -26,6 +26,37 @@ class CompanyDetailScraper:
         self.data_dir = data_dir or Path("data/raw/company_details")
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
+    def cleanup_urls(self):
+        """Re-validate and normalize all URL fields in the company table.
+
+        Sets invalid placeholder values to None and adds https:// prefix
+        to bare domains. This is a one-time migration for existing data.
+        """
+        url_fields = ["stakeholder_url", "governance_url", "website"]
+
+        with Session(engine) as session:
+            companies = session.exec(select(Company)).all()
+            fixed = 0
+
+            for company in companies:
+                changed = False
+                for field in url_fields:
+                    raw = getattr(company, field)
+                    normalized = self._normalize_url(raw)
+                    if raw != normalized:
+                        setattr(company, field, normalized)
+                        changed = True
+                        logger.info(
+                            f"[{company.code}] {field}: {raw!r} -> {normalized!r}"
+                        )
+
+                if changed:
+                    session.add(company)
+                    fixed += 1
+
+            session.commit()
+            logger.info(f"URL cleanup completed. {fixed}/{len(companies)} companies updated.")
+
     def sync_all_details(self, limit: Optional[int] = None, force: bool = False, company_code: Optional[str] = None, retries: int = 3, delay: float = 2.0):
         """Sync detailed info (Stakeholder/Governance URLs) for all companies."""
         with Session(engine) as session:
@@ -97,10 +128,9 @@ class CompanyDetailScraper:
         stakeholder_url = self._extract_url_by_label(soup, "公司網站內利害關係人專區網址")
         governance_url = self._extract_url_by_label(soup, "公司網站內公司治理資訊專區網址")
 
-        if stakeholder_url:
-            company.stakeholder_url = stakeholder_url
-        if governance_url:
-            company.governance_url = governance_url
+        # Always update (even to None) so invalid values get cleared
+        company.stakeholder_url = stakeholder_url
+        company.governance_url = governance_url
 
         session.add(company)
 
@@ -132,14 +162,55 @@ class CompanyDetailScraper:
         
         return None
 
+    # Values that MOPS uses as placeholders instead of real URLs
+    INVALID_URL_VALUES = frozenset({
+        "無", "不適用", "na", "n/a", "n.a.", "none", "nil", "no",
+        "0", "-", "尚未設置", "建置中", "尚未建置", "尚未建立",
+        "待完成", "架設中", "/", "..", ".",
+    })
+
+    @staticmethod
+    def _normalize_url(value: Optional[str]) -> Optional[str]:
+        """Validate and normalize a URL value from MOPS.
+
+        Returns None for invalid/placeholder values, auto-prefixes https://
+        for bare domains, and returns valid URLs as-is.
+        """
+        if not value:
+            return None
+
+        cleaned = value.strip()
+        if not cleaned:
+            return None
+
+        # Check against known placeholder values (case-insensitive)
+        lower = cleaned.lower()
+        if lower in CompanyDetailScraper.INVALID_URL_VALUES:
+            return None
+
+        # Reject dangerous protocols (defense-in-depth against XSS)
+        if any(lower.startswith(p) for p in ("javascript:", "data:", "vbscript:")):
+            return None
+
+        # Already a proper URL
+        if cleaned.startswith("http://") or cleaned.startswith("https://"):
+            return cleaned
+
+        # Looks like a bare domain (contains a dot) → add https://
+        if "." in cleaned:
+            return f"https://{cleaned}"
+
+        # No protocol and no dot → not a valid URL
+        return None
+
     def _extract_url_by_label(self, soup: BeautifulSoup, label_text: str) -> Optional[str]:
         """Find the link corresponding to a label in the MOPS layout."""
         # Some labels have <br> in them, so we strip them when comparing
         # OR we search for partial matches.
-        
+
         target_cells = soup.find_all(['th', 'td'])
         value = None
-        
+
         for cell in target_cells:
             # Get text and clean it (including internal whitespace/newlines)
             cell_text = "".join(cell.get_text().split())
@@ -153,8 +224,5 @@ class CompanyDetailScraper:
                     else:
                         value = next_td.get_text(strip=True).replace('\xa0', '') # Remove &nbsp;
                     break
-        
-        if value in ["不適用", "", None]:
-            return None
-            
-        return value.strip()
+
+        return self._normalize_url(value)

@@ -257,6 +257,17 @@ def sync_company_details(
     typer.echo("Company Detail Sync completed.")
 
 @app.command()
+def cleanup_urls():
+    """
+    Clean up invalid URL values in company table.
+    Sets placeholder values (NA, 無, 0, etc.) to NULL and adds https:// to bare domains.
+    """
+    scraper = CompanyDetailScraper()
+    typer.echo("--- Starting URL Cleanup ---")
+    scraper.cleanup_urls()
+    typer.echo("URL Cleanup completed.")
+
+@app.command()
 def sync_all(
     skip_download: bool = typer.Option(False, "--skip-download", help="Skip download step if files exist"),
 ):

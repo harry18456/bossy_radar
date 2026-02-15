@@ -95,6 +95,26 @@ const ensureProtocol = (url: string) => {
   }
   return `https://${url}`;
 };
+
+// Known placeholder values from MOPS (synced with backend INVALID_URL_VALUES)
+const INVALID_URL_VALUES = new Set([
+  "無", "不適用", "na", "n/a", "n.a.", "none", "nil", "no",
+  "0", "-", "尚未設置", "建置中", "尚未建置", "尚未建立",
+  "待完成", "架設中", "/", "..", ".",
+]);
+
+// Check if a value is a real URL (not a placeholder like "NA", "無", "0", etc.)
+const isValidUrl = (url: string | null | undefined): boolean => {
+  if (!url) return false;
+  const trimmed = url.trim();
+  if (!trimmed) return false;
+  const lower = trimmed.toLowerCase();
+  // Reject dangerous protocols
+  if (["javascript:", "data:", "vbscript:"].some((p) => lower.startsWith(p))) return false;
+  if (lower.startsWith("http://") || lower.startsWith("https://")) return true;
+  if (INVALID_URL_VALUES.has(lower)) return false;
+  return trimmed.includes(".");
+};
 </script>
 
 <template>
@@ -164,8 +184,8 @@ const ensureProtocol = (url: string) => {
                 {{ company.address || "無地址資訊" }}
               </span>
               <a
-                v-if="company.website"
-                :href="ensureProtocol(company.website)"
+                v-if="isValidUrl(company.website)"
+                :href="ensureProtocol(company.website!)"
                 target="_blank"
                 rel="noopener noreferrer"
                 class="flex items-center text-blue-600 dark:text-blue-400 hover:underline"
@@ -290,8 +310,8 @@ const ensureProtocol = (url: string) => {
               </dt>
               <dd class="mt-1 text-sm">
                 <a
-                  v-if="company.stakeholder_url"
-                  :href="company.stakeholder_url"
+                  v-if="isValidUrl(company.stakeholder_url)"
+                  :href="ensureProtocol(company.stakeholder_url!)"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
@@ -308,8 +328,8 @@ const ensureProtocol = (url: string) => {
               </dt>
               <dd class="mt-1 text-sm">
                 <a
-                  v-if="company.governance_url"
-                  :href="company.governance_url"
+                  v-if="isValidUrl(company.governance_url)"
+                  :href="ensureProtocol(company.governance_url!)"
                   target="_blank"
                   rel="noopener noreferrer"
                   class="inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
