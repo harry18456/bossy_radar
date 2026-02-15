@@ -1,0 +1,37 @@
+{
+  "manifest_version": 3,
+  "name": "Bossy Radar - 104 公司快查",
+  "version": "0.2.0",
+  "description": "在 104 人力銀行頁面上顯示公司勞動違規、薪資等資訊",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.bossy.eraser.tw/*"
+  ],
+  "background": {
+    "service_worker": "background/service-worker.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["*://*.104.com.tw/*"],
+      "js": ["content-scripts/injector.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": ["*://*.104.com.tw/*"],
+      "js": ["content-scripts/main.js"],
+      "css": ["content-scripts/widget.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["content-scripts/interceptor.js"],
+      "matches": ["*://*.104.com.tw/*"]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
