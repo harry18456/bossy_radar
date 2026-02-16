@@ -55,6 +55,7 @@ class CompanyService:
         total = session.exec(count_query).one()
 
         # Apply Sorts
+        sort_applied = False
         if sorts:
             for sort_field in sorts:
                 direction = desc
@@ -64,7 +65,9 @@ class CompanyService:
                 field_name = sort_field.lstrip("-")
                 if hasattr(Company, field_name):
                     query = query.order_by(direction(getattr(Company, field_name)))
-        else:
+                    sort_applied = True
+
+        if not sort_applied:
             # Default sort
             query = query.order_by(Company.code)
 

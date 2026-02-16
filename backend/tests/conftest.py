@@ -5,6 +5,8 @@ Uses in-memory SQLite to avoid touching production data.
 Each test gets a fresh database to prevent data collisions.
 """
 
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
@@ -26,6 +28,71 @@ def test_engine():
     SQLModel.metadata.create_all(engine)
     yield engine
     engine.dispose()
+
+
+@pytest.fixture
+def more_companies(test_session):
+    """Seed comprehensive company data for filtering/sorting tests."""
+    companies = [
+        Company(
+            code="1101",
+            name="台灣水泥",
+            abbreviation="台泥",
+            market_type="Listed",
+            industry="水泥工業",
+            capital=10000,
+            listing_date=date(1962, 2, 9),
+        ),
+        Company(
+            code="2330",
+            name="台灣積體電路",
+            abbreviation="台積電",
+            market_type="Listed",
+            industry="半導體業",
+            capital=50000,
+            listing_date=date(1994, 9, 5),
+        ),
+        Company(
+            code="2454",
+            name="聯發科技",
+            abbreviation="聯發科",
+            market_type="Listed",
+            industry="半導體業",
+            capital=20000,
+            listing_date=date(2001, 7, 23),
+        ),
+        Company(
+            code="6510",
+            name="精測科技",
+            abbreviation="精測",
+            market_type="OTC",
+            industry="半導體業",
+            capital=5000,
+            listing_date=date(2016, 3, 24),
+        ),
+        Company(
+            code="1234",
+            name="測試電腦",
+            abbreviation="測試",
+            market_type="OTC",
+            industry="電腦及週邊設備業",
+            capital=1000,
+            listing_date=date(2020, 1, 1),
+        ),
+        Company(
+            code="9999",
+            name="未上市好公司",
+            abbreviation="未上市",
+            market_type="Public",
+            industry="其他",
+            capital=500,
+            listing_date=date(2022, 12, 31),
+        ),
+    ]
+    for c in companies:
+        test_session.add(c)
+    test_session.commit()
+    return companies
 
 
 @pytest.fixture
