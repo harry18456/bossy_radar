@@ -5,7 +5,6 @@ Uses in-memory SQLite with seeded company data to verify matching logic.
 """
 
 import pytest
-from sqlmodel import Session
 
 from app.services.company_matcher import CompanyMatcher
 

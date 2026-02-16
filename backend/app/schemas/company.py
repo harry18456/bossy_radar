@@ -1,8 +1,11 @@
-from typing import Generic, List, TypeVar, Optional
+from typing import Generic, List, Optional, TypeVar
+
 from pydantic import BaseModel
+
 from app.models.company import Company
 
 T = TypeVar("T")
+
 
 class PaginatedResponse(BaseModel, Generic[T]):
     items: List[T]
@@ -11,8 +14,10 @@ class PaginatedResponse(BaseModel, Generic[T]):
     size: int
     total_pages: int
 
+
 class CompanyResponse(Company):
     pass
+
 
 class CompanyCatalogItem(BaseModel):
     code: str
@@ -20,7 +25,7 @@ class CompanyCatalogItem(BaseModel):
     abbreviation: Optional[str] = None
     market_type: str
     industry: Optional[str] = None
-    tax_id: Optional[str] = None              # 統一編號
-    capital: Optional[float] = None           # 資本額
+    tax_id: Optional[str] = None  # 統一編號
+    capital: Optional[float] = None  # 資本額
     establishment_date: Optional[str] = None  # 成立日期 (如 1987-02-21)
-    listing_date: Optional[str] = None        # 上市日期 (如 1994-09-05)
+    listing_date: Optional[str] = None  # 上市日期 (如 1994-09-05)

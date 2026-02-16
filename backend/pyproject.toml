@@ -22,7 +22,16 @@ dependencies = [
 dev = [
     "pytest>=8.0.0",
     "pytest-cov>=6.0.0",
+    "ruff>=0.3.0",
 ]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W"]
+ignore = []
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

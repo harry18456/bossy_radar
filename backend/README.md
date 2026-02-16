@@ -238,6 +238,21 @@ uv run fastapi dev app/main.py
 uv sync --group dev
 ```
 
+### 代碼品質 (Lint & Format)
+
+本專案使用 [Ruff](https://docs.astral.sh/ruff/) 進行代碼檢查與格式化。
+
+```bash
+# 格式化代碼 (類似 Black)
+uv run ruff format .
+
+# 檢查代碼品質 (類似 Flake8/Isort)
+uv run ruff check .
+
+# 自動修復可修正的問題
+uv run ruff check --fix .
+```
+
 ### 執行測試
 
 ```bash

@@ -1,6 +1,8 @@
 from datetime import date, datetime
 from typing import Optional
+
 from sqlmodel import SQLModel
+
 
 class ViolationBase(SQLModel):
     company_name: str
@@ -13,6 +15,7 @@ class ViolationBase(SQLModel):
     violation_content: Optional[str] = None
     fine_amount: int = 0
     company_code: Optional[str] = None
+
 
 class ViolationPublic(ViolationBase):
     id: int

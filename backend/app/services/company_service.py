@@ -1,16 +1,17 @@
 import csv
+import logging
 import re
 from datetime import date, datetime
 from pathlib import Path
 from typing import List, Optional
 
-from sqlmodel import Session, select, col, asc, desc, func
+from sqlmodel import Session, asc, col, desc, func, select
 
-from app.models.company import Company
 from app.db.session import engine
-import logging
+from app.models.company import Company
 
 logger = logging.getLogger(__name__)
+
 
 class CompanyService:
     def __init__(self):
@@ -22,27 +23,29 @@ class CompanyService:
         page: int = 1,
         size: int = 20,
         filters: Optional[dict] = None,
-        sorts: Optional[List[str]] = None
+        sorts: Optional[List[str]] = None,
     ):
         """
         Get companies with pagination, filtering, and sorting.
         """
         query = select(Company)
-        
+
         # Apply Filters
         if filters:
             if filters.get("market_type"):
                 # Multi-value filter (IN)
-                query = query.where(col(Company.market_type).in_(filters["market_type"]))
-            
+                query = query.where(
+                    col(Company.market_type).in_(filters["market_type"])
+                )
+
             if filters.get("industry"):
                 # Multi-value filter (IN)
                 query = query.where(col(Company.industry).in_(filters["industry"]))
-                
+
             if filters.get("code"):
                 # Multi-value filter (IN)
                 query = query.where(col(Company.code).in_(filters["code"]))
-            
+
             if filters.get("name"):
                 # Partial match
                 query = query.where(col(Company.name).ilike(f"%{filters['name']}%"))
@@ -58,19 +61,19 @@ class CompanyService:
                 direction = desc
                 if not sort_field.startswith("-"):
                     direction = asc
-                
+
                 field_name = sort_field.lstrip("-")
                 if hasattr(Company, field_name):
                     query = query.order_by(direction(getattr(Company, field_name)))
         else:
             # Default sort
             query = query.order_by(Company.code)
-            
+
         # Apply Pagination
         query = query.offset((page - 1) * size).limit(size)
-        
+
         results = session.exec(query).all()
-        
+
         return results, total
 
     def get_catalog(self, session: Session) -> List[Company]:
@@ -86,25 +89,31 @@ class CompanyService:
             Company.industry,
             Company.capital,
             Company.establishment_date,
-            Company.listing_date
+            Company.listing_date,
         ).order_by(Company.code)
-        
+
         # When selecting specific columns, SQLModel returns rows (tuples)
         results = session.exec(query).all()
-        
+
         # Map to dictionaries for Pydantic compatibility
         catalog = []
         for row in results:
-            catalog.append({
-                "code": row.code,
-                "name": row.name,
-                "abbreviation": row.abbreviation,
-                "market_type": row.market_type,
-                "industry": row.industry,
-                "capital": float(row.capital) if row.capital is not None else None,
-                "establishment_date": row.establishment_date.isoformat() if row.establishment_date else None,
-                "listing_date": row.listing_date.isoformat() if row.listing_date else None
-            })
+            catalog.append(
+                {
+                    "code": row.code,
+                    "name": row.name,
+                    "abbreviation": row.abbreviation,
+                    "market_type": row.market_type,
+                    "industry": row.industry,
+                    "capital": float(row.capital) if row.capital is not None else None,
+                    "establishment_date": row.establishment_date.isoformat()
+                    if row.establishment_date
+                    else None,
+                    "listing_date": row.listing_date.isoformat()
+                    if row.listing_date
+                    else None,
+                }
+            )
         return catalog
 
     def sync_companies(self, data_dir: Path, target_types: List[str]):
@@ -113,19 +122,20 @@ class CompanyService:
         """
         # Ensure tables exist
         from sqlmodel import SQLModel
+
         SQLModel.metadata.create_all(engine)
-        
+
         with Session(engine) as session:
             for market_type in target_types:
                 file_path = data_dir / f"{market_type}.csv"
                 if not file_path.exists():
                     logger.warning(f"File not found: {file_path}")
                     continue
-                
+
                 logger.info(f"Processing {market_type} companies from {file_path}")
                 companies = self._parse_csv(file_path, market_type)
                 self._upsert_companies(session, companies)
-            
+
             session.commit()
 
     def _parse_csv(self, file_path: Path, market_type: str) -> List[Company]:
@@ -134,7 +144,7 @@ class CompanyService:
             # Skip potential BOM or weird first characters if simple
             # But csv.DictReader usually handles it if we strip
             lines = f.readlines()
-            
+
         if not lines:
             return []
 
@@ -142,42 +152,44 @@ class CompanyService:
         # We need to find the header line. Based on analysis, headers start with "出表日期" or "公司代號"
         # The sample showed:
         # Header: ﻿出表日期,公司代號,...
-        
+
         # We can try to parse from the first line that looks like a header
         header_index = 0
         for i, line in enumerate(lines):
             if "公司代號" in line:
                 header_index = i
                 break
-        
+
         # Parse CSV from header_index
         # We treat lines[header_index] as header
         reader = csv.DictReader(lines[header_index:])
-        
+
         for row in reader:
             try:
                 code = row.get("公司代號", "").strip()
                 if not code:
                     continue
-                
+
                 # Validate company code format (must be alphanumeric, no dots or URL-like strings)
-                if not re.match(r'^[A-Za-z0-9]+$', code):
+                if not re.match(r"^[A-Za-z0-9]+$", code):
                     logger.warning(f"Skipping invalid company code: {code}")
                     continue
-                
+
                 # Sanitize string fields (strip whitespace and hidden characters)
                 def clean_str(val: str) -> str:
                     return val.strip() if val else ""
-                
+
                 # Validate website field - must look like a URL or be empty
                 website = clean_str(row.get("網址", ""))
                 address = clean_str(row.get("住址", ""))
-                
+
                 # Check for data corruption: if address looks like a URL, log and skip
-                if address and re.match(r'^(https?://|www\.)', address, re.IGNORECASE):
-                    logger.warning(f"Possible data corruption for {code}: address contains URL-like content, skipping: {address}")
+                if address and re.match(r"^(https?://|www\.)", address, re.IGNORECASE):
+                    logger.warning(
+                        f"Possible data corruption for {code}: address contains URL-like content, skipping: {address}"
+                    )
                     continue
-                
+
                 # Basic Mapping
                 company = Company(
                     code=code,
@@ -189,16 +201,18 @@ class CompanyService:
                     chairman=clean_str(row.get("董事長", "")),
                     manager=clean_str(row.get("總經理", "")),
                     establishment_date=self._parse_roc_date(row.get("成立日期", "")),
-                    listing_date=self._parse_roc_date(row.get("上市日期") or row.get("上櫃日期", "")),
+                    listing_date=self._parse_roc_date(
+                        row.get("上市日期") or row.get("上櫃日期", "")
+                    ),
                     capital=self._parse_money(row.get("實收資本額", "")),
                     address=address,
                     website=website,
-                    email=clean_str(row.get("電子郵件信箱", ""))
+                    email=clean_str(row.get("電子郵件信箱", "")),
                 )
                 companies.append(company)
             except Exception as e:
                 logger.error(f"Error parsing row {row.get('公司代號')}: {e}")
-                
+
         return companies
 
     def _upsert_companies(self, session: Session, companies: List[Company]):
@@ -207,12 +221,14 @@ class CompanyService:
             # Check if exists
             statement = select(Company).where(Company.code == new_data.code)
             existing = session.exec(statement).first()
-            
+
             if existing:
                 # Update fields
                 existing.name = new_data.name
                 existing.abbreviation = new_data.abbreviation
-                existing.market_type = new_data.market_type # Identify sync source preference
+                existing.market_type = (
+                    new_data.market_type
+                )  # Identify sync source preference
                 existing.industry = new_data.industry
                 existing.tax_id = new_data.tax_id
                 existing.chairman = new_data.chairman
@@ -236,18 +252,18 @@ class CompanyService:
         """
         if not date_str:
             return None
-        
+
         try:
             # Clean string
             date_str = date_str.strip()
-            if len(date_str) < 6: # e.g. 990101
+            if len(date_str) < 6:  # e.g. 990101
                 return None
-                
+
             year_len = len(date_str) - 4
             year_val = int(date_str[:year_len])
-            month = int(date_str[year_len:year_len+2])
-            day = int(date_str[year_len+2:])
-            
+            month = int(date_str[year_len : year_len + 2])
+            day = int(date_str[year_len + 2 :])
+
             # If year is already in AD format (e.g. 1950), don't add 1911
             actual_year = year_val + 1911 if year_val < 1000 else year_val
             return date(actual_year, month, day)

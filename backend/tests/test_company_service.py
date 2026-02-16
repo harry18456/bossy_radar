@@ -18,6 +18,7 @@ def service():
 
 # ---------- _parse_roc_date ----------
 
+
 class TestParseRocDate:
     """Tests for ROC date string → Python date conversion."""
 
@@ -65,6 +66,7 @@ class TestParseRocDate:
 
 
 # ---------- _parse_money ----------
+
 
 class TestParseMoney:
     """Tests for money string → int conversion."""

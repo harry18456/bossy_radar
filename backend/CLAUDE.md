@@ -100,4 +100,5 @@ uv run python -m app.cli.main export --output-dir ../frontend/public/data
 1. **長時間任務**: CLI 負責資料擷取，不應阻塞 HTTP 請求
 2. **檔案儲存**: `data/` 目錄為暫時儲存，必須被 gitignore
 3. **比對策略**: 違規資料透過公司名稱、簡稱、分公司名、負責人等多重比對
-4. **測試**: 使用 `uv run pytest` 執行測試，測試位於 `tests/` 目錄，使用 in-memory SQLite 不影響正式 DB
+4. **測試**: 使用 `uv run pytest` 執行測試，測試位於 `tests/` 目錄
+5. **代碼風格**: 使用 `uv run ruff check .` 與 `uv run ruff format .` 保持代碼品質

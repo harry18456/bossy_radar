@@ -4,7 +4,6 @@ from starlette.middleware.cors import CORSMiddleware
 from app.api.main import api_router
 from app.core.config import settings
 
-
 app = FastAPI(title="Bossy Radar API")
 
 if settings.BACKEND_CORS_ORIGINS:
@@ -17,6 +16,7 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 app.include_router(api_router, prefix="/api/v1")
+
 
 @app.get("/")
 def read_root():
