@@ -29,10 +29,8 @@ jobs:
       - name: Lint and Format Check
         run: |
           cd backend
-          # Check formatting (strict - must pass)
           uv run ruff format --check .
-          # Check linting (relaxed - existing errors allowed for now)
-          uv run ruff check . || echo "::warning::Ruff check found lint errors (non-blocking)"
+          uv run ruff check .
 
       - name: Run Tests
         run: |
