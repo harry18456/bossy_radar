@@ -11,6 +11,13 @@ Thumbs.db
 backend/*.py[cod]
 backend/.venv/
 backend/.env
+
+# Testing / Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+test-results/
+
 # Ignore SQLite database files everywhere
 *.db
 *.db-shm
