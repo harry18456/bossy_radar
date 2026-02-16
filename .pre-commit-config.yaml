@@ -8,5 +8,7 @@ repos:
       # Run the linter.
       - id: ruff
         args: [--fix]
+        files: ^backend/
       # Run the formatter.
       - id: ruff-format
+        files: ^backend/
