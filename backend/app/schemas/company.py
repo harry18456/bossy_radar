@@ -2,7 +2,7 @@ from typing import Generic, TypeVar
 
 from pydantic import BaseModel
 
-from app.models.company import Company
+from app.models.company import CompanyBase
 
 T = TypeVar("T")
 
@@ -15,8 +15,8 @@ class PaginatedResponse(BaseModel, Generic[T]):
     total_pages: int
 
 
-class CompanyResponse(Company):
-    pass
+class CompanyResponse(CompanyBase):
+    code: str
 
 
 class CompanyCatalogItem(BaseModel):

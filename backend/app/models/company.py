@@ -3,10 +3,7 @@ from datetime import date, datetime
 from sqlmodel import Field, SQLModel
 
 
-class Company(SQLModel, table=True):
-    # 公司代號 (Primary Key)
-    code: str = Field(primary_key=True, description="公司代號")
-
+class CompanyBase(SQLModel):
     # 基本資料
     name: str = Field(index=True, description="公司名稱")
     abbreviation: str | None = Field(default=None, description="公司簡稱")
@@ -36,3 +33,8 @@ class Company(SQLModel, table=True):
     last_updated: datetime = Field(
         default_factory=datetime.now, description="最後更新時間"
     )
+
+
+class Company(CompanyBase, table=True):
+    # 公司代號 (Primary Key)
+    code: str = Field(primary_key=True, description="公司代號")
