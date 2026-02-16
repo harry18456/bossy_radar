@@ -102,3 +102,4 @@ uv run python -m app.cli.main export --output-dir ../frontend/public/data
 3. **比對策略**: 違規資料透過公司名稱、簡稱、分公司名、負責人等多重比對
 4. **測試**: 使用 `uv run pytest` 執行測試，測試位於 `tests/` 目錄
 5. **代碼風格**: 使用 `uv run ruff check .` 與 `uv run ruff format .` 保持代碼品質
+6. **自動化**: 本地 Commit 前會觸發 Pre-commit 檢查；Push 後會觸發 GitHub CI

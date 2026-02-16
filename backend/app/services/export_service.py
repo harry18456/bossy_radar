@@ -4,7 +4,7 @@ import shutil
 from collections import defaultdict
 from datetime import date, datetime
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any
 
 from sqlmodel import Session, col, extract, func, select
 
@@ -308,7 +308,7 @@ class ExportService:
         adjustments_map = fetch_map(SalaryAdjustment)
 
         # Step 5: Assemble items by year
-        items_by_year: Dict[int, List[YearlySummaryItem]] = {}
+        items_by_year: dict[int, list[YearlySummaryItem]] = {}
         total_count = 0
 
         for y in available_years:
@@ -688,7 +688,7 @@ class ExportService:
             company_map = {c.code: c for c in companies}
 
         # ========== Step 6: 建構回應 ==========
-        def build_violation_leaderboard(data: Dict[str, dict]) -> ViolationLeaderboard:
+        def build_violation_leaderboard(data: dict[str, dict]) -> ViolationLeaderboard:
             items = [
                 ViolationLeaderboardItem(
                     company_code=code,
@@ -743,7 +743,7 @@ class ExportService:
             )
 
         # 合併歷年違規
-        all_time_stats: Dict[str, dict] = defaultdict(
+        all_time_stats: dict[str, dict] = defaultdict(
             lambda: {
                 "name": "",
                 "labor_count": 0,
@@ -776,7 +776,7 @@ class ExportService:
         # 各年度違規
         violation_yearly = {}
         for year_roc, data in yearly_violation_data.items():
-            yearly_stats: Dict[str, dict] = defaultdict(
+            yearly_stats: dict[str, dict] = defaultdict(
                 lambda: {
                     "name": "",
                     "labor_count": 0,

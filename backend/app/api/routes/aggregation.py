@@ -7,7 +7,6 @@ Endpoints:
 """
 
 import math
-from typing import List, Optional
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import extract
@@ -110,12 +109,12 @@ def get_yearly_summary(
     session: SessionDep,
     page: int = Query(1, ge=1, description="頁碼 (從 1 開始)"),
     size: int = Query(20, le=100, description="每頁筆數"),
-    sort: Optional[List[str]] = Query(None, description="排序欄位"),
-    year: Optional[List[int]] = Query(None, description="民國年過濾"),
-    company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
-    market_type: Optional[List[str]] = Query(None, description="市場別過濾"),
-    industry: Optional[List[str]] = Query(None, description="產業過濾"),
-    include: Optional[List[str]] = Query(
+    sort: list[str] | None = Query(None, description="排序欄位"),
+    year: list[int] | None = Query(None, description="民國年過濾"),
+    company_code: list[str] | None = Query(None, description="公司代號過濾"),
+    market_type: list[str] | None = Query(None, description="市場別過濾"),
+    industry: list[str] | None = Query(None, description="產業過濾"),
+    include: list[str] | None = Query(
         None,
         description="要包含的資料：violations, employee_benefit, non_manager_salary, welfare_policy, salary_adjustment, all",
     ),

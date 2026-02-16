@@ -3,7 +3,6 @@ t222sb01 - 基層員工調整薪資或分派酬勞
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlmodel import Field, SQLModel
 
@@ -13,10 +12,10 @@ class SalaryAdjustment(SQLModel, table=True):
 
     __tablename__ = "salary_adjustment"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Company Link (Nullable - 無法比對時存入 archive)
-    company_code: Optional[str] = Field(
+    company_code: str | None = Field(
         default=None,
         foreign_key="company.code",
         index=True,
@@ -30,44 +29,42 @@ class SalaryAdjustment(SQLModel, table=True):
     market_type: str = Field(index=True, description="市場別 (sii/otc)")
 
     # 基本資料
-    industry: Optional[str] = Field(default=None, description="產業類別")
-    pretax_net_profit: Optional[int] = Field(
-        default=None, description="年度稅前淨利(元)"
-    )
+    industry: str | None = Field(default=None, description="產業類別")
+    pretax_net_profit: int | None = Field(default=None, description="年度稅前淨利(元)")
 
     # 章程訂定提撥比率
-    allocation_ratio_min: Optional[str] = Field(
+    allocation_ratio_min: str | None = Field(
         default=None, description="章程訂定提撥比率下限"
     )
-    allocation_ratio_max: Optional[str] = Field(
+    allocation_ratio_max: str | None = Field(
         default=None, description="章程訂定提撥比率上限"
     )
 
     # 實際提撥資訊
-    board_resolution_date: Optional[str] = Field(
+    board_resolution_date: str | None = Field(
         default=None, description="董事會決議提撥日期"
     )
-    actual_allocation_ratio: Optional[str] = Field(
+    actual_allocation_ratio: str | None = Field(
         default=None, description="實際提撥比率"
     )
-    basic_employee_definition: Optional[str] = Field(
+    basic_employee_definition: str | None = Field(
         default=None, description="基層員工認定範圍說明"
     )
-    basic_employee_count: Optional[int] = Field(
+    basic_employee_count: int | None = Field(
         default=None, description="基層員工人數(人)"
     )
-    total_allocation_amount: Optional[int] = Field(
+    total_allocation_amount: int | None = Field(
         default=None, description="提撥總金額(元)"
     )
-    allocation_method: Optional[str] = Field(
+    allocation_method: str | None = Field(
         default=None, description="方式：調整薪資或分派酬勞"
     )
 
     # 差異相關
-    difference_amount: Optional[str] = Field(default=None, description="差異數(元)")
-    difference_reason: Optional[str] = Field(default=None, description="原因")
-    difference_handling: Optional[str] = Field(default=None, description="處理情形")
-    note: Optional[str] = Field(default=None, description="備註")
+    difference_amount: str | None = Field(default=None, description="差異數(元)")
+    difference_reason: str | None = Field(default=None, description="原因")
+    difference_handling: str | None = Field(default=None, description="處理情形")
+    note: str | None = Field(default=None, description="備註")
 
     # System
     created_at: datetime = Field(default_factory=datetime.now, description="建立時間")

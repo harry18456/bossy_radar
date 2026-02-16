@@ -3,7 +3,6 @@ t100sb14 - 財務報告附註揭露之員工福利(薪資)資訊
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlmodel import Field, SQLModel
 
@@ -13,10 +12,10 @@ class EmployeeBenefit(SQLModel, table=True):
 
     __tablename__ = "employee_benefit"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Company Link (Nullable - 無法比對時存入 archive)
-    company_code: Optional[str] = Field(
+    company_code: str | None = Field(
         default=None,
         foreign_key="company.code",
         index=True,
@@ -30,43 +29,43 @@ class EmployeeBenefit(SQLModel, table=True):
     market_type: str = Field(index=True, description="市場別 (sii/otc)")
 
     # 基本資料
-    industry: Optional[str] = Field(default=None, description="產業類別")
-    company_category: Optional[str] = Field(default=None, description="公司類別")
+    industry: str | None = Field(default=None, description="產業類別")
+    company_category: str | None = Field(default=None, description="公司類別")
 
     # 員工福利資訊
-    employee_benefit_expense: Optional[int] = Field(
+    employee_benefit_expense: int | None = Field(
         default=None, description="員工福利費用(仟元)"
     )
-    employee_salary_expense: Optional[int] = Field(
+    employee_salary_expense: int | None = Field(
         default=None, description="員工薪資費用(仟元)"
     )
-    employee_count: Optional[int] = Field(default=None, description="員工人數(人)")
-    avg_benefit_per_employee: Optional[int] = Field(
+    employee_count: int | None = Field(default=None, description="員工人數(人)")
+    avg_benefit_per_employee: int | None = Field(
         default=None, description="平均員工福利費用(仟元/人)"
     )
 
     # 平均員工薪資費用
-    avg_salary_current_year: Optional[int] = Field(
+    avg_salary_current_year: int | None = Field(
         default=None, description="本年度平均員工薪資費用(仟元/人)"
     )
-    avg_salary_previous_year: Optional[int] = Field(
+    avg_salary_previous_year: int | None = Field(
         default=None, description="上年度平均員工薪資費用(仟元/人)"
     )
-    salary_change_rate: Optional[float] = Field(
+    salary_change_rate: float | None = Field(
         default=None, description="調整變動情形(%)"
     )
 
     # 每股盈餘
-    eps: Optional[float] = Field(default=None, description="每股盈餘(元/股)")
+    eps: float | None = Field(default=None, description="每股盈餘(元/股)")
 
     # 同產業公司比較
-    industry_avg_benefit: Optional[int] = Field(
+    industry_avg_benefit: int | None = Field(
         default=None, description="同產業平均員工福利費用(仟元/人)"
     )
-    industry_avg_salary: Optional[int] = Field(
+    industry_avg_salary: int | None = Field(
         default=None, description="同產業平均員工薪資費用(仟元/人)"
     )
-    industry_avg_eps: Optional[float] = Field(
+    industry_avg_eps: float | None = Field(
         default=None, description="同產業平均每股盈餘(元/股)"
     )
 

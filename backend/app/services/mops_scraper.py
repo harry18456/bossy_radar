@@ -12,7 +12,6 @@ import logging
 import re
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Type
 
 import httpx
 from bs4 import BeautifulSoup
@@ -116,23 +115,23 @@ class MopsScraper:
 
         logger.info("MOPS sync completed")
 
-    def sync_employee_benefit(self, years: List[int], markets: List[str]):
+    def sync_employee_benefit(self, years: list[int], markets: list[str]):
         """Sync t100sb14 data."""
         self._sync_data_source("t100sb14", years, markets)
 
-    def sync_non_manager_salary(self, years: List[int], markets: List[str]):
+    def sync_non_manager_salary(self, years: list[int], markets: list[str]):
         """Sync t100sb15 data."""
         self._sync_data_source("t100sb15", years, markets)
 
-    def sync_welfare_policy(self, years: List[int], markets: List[str]):
+    def sync_welfare_policy(self, years: list[int], markets: list[str]):
         """Sync t100sb13 data."""
         self._sync_data_source("t100sb13", years, markets)
 
-    def sync_salary_adjustment(self, years: List[int], markets: List[str]):
+    def sync_salary_adjustment(self, years: list[int], markets: list[str]):
         """Sync t222sb01 data."""
         self._sync_data_source("t222sb01", years, markets)
 
-    def _sync_data_source(self, source_key: str, years: List[int], markets: List[str]):
+    def _sync_data_source(self, source_key: str, years: list[int], markets: list[str]):
         """Generic sync method for a data source."""
         config = DATA_SOURCES[source_key]
         logger.info(f"Syncing {config['name']} ({source_key})")
@@ -194,9 +193,9 @@ class MopsScraper:
         market: str,
         session: Session,
         archive_session: Session,
-        company_code_map: Dict[str, str],
-        company_name_map: Dict[str, str],
-        company_branch_map: List[tuple],
+        company_code_map: dict[str, str],
+        company_name_map: dict[str, str],
+        company_branch_map: list[tuple],
     ):
         """Fetch HTML from MOPS and process data."""
         # Build payload using config
@@ -259,7 +258,7 @@ class MopsScraper:
 
     def _parse_table(
         self, html: str, source_key: str, year: int, market: str
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Parse MOPS HTML table to records."""
         soup = BeautifulSoup(html, "html.parser")
 
@@ -297,7 +296,7 @@ class MopsScraper:
 
         return []
 
-    def _parse_t100sb14(self, table, year: int, market: str) -> List[dict]:
+    def _parse_t100sb14(self, table, year: int, market: str) -> list[dict]:
         """Parse t100sb14 table - 員工福利及薪資統計."""
         records = []
         rows = table.find_all("tr")
@@ -378,7 +377,7 @@ class MopsScraper:
 
         return records
 
-    def _parse_t100sb15(self, table, year: int, market: str) -> List[dict]:
+    def _parse_t100sb15(self, table, year: int, market: str) -> list[dict]:
         """Parse t100sb15 table."""
         records = []
         rows = table.find_all("tr")
@@ -518,7 +517,7 @@ class MopsScraper:
 
         return records
 
-    def _parse_t100sb13(self, table, year: int, market: str) -> List[dict]:
+    def _parse_t100sb13(self, table, year: int, market: str) -> list[dict]:
         """Parse t100sb13 table - 員工福利政策及權益維護措施揭露."""
         records = []
         rows = table.find_all("tr")
@@ -593,7 +592,7 @@ class MopsScraper:
 
         return records
 
-    def _parse_t222sb01(self, table, year: int, market: str) -> List[dict]:
+    def _parse_t222sb01(self, table, year: int, market: str) -> list[dict]:
         """Parse t222sb01 table - 基層員工調整薪資或分派酬勞."""
         # This table only exists starting from year 113
         if year < 113:
@@ -678,11 +677,11 @@ class MopsScraper:
         self,
         session: Session,
         archive_session: Session,
-        records: List[dict],
-        model_class: Type[SQLModel],
-        company_code_map: Dict[str, str],
-        company_name_map: Dict[str, str],
-        company_branch_map: List[tuple],
+        records: list[dict],
+        model_class: type[SQLModel],
+        company_code_map: dict[str, str],
+        company_name_map: dict[str, str],
+        company_branch_map: list[tuple],
     ):
         """Upsert records to main or archive DB."""
         count = 0
@@ -743,10 +742,10 @@ class MopsScraper:
         self,
         raw_code: str,
         raw_name: str,
-        company_code_map: Dict[str, str],
-        company_name_map: Dict[str, str],
-        company_branch_map: List[tuple],
-    ) -> Optional[str]:
+        company_code_map: dict[str, str],
+        company_name_map: dict[str, str],
+        company_branch_map: list[tuple],
+    ) -> str | None:
         """Match raw company data to existing company code."""
         # Level 1: Exact code match
         if raw_code and raw_code in company_code_map:
@@ -771,7 +770,7 @@ class MopsScraper:
         text = cell.get_text(strip=True)
         return text.strip()
 
-    def _parse_number(self, cell) -> Optional[int]:
+    def _parse_number(self, cell) -> int | None:
         """Parse integer from cell."""
         text = self._clean_text(cell)
         if not text or text == "-" or text == "N/A":
@@ -785,7 +784,7 @@ class MopsScraper:
         except:
             return None
 
-    def _parse_float(self, cell) -> Optional[float]:
+    def _parse_float(self, cell) -> float | None:
         """Parse float from cell."""
         text = self._clean_text(cell)
         if not text or text == "-" or text == "N/A":

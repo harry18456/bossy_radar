@@ -1,5 +1,4 @@
 import math
-from typing import List, Optional
 
 from fastapi import APIRouter, Query
 
@@ -15,15 +14,15 @@ def read_companies(
     session: SessionDep,
     page: int = Query(1, ge=1, description="頁碼"),
     size: int = Query(20, le=100, description="每頁筆數"),
-    sort: Optional[List[str]] = Query(
+    sort: list[str] | None = Query(
         None, description="排序欄位 (e.g. -capital, listing_date)"
     ),
-    market_type: Optional[List[str]] = Query(
+    market_type: list[str] | None = Query(
         None, description="市場別過濾 (Listed, OTC, Emerging, Public)"
     ),
-    industry: Optional[List[str]] = Query(None, description="產業類別過濾"),
-    company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
-    name: Optional[str] = Query(None, description="公司名稱過濾 (模糊比對)"),
+    industry: list[str] | None = Query(None, description="產業類別過濾"),
+    company_code: list[str] | None = Query(None, description="公司代號過濾"),
+    name: str | None = Query(None, description="公司名稱過濾 (模糊比對)"),
 ):
     """
     查詢公司資料（分頁、排序、過濾）
@@ -48,7 +47,7 @@ def read_companies(
     )
 
 
-@router.get("/catalog", response_model=List[CompanyCatalogItem])
+@router.get("/catalog", response_model=list[CompanyCatalogItem])
 def read_company_catalog(session: SessionDep):
     """
     取得所有公司的精簡清單（用於前端搜尋建議）

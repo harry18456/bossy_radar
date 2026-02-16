@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 import typer
 
@@ -171,13 +170,13 @@ def sync_violations(
 
 @app.command()
 def sync_mops(
-    start_year: Optional[int] = typer.Option(
+    start_year: int | None = typer.Option(
         None, "--start-year", help="Start ROC year (default: current - 4)"
     ),
-    end_year: Optional[int] = typer.Option(
+    end_year: int | None = typer.Option(
         None, "--end-year", help="End ROC year (default: current)"
     ),
-    data_type: Optional[str] = typer.Option(
+    data_type: str | None = typer.Option(
         None,
         "--data-type",
         help="Specific data type to sync (employee_benefit, non_manager_salary, welfare_policy, salary_adjustment)",
@@ -277,10 +276,10 @@ def sync_env():
 
 @app.command()
 def sync_company_details(
-    company_code: Optional[str] = typer.Option(
+    company_code: str | None = typer.Option(
         None, "--code", help="Sync specific company code"
     ),
-    limit: Optional[int] = typer.Option(
+    limit: int | None = typer.Option(
         None, "--limit", help="Limit number of companies to sync"
     ),
     force: bool = typer.Option(

@@ -4,8 +4,6 @@ Company Matcher - 共用的公司比對邏輯
 提供 Tax ID 精確比對與名稱模糊比對功能，供 ViolationService 與 EnvironmentalService 共用。
 """
 
-from typing import Dict, List, Optional, Tuple
-
 from sqlmodel import Session, select
 
 from app.models.company import Company
@@ -24,16 +22,16 @@ class CompanyMatcher:
         companies = session.exec(select(Company)).all()
 
         # Tax ID -> Code (精確比對用)
-        self.tax_id_map: Dict[str, str] = {}
+        self.tax_id_map: dict[str, str] = {}
 
         # Name -> Code (名稱精確比對用)
-        self.name_map: Dict[str, str] = {}
+        self.name_map: dict[str, str] = {}
 
         # (Name, Code) list (分公司比對用)
-        self.branch_list: List[Tuple[str, str]] = []
+        self.branch_list: list[tuple[str, str]] = []
 
         # Chairman -> [(Name, Code)] (負責人比對用)
-        self.chairman_map: Dict[str, List[Tuple[str, str]]] = {}
+        self.chairman_map: dict[str, list[tuple[str, str]]] = {}
 
         for c in companies:
             # Tax ID Index
@@ -54,7 +52,7 @@ class CompanyMatcher:
                     self.chairman_map[c.chairman] = []
                 self.chairman_map[c.chairman].append((c.name, c.code))
 
-    def match_by_tax_id(self, tax_id: Optional[str]) -> Optional[str]:
+    def match_by_tax_id(self, tax_id: str | None) -> str | None:
         """
         使用統一編號進行精確比對。
 
@@ -68,7 +66,7 @@ class CompanyMatcher:
             return None
         return self.tax_id_map.get(tax_id.strip())
 
-    def match_by_name(self, company_name: str) -> Optional[str]:
+    def match_by_name(self, company_name: str) -> str | None:
         """
         使用公司名稱進行精確比對（含簡稱）。
 
@@ -82,7 +80,7 @@ class CompanyMatcher:
             return None
         return self.name_map.get(company_name.strip())
 
-    def match_by_branch(self, company_name: str) -> Optional[str]:
+    def match_by_branch(self, company_name: str) -> str | None:
         """
         使用分公司/廠區名稱進行前綴比對。
         例如：「某某科技股份有限公司新竹廠」-> 匹配「某某科技股份有限公司」
@@ -102,7 +100,7 @@ class CompanyMatcher:
                 return c_code
         return None
 
-    def match_by_chairman(self, name: str) -> Optional[str]:
+    def match_by_chairman(self, name: str) -> str | None:
         """
         使用負責人姓名進行比對（僅當唯一時匹配）。
 
@@ -121,8 +119,8 @@ class CompanyMatcher:
         return None
 
     def match(
-        self, tax_id: Optional[str] = None, company_name: Optional[str] = None
-    ) -> Optional[str]:
+        self, tax_id: str | None = None, company_name: str | None = None
+    ) -> str | None:
         """
         綜合比對：按優先順序嘗試所有比對策略。
 

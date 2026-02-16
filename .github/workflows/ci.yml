@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        run: uv python install 3.11
+
+      - name: Install dependencies
+        run: |
+          cd backend
+          uv sync --group dev
+
+      - name: Lint and Format Check
+        run: |
+          cd backend
+          # Check formatting (don't fix, just fail if bad)
+          uv run ruff format --check .
+          # Check linting (don't fix, just fail if bad)
+          # Note: We might want to relax this initially if there are too many errors
+          # For now, let's run it but maybe continue-on-error if you want to allow merge
+          # But strictly speaking, CI should fail on lint errors.
+          # Given we have 171 remaing errors, this WILL fail.
+          # So I will comment it out or make it continue-on-error for now?
+          # User wants "CI", usually means strict.
+          # But current codebase has errors.
+          # I'll let it fail, so user knows. Or I can select only critical rules?
+          # Let's run it.
+          uv run ruff check .
+
+      - name: Run Tests
+        run: |
+          cd backend
+          uv run pytest

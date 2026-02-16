@@ -23,6 +23,7 @@ dev = [
     "pytest>=8.0.0",
     "pytest-cov>=6.0.0",
     "ruff>=0.3.0",
+    "pre-commit>=4.1.0",
 ]
 
 [tool.ruff]
@@ -30,8 +31,14 @@ line-length = 88
 target-version = "py311"
 
 [tool.ruff.lint]
-["E", "F", "I", "W", "UP", "B", "N", "SIM", "C4", "RUF"]
-ignore = []
+select = ["E", "F", "I", "W", "UP", "B", "N", "SIM", "C4", "RUF"]
+ignore = [
+    "E501",  # Line too long (handling separately or ignored)
+    "B008",  # Do not perform function calls in argument defaults (FastAPI dependency injection)
+    "RUF001", # String contains ambiguous unicode character (Chinese)
+    "RUF002", # Docstring contains ambiguous unicode character (Chinese)
+    "RUF003", # Comment contains ambiguous unicode character (Chinese)
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

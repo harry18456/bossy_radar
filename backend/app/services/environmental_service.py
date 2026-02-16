@@ -9,7 +9,6 @@ import logging
 import re
 from datetime import date, datetime
 from pathlib import Path
-from typing import List, Optional
 
 import requests
 from sqlmodel import Session, SQLModel, select
@@ -134,12 +133,12 @@ class EnvironmentalService:
             session.commit()
             archive_session.commit()
 
-    def _parse_json(self, file_path: Path) -> List[EnvironmentalViolation]:
+    def _parse_json(self, file_path: Path) -> list[EnvironmentalViolation]:
         """解析 JSON 檔案"""
         records = []
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             if not isinstance(data, list):
@@ -231,7 +230,7 @@ class EnvironmentalService:
         self,
         session: Session,
         archive_session: Session,
-        violations: List[EnvironmentalViolation],
+        violations: list[EnvironmentalViolation],
         matcher: CompanyMatcher,
     ):
         """比對並儲存違規資料"""
@@ -308,7 +307,7 @@ class EnvironmentalService:
 
     # ========== Helper Methods ==========
 
-    def _clean_str(self, value) -> Optional[str]:
+    def _clean_str(self, value) -> str | None:
         """清理字串"""
         if value is None:
             return None
@@ -317,7 +316,7 @@ class EnvironmentalService:
             return None
         return s
 
-    def _parse_date(self, value) -> Optional[date]:
+    def _parse_date(self, value) -> date | None:
         """解析日期 (支援多種格式)"""
         if not value:
             return None
@@ -357,7 +356,7 @@ class EnvironmentalService:
         except Exception:
             return 0
 
-    def _parse_bool(self, value) -> Optional[bool]:
+    def _parse_bool(self, value) -> bool | None:
         """解析布林值"""
         if not value:
             return None

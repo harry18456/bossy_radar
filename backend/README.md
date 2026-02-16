@@ -265,6 +265,20 @@ uv run ruff check .
 uv run ruff check --fix .
 ```
 
+### 自動化檢查 (CI/CD)
+
+本專案已配置自動化檢查流程：
+
+1.  **Pre-commit (本地)**
+    - 每次 `git commit` 時自動執行 Ruff 格式化與檢查。
+    - 若檢查失敗，Commit 會被攔截，請修正後再次提交。
+    - 安裝方式：`uv run pre-commit install`
+
+2.  **GitHub Actions (CI)**
+    - 每次 Push 或 Pull Request 至 `main` 分支時觸發。
+    - 自動執行安裝依賴、Lint/Format 檢查與測試。
+    - 設定檔：`.github/workflows/ci.yml`
+
 ### 執行測試
 
 ```bash

@@ -7,7 +7,6 @@ Endpoints:
 
 from collections import defaultdict
 from datetime import date
-from typing import Dict, List
 
 from fastapi import APIRouter
 from sqlalchemy import extract, text
@@ -35,7 +34,7 @@ LIMIT = 10
 YEARS_TO_INCLUDE = 3  # 只回傳最近 N 年
 
 
-def _get_recent_years(current_year: int) -> List[int]:
+def _get_recent_years(current_year: int) -> list[int]:
     """取得最近 N 年的年份列表 (民國年)"""
     return [current_year - i for i in range(YEARS_TO_INCLUDE)]
 
@@ -281,7 +280,7 @@ def get_leaderboards(session: SessionDep):
 
     # ========== Step 6: 建構回應 ==========
     # 合併勞動+環境違規 (歷年累計)
-    all_time_stats: Dict[str, dict] = defaultdict(
+    all_time_stats: dict[str, dict] = defaultdict(
         lambda: {
             "name": "",
             "labor_count": 0,
@@ -314,7 +313,7 @@ def get_leaderboards(session: SessionDep):
     # 各年度違規
     violation_yearly = {}
     for year_roc, data in yearly_violation_data.items():
-        yearly_stats: Dict[str, dict] = defaultdict(
+        yearly_stats: dict[str, dict] = defaultdict(
             lambda: {
                 "name": "",
                 "labor_count": 0,
@@ -378,7 +377,7 @@ def get_leaderboards(session: SessionDep):
     )
 
 
-def _build_violation_leaderboard(data: Dict[str, dict]) -> ViolationLeaderboard:
+def _build_violation_leaderboard(data: dict[str, dict]) -> ViolationLeaderboard:
     """從違規統計資料建構 ViolationLeaderboard"""
     items = [
         ViolationLeaderboardItem(
@@ -411,7 +410,7 @@ def _build_violation_leaderboard(data: Dict[str, dict]) -> ViolationLeaderboard:
 
 
 def _to_salary_item(
-    s: NonManagerSalary, company_map: Dict[str, Company]
+    s: NonManagerSalary, company_map: dict[str, Company]
 ) -> SalaryLeaderboardItem:
     return SalaryLeaderboardItem(
         company_code=s.company_code,
@@ -422,7 +421,7 @@ def _to_salary_item(
 
 
 def _to_industry_salary_item(
-    s: NonManagerSalary, company_map: Dict[str, Company]
+    s: NonManagerSalary, company_map: dict[str, Company]
 ) -> IndustrySalaryLeaderboardItem:
     return IndustrySalaryLeaderboardItem(
         company_code=s.company_code,

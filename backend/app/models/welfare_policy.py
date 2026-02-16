@@ -3,7 +3,6 @@ t100sb13 - 員工福利政策及權益維護措施揭露-彙總資料查詢
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlmodel import Field, SQLModel
 
@@ -13,10 +12,10 @@ class WelfarePolicy(SQLModel, table=True):
 
     __tablename__ = "welfare_policy"
 
-    id: Optional[int] = Field(default=None, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
 
     # Company Link (Nullable - 無法比對時存入 archive)
-    company_code: Optional[str] = Field(
+    company_code: str | None = Field(
         default=None,
         foreign_key="company.code",
         index=True,
@@ -30,38 +29,34 @@ class WelfarePolicy(SQLModel, table=True):
     market_type: str = Field(index=True, description="市場別 (sii/otc)")
 
     # 平均員工薪資調整情形 (經常性薪資)
-    planned_salary_increase: Optional[str] = Field(default=None, description="預計調薪")
-    planned_salary_increase_note: Optional[str] = Field(
+    planned_salary_increase: str | None = Field(default=None, description="預計調薪")
+    planned_salary_increase_note: str | None = Field(
         default=None, description="預計調薪備註"
     )
-    actual_salary_increase: Optional[str] = Field(default=None, description="實際調薪")
-    actual_salary_increase_note: Optional[str] = Field(
+    actual_salary_increase: str | None = Field(default=None, description="實際調薪")
+    actual_salary_increase_note: str | None = Field(
         default=None, description="實際調薪備註"
     )
-    non_manager_salary_increase: Optional[str] = Field(
+    non_manager_salary_increase: str | None = Field(
         default=None, description="非經理人員工調薪"
     )
-    non_manager_salary_increase_note: Optional[str] = Field(
+    non_manager_salary_increase_note: str | None = Field(
         default=None, description="非經理人員工調薪備註"
     )
-    manager_salary_increase: Optional[str] = Field(
+    manager_salary_increase: str | None = Field(
         default=None, description="經理人員工調薪"
     )
-    manager_salary_increase_note: Optional[str] = Field(
+    manager_salary_increase_note: str | None = Field(
         default=None, description="經理人員工調薪備註"
     )
 
     # 新進員工之平均起薪金額
-    entry_salary_master: Optional[str] = Field(
-        default=None, description="碩士及以上起薪"
-    )
-    entry_salary_bachelor: Optional[str] = Field(
-        default=None, description="大專校院起薪"
-    )
-    entry_salary_highschool: Optional[str] = Field(
+    entry_salary_master: str | None = Field(default=None, description="碩士及以上起薪")
+    entry_salary_bachelor: str | None = Field(default=None, description="大專校院起薪")
+    entry_salary_highschool: str | None = Field(
         default=None, description="高中及以下起薪"
     )
-    entry_salary_note: Optional[str] = Field(default=None, description="起薪備註")
+    entry_salary_note: str | None = Field(default=None, description="起薪備註")
 
     # System
     created_at: datetime = Field(default_factory=datetime.now, description="建立時間")

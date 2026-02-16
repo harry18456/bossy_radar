@@ -1,46 +1,45 @@
 from datetime import date, datetime
-from typing import Optional
 
 from sqlmodel import SQLModel
 
 
 class EnvironmentalViolationBase(SQLModel):
     # Company Link
-    company_code: Optional[str] = None
+    company_code: str | None = None
 
     # 識別資料
-    tax_id: Optional[str] = None
-    control_no: Optional[str] = None
-    disposition_no: Optional[str] = None
+    tax_id: str | None = None
+    control_no: str | None = None
+    disposition_no: str | None = None
 
     # 事業資料
     company_name: str
-    company_address: Optional[str] = None
-    violation_address: Optional[str] = None
+    company_address: str | None = None
+    violation_address: str | None = None
 
     # 違規資訊
-    violation_type: Optional[str] = None
-    violation_date: Optional[date] = None
-    violation_reason: Optional[str] = None
-    law_article: Optional[str] = None
+    violation_type: str | None = None
+    violation_date: date | None = None
+    violation_reason: str | None = None
+    law_article: str | None = None
 
     # 裁處資訊
-    authority: Optional[str] = None
-    penalty_date: Optional[date] = None
+    authority: str | None = None
+    penalty_date: date | None = None
     fine_amount: int = 0
-    penalty_reason: Optional[str] = None
+    penalty_reason: str | None = None
 
     # 後續處理
-    limit_date: Optional[date] = None
-    is_improved: Optional[bool] = None
-    is_appeal: Optional[bool] = None
-    appeal_result: Optional[str] = None
-    is_paid: Optional[bool] = None
+    limit_date: date | None = None
+    is_improved: bool | None = None
+    is_appeal: bool | None = None
+    appeal_result: str | None = None
+    is_paid: bool | None = None
 
     # 其他
-    illegal_profit: Optional[int] = None
-    other_penalty: Optional[str] = None
-    is_serious: Optional[bool] = None
+    illegal_profit: int | None = None
+    other_penalty: str | None = None
+    is_serious: bool | None = None
 
 
 class EnvironmentalViolationPublic(EnvironmentalViolationBase):

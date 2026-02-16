@@ -1,7 +1,6 @@
 import logging
 import time
 from pathlib import Path
-from typing import Optional
 
 import httpx
 from bs4 import BeautifulSoup
@@ -61,9 +60,9 @@ class CompanyDetailScraper:
 
     def sync_all_details(
         self,
-        limit: Optional[int] = None,
+        limit: int | None = None,
         force: bool = False,
-        company_code: Optional[str] = None,
+        company_code: str | None = None,
         retries: int = 3,
         delay: float = 2.0,
     ):
@@ -169,7 +168,7 @@ class CompanyDetailScraper:
         retries: int = 3,
         delay: float = 2.0,
         max_delay: float = 60.0,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Fetch URL with exponential backoff retry. Support infinite if retries < 0."""
         attempt = 0
         while True:
@@ -232,7 +231,7 @@ class CompanyDetailScraper:
     )
 
     @staticmethod
-    def _normalize_url(value: Optional[str]) -> Optional[str]:
+    def _normalize_url(value: str | None) -> str | None:
         """Validate and normalize a URL value from MOPS.
 
         Returns None for invalid/placeholder values, auto-prefixes https://
@@ -265,9 +264,7 @@ class CompanyDetailScraper:
         # No protocol and no dot → not a valid URL
         return None
 
-    def _extract_url_by_label(
-        self, soup: BeautifulSoup, label_text: str
-    ) -> Optional[str]:
+    def _extract_url_by_label(self, soup: BeautifulSoup, label_text: str) -> str | None:
         """Find the link corresponding to a label in the MOPS layout."""
         # Some labels have <br> in them, so we strip them when comparing
         # OR we search for partial matches.

@@ -9,7 +9,6 @@ Endpoints:
 """
 
 import math
-from typing import List, Optional
 
 from fastapi import APIRouter, Query
 from sqlmodel import Session, asc, col, desc, func, select
@@ -31,7 +30,7 @@ router = APIRouter()
 
 
 def apply_pagination_and_sort(
-    query, model, page: int, size: int, sorts: Optional[List[str]], session: Session
+    query, model, page: int, size: int, sorts: list[str] | None, session: Session
 ):
     """
     Apply sorting and pagination to a query.
@@ -69,13 +68,13 @@ def read_employee_benefits(
     session: SessionDep,
     page: int = Query(1, ge=1, description="頁碼"),
     size: int = Query(20, le=100, description="每頁筆數"),
-    sort: Optional[List[str]] = Query(
+    sort: list[str] | None = Query(
         None, description="排序欄位 (e.g. -year, company_code)"
     ),
-    company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
-    year: Optional[List[int]] = Query(None, description="民國年過濾"),
-    market_type: Optional[List[str]] = Query(None, description="市場別過濾 (sii/otc)"),
-    industry: Optional[List[str]] = Query(None, description="產業類別過濾"),
+    company_code: list[str] | None = Query(None, description="公司代號過濾"),
+    year: list[int] | None = Query(None, description="民國年過濾"),
+    market_type: list[str] | None = Query(None, description="市場別過濾 (sii/otc)"),
+    industry: list[str] | None = Query(None, description="產業類別過濾"),
 ):
     """
     查詢財務報告附註揭露之員工福利(薪資)資訊 (t100sb14)
@@ -108,13 +107,13 @@ def read_non_manager_salaries(
     session: SessionDep,
     page: int = Query(1, ge=1, description="頁碼"),
     size: int = Query(20, le=100, description="每頁筆數"),
-    sort: Optional[List[str]] = Query(
+    sort: list[str] | None = Query(
         None, description="排序欄位 (e.g. -year, company_code)"
     ),
-    company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
-    year: Optional[List[int]] = Query(None, description="民國年過濾"),
-    market_type: Optional[List[str]] = Query(None, description="市場別過濾 (sii/otc)"),
-    industry: Optional[List[str]] = Query(None, description="產業類別過濾"),
+    company_code: list[str] | None = Query(None, description="公司代號過濾"),
+    year: list[int] | None = Query(None, description="民國年過濾"),
+    market_type: list[str] | None = Query(None, description="市場別過濾 (sii/otc)"),
+    industry: list[str] | None = Query(None, description="產業類別過濾"),
 ):
     """
     查詢非擔任主管職務之全時員工薪資資訊 (t100sb15)
@@ -147,12 +146,12 @@ def read_welfare_policies(
     session: SessionDep,
     page: int = Query(1, ge=1, description="頁碼"),
     size: int = Query(20, le=100, description="每頁筆數"),
-    sort: Optional[List[str]] = Query(
+    sort: list[str] | None = Query(
         None, description="排序欄位 (e.g. -year, company_code)"
     ),
-    company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
-    year: Optional[List[int]] = Query(None, description="民國年過濾"),
-    market_type: Optional[List[str]] = Query(None, description="市場別過濾 (sii/otc)"),
+    company_code: list[str] | None = Query(None, description="公司代號過濾"),
+    year: list[int] | None = Query(None, description="民國年過濾"),
+    market_type: list[str] | None = Query(None, description="市場別過濾 (sii/otc)"),
 ):
     """
     查詢員工福利政策及權益維護措施揭露 (t100sb13)
@@ -183,13 +182,13 @@ def read_salary_adjustments(
     session: SessionDep,
     page: int = Query(1, ge=1, description="頁碼"),
     size: int = Query(20, le=100, description="每頁筆數"),
-    sort: Optional[List[str]] = Query(
+    sort: list[str] | None = Query(
         None, description="排序欄位 (e.g. -year, company_code)"
     ),
-    company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
-    year: Optional[List[int]] = Query(None, description="民國年過濾"),
-    market_type: Optional[List[str]] = Query(None, description="市場別過濾 (sii/otc)"),
-    industry: Optional[List[str]] = Query(None, description="產業類別過濾"),
+    company_code: list[str] | None = Query(None, description="公司代號過濾"),
+    year: list[int] | None = Query(None, description="民國年過濾"),
+    market_type: list[str] | None = Query(None, description="市場別過濾 (sii/otc)"),
+    industry: list[str] | None = Query(None, description="產業類別過濾"),
 ):
     """
     查詢基層員工調整薪資或分派酬勞 (t222sb01)

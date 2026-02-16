@@ -6,7 +6,6 @@ GET /violations - 查詢勞動違規記錄
 
 import math
 from datetime import date
-from typing import List, Optional
 
 from fastapi import APIRouter, Query
 from sqlalchemy import extract
@@ -25,21 +24,19 @@ def read_violations(
     session: SessionDep,
     page: int = Query(1, ge=1, description="頁碼"),
     size: int = Query(20, le=100, description="每頁筆數"),
-    sort: Optional[List[str]] = Query(
+    sort: list[str] | None = Query(
         None, description="排序欄位 (e.g. -fine_amount, penalty_date)"
     ),
-    company_code: Optional[List[str]] = Query(None, description="公司代號過濾"),
-    data_source: Optional[List[str]] = Query(
+    company_code: list[str] | None = Query(None, description="公司代號過濾"),
+    data_source: list[str] | None = Query(
         None, description="資料來源過濾 (e.g. LaborStandards)"
     ),
-    authority: Optional[List[str]] = Query(
-        None, description="主管機關過濾 (e.g. Taipei)"
-    ),
-    year: Optional[List[int]] = Query(None, description="年度過濾 (西元年)"),
-    start_date: Optional[date] = Query(None, description="處分日期起始"),
-    end_date: Optional[date] = Query(None, description="處分日期結束"),
-    min_fine: Optional[int] = Query(None, description="最低罰款金額"),
-    max_fine: Optional[int] = Query(None, description="最高罰款金額"),
+    authority: list[str] | None = Query(None, description="主管機關過濾 (e.g. Taipei)"),
+    year: list[int] | None = Query(None, description="年度過濾 (西元年)"),
+    start_date: date | None = Query(None, description="處分日期起始"),
+    end_date: date | None = Query(None, description="處分日期結束"),
+    min_fine: int | None = Query(None, description="最低罰款金額"),
+    max_fine: int | None = Query(None, description="最高罰款金額"),
 ):
     """
     查詢勞動違規記錄（僅上市櫃公司）

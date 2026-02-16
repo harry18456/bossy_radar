@@ -11,7 +11,7 @@ from sqlmodel import Session, SQLModel, create_engine
 
 from app.db.session import get_session
 from app.main import app
-from app.models import Company  # noqa: F401 - triggers all model registrations
+from app.models import Company
 
 
 @pytest.fixture

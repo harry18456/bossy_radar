@@ -3,7 +3,6 @@ MOPS 員工薪資/福利資料相關 Schemas
 """
 
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -11,26 +10,26 @@ from pydantic import BaseModel
 # ========== Employee Benefit (t100sb14) ==========
 class EmployeeBenefitResponse(BaseModel):
     id: int
-    company_code: Optional[str] = None
+    company_code: str | None = None
     raw_company_code: str
     company_name: str
     year: int
     market_type: str
-    industry: Optional[str] = None
-    company_category: Optional[str] = None
+    industry: str | None = None
+    company_category: str | None = None
 
     # Matching EmployeeBenefit model fields
-    employee_benefit_expense: Optional[int] = None
-    employee_salary_expense: Optional[int] = None
-    employee_count: Optional[int] = None
-    avg_benefit_per_employee: Optional[int] = None
-    avg_salary_current_year: Optional[int] = None
-    avg_salary_previous_year: Optional[int] = None
-    salary_change_rate: Optional[float] = None
-    eps: Optional[float] = None
-    industry_avg_benefit: Optional[int] = None
-    industry_avg_salary: Optional[int] = None
-    industry_avg_eps: Optional[float] = None
+    employee_benefit_expense: int | None = None
+    employee_salary_expense: int | None = None
+    employee_count: int | None = None
+    avg_benefit_per_employee: int | None = None
+    avg_salary_current_year: int | None = None
+    avg_salary_previous_year: int | None = None
+    salary_change_rate: float | None = None
+    eps: float | None = None
+    industry_avg_benefit: int | None = None
+    industry_avg_salary: int | None = None
+    industry_avg_eps: float | None = None
 
     created_at: datetime
     last_updated: datetime
@@ -42,41 +41,41 @@ class EmployeeBenefitResponse(BaseModel):
 # ========== Non-Manager Salary (t100sb15) ==========
 class NonManagerSalaryResponse(BaseModel):
     id: int
-    company_code: Optional[str] = None
+    company_code: str | None = None
     raw_company_code: str
     company_name: str
     year: int
     market_type: str
-    industry: Optional[str] = None
-    employee_count: Optional[int] = None
+    industry: str | None = None
+    employee_count: int | None = None
 
     # 薪資統計
-    total_salary: Optional[int] = None  # 員工薪資總額(仟元)
-    avg_salary: Optional[int] = None
-    median_salary: Optional[int] = None
+    total_salary: int | None = None  # 員工薪資總額(仟元)
+    avg_salary: int | None = None
+    median_salary: int | None = None
 
     # 年度比較
-    avg_salary_previous_year: Optional[int] = None
-    avg_salary_change: Optional[float] = None
-    median_salary_previous_year: Optional[int] = None
-    median_salary_change: Optional[float] = None
+    avg_salary_previous_year: int | None = None
+    avg_salary_change: float | None = None
+    median_salary_previous_year: int | None = None
+    median_salary_change: float | None = None
 
     # 同業比較
-    industry_avg_salary: Optional[int] = None  # 同產業平均薪資(仟元)
-    industry_median_salary: Optional[int] = None  # 同產業薪資中位數(仟元)
+    industry_avg_salary: int | None = None  # 同產業平均薪資(仟元)
+    industry_median_salary: int | None = None  # 同產業薪資中位數(仟元)
 
     # EPS 相關
-    eps: Optional[float] = None
-    industry_avg_eps: Optional[float] = None
+    eps: float | None = None
+    industry_avg_eps: float | None = None
 
     # 薪資統計情形 (Y/N flags)
-    is_avg_salary_under_500k: Optional[str] = None
-    is_better_eps_lower_salary: Optional[str] = None
-    is_eps_growth_salary_decrease: Optional[str] = None
+    is_avg_salary_under_500k: str | None = None
+    is_better_eps_lower_salary: str | None = None
+    is_eps_growth_salary_decrease: str | None = None
 
     # 經營績效與薪酬關聯 (質化指標)
-    performance_salary_relation_note: Optional[str] = None
-    improvement_measures_note: Optional[str] = None
+    performance_salary_relation_note: str | None = None
+    improvement_measures_note: str | None = None
 
     created_at: datetime
     last_updated: datetime
@@ -88,23 +87,23 @@ class NonManagerSalaryResponse(BaseModel):
 # ========== Welfare Policy (t100sb13) ==========
 class WelfarePolicyResponse(BaseModel):
     id: int
-    company_code: Optional[str] = None
+    company_code: str | None = None
     raw_company_code: str
     company_name: str
     year: int
     market_type: str
-    planned_salary_increase: Optional[str] = None
-    planned_salary_increase_note: Optional[str] = None
-    actual_salary_increase: Optional[str] = None
-    actual_salary_increase_note: Optional[str] = None
-    non_manager_salary_increase: Optional[str] = None
-    non_manager_salary_increase_note: Optional[str] = None
-    manager_salary_increase: Optional[str] = None
-    manager_salary_increase_note: Optional[str] = None
-    entry_salary_master: Optional[str] = None
-    entry_salary_bachelor: Optional[str] = None
-    entry_salary_highschool: Optional[str] = None
-    entry_salary_note: Optional[str] = None
+    planned_salary_increase: str | None = None
+    planned_salary_increase_note: str | None = None
+    actual_salary_increase: str | None = None
+    actual_salary_increase_note: str | None = None
+    non_manager_salary_increase: str | None = None
+    non_manager_salary_increase_note: str | None = None
+    manager_salary_increase: str | None = None
+    manager_salary_increase_note: str | None = None
+    entry_salary_master: str | None = None
+    entry_salary_bachelor: str | None = None
+    entry_salary_highschool: str | None = None
+    entry_salary_note: str | None = None
     created_at: datetime
     last_updated: datetime
 
@@ -115,25 +114,25 @@ class WelfarePolicyResponse(BaseModel):
 # ========== Salary Adjustment (t222sb01) ==========
 class SalaryAdjustmentResponse(BaseModel):
     id: int
-    company_code: Optional[str] = None
+    company_code: str | None = None
     raw_company_code: str
     company_name: str
     year: int
     market_type: str
-    industry: Optional[str] = None
-    pretax_net_profit: Optional[int] = None
-    allocation_ratio_min: Optional[str] = None
-    allocation_ratio_max: Optional[str] = None
-    board_resolution_date: Optional[str] = None
-    actual_allocation_ratio: Optional[str] = None
-    basic_employee_definition: Optional[str] = None
-    basic_employee_count: Optional[int] = None
-    total_allocation_amount: Optional[int] = None
-    allocation_method: Optional[str] = None
-    difference_amount: Optional[str] = None
-    difference_reason: Optional[str] = None
-    difference_handling: Optional[str] = None
-    note: Optional[str] = None
+    industry: str | None = None
+    pretax_net_profit: int | None = None
+    allocation_ratio_min: str | None = None
+    allocation_ratio_max: str | None = None
+    board_resolution_date: str | None = None
+    actual_allocation_ratio: str | None = None
+    basic_employee_definition: str | None = None
+    basic_employee_count: int | None = None
+    total_allocation_amount: int | None = None
+    allocation_method: str | None = None
+    difference_amount: str | None = None
+    difference_reason: str | None = None
+    difference_handling: str | None = None
+    note: str | None = None
     created_at: datetime
     last_updated: datetime
 

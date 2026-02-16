@@ -3,7 +3,6 @@ import logging
 import re
 from datetime import date, datetime
 from pathlib import Path
-from typing import Dict, List, Optional
 
 from sqlmodel import Session, select
 
@@ -28,7 +27,7 @@ class ViolationService:
             "Union",
         ]
 
-    def sync_violations(self, data_dir: Path, target_sources: List[str]):
+    def sync_violations(self, data_dir: Path, target_sources: list[str]):
         """
         Sync violations from downloaded JSONs to DB.
         """
@@ -90,10 +89,10 @@ class ViolationService:
                 session.commit()
                 archive_session.commit()
 
-    def _parse_json(self, file_path: Path, source: str) -> List[Violation]:
+    def _parse_json(self, file_path: Path, source: str) -> list[Violation]:
         records = []
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             if not isinstance(data, list):
@@ -147,10 +146,10 @@ class ViolationService:
         self,
         session: Session,
         archive_session: Session,
-        violations: List[Violation],
-        company_map: Dict[str, str],
-        company_branch_map: List[tuple],
-        company_chairman_map: Dict[str, list],
+        violations: list[Violation],
+        company_map: dict[str, str],
+        company_branch_map: list[tuple],
+        company_chairman_map: dict[str, list],
     ):
         count = 0
         linked_count = 0
@@ -230,7 +229,7 @@ class ViolationService:
             f"Processed {count} violations. Linked {linked_count} to companies."
         )
 
-    def _parse_roc_date(self, date_str: str) -> Optional[date]:
+    def _parse_roc_date(self, date_str: str) -> date | None:
         """
         Convert ROC date string (e.g. '1150126') to date object.
         Reusing similar logic but handling int/str inputs.

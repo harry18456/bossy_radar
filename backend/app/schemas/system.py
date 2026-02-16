@@ -1,16 +1,15 @@
 from datetime import datetime
-from typing import Dict, Optional
 
 from pydantic import BaseModel
 
 
 class SyncStatusItem(BaseModel):
-    last_updated: Optional[datetime]
+    last_updated: datetime | None
     count: int
 
 
 class SyncStatusResponse(BaseModel):
-    companies: Dict[str, SyncStatusItem]
-    violations: Dict[str, SyncStatusItem]
-    environmental_violations: Dict[str, SyncStatusItem]
-    mops: Dict[str, SyncStatusItem]
+    companies: dict[str, SyncStatusItem]
+    violations: dict[str, SyncStatusItem]
+    environmental_violations: dict[str, SyncStatusItem]
+    mops: dict[str, SyncStatusItem]

@@ -3,7 +3,6 @@ import logging
 import re
 from datetime import date, datetime
 from pathlib import Path
-from typing import List, Optional
 
 from sqlmodel import Session, asc, col, desc, func, select
 
@@ -22,8 +21,8 @@ class CompanyService:
         session: Session,
         page: int = 1,
         size: int = 20,
-        filters: Optional[dict] = None,
-        sorts: Optional[List[str]] = None,
+        filters: dict | None = None,
+        sorts: list[str] | None = None,
     ):
         """
         Get companies with pagination, filtering, and sorting.
@@ -76,7 +75,7 @@ class CompanyService:
 
         return results, total
 
-    def get_catalog(self, session: Session) -> List[Company]:
+    def get_catalog(self, session: Session) -> list[Company]:
         """
         Get all companies with minimal fields for search catalog.
         """
@@ -116,7 +115,7 @@ class CompanyService:
             )
         return catalog
 
-    def sync_companies(self, data_dir: Path, target_types: List[str]):
+    def sync_companies(self, data_dir: Path, target_types: list[str]):
         """
         Sync companies from downloaded CSVs to DB.
         """
@@ -138,9 +137,9 @@ class CompanyService:
 
             session.commit()
 
-    def _parse_csv(self, file_path: Path, market_type: str) -> List[Company]:
+    def _parse_csv(self, file_path: Path, market_type: str) -> list[Company]:
         companies = []
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             # Skip potential BOM or weird first characters if simple
             # But csv.DictReader usually handles it if we strip
             lines = f.readlines()
@@ -215,7 +214,7 @@ class CompanyService:
 
         return companies
 
-    def _upsert_companies(self, session: Session, companies: List[Company]):
+    def _upsert_companies(self, session: Session, companies: list[Company]):
         count = 0
         for new_data in companies:
             # Check if exists
@@ -246,7 +245,7 @@ class CompanyService:
             count += 1
         logger.info(f"Upserted {count} companies")
 
-    def _parse_roc_date(self, date_str: str) -> Optional[date]:
+    def _parse_roc_date(self, date_str: str) -> date | None:
         """
         Convert ROC date string (e.g. '1150126') to date object.
         """
@@ -270,7 +269,7 @@ class CompanyService:
         except ValueError:
             return None
 
-    def _parse_money(self, money_str: str) -> Optional[int]:
+    def _parse_money(self, money_str: str) -> int | None:
         """
         Parse money string like '新台幣 10000元' or '10000'
         """
