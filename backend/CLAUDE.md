@@ -84,19 +84,20 @@ uv run python -m app.cli.main export --output-dir ../frontend/public/data
 
 ## API 端點
 
-| 端點 | 說明 |
-|------|------|
-| `GET /api/v1/companies` | 公司列表 |
-| `GET /api/v1/companies/{code}/profile` | 公司詳細資料 |
-| `GET /api/v1/companies/yearly-summary` | 公司年度摘要 |
-| `GET /api/v1/violations` | 勞動違規列表 |
-| `GET /api/v1/environmental-violations` | 環境違規列表 |
-| `GET /api/v1/mops/employee-benefits` | 員工福利資訊 |
+| 端點                                    | 說明           |
+| --------------------------------------- | -------------- |
+| `GET /api/v1/companies`                 | 公司列表       |
+| `GET /api/v1/companies/{code}/profile`  | 公司詳細資料   |
+| `GET /api/v1/companies/yearly-summary`  | 公司年度摘要   |
+| `GET /api/v1/violations`                | 勞動違規列表   |
+| `GET /api/v1/environmental-violations`  | 環境違規列表   |
+| `GET /api/v1/mops/employee-benefits`    | 員工福利資訊   |
 | `GET /api/v1/mops/non-manager-salaries` | 非主管薪資資訊 |
-| `GET /api/v1/system/sync-status` | 系統同步狀態 |
+| `GET /api/v1/system/sync-status`        | 系統同步狀態   |
 
 ## 開發注意事項
 
 1. **長時間任務**: CLI 負責資料擷取，不應阻塞 HTTP 請求
 2. **檔案儲存**: `data/` 目錄為暫時儲存，必須被 gitignore
 3. **比對策略**: 違規資料透過公司名稱、簡稱、分公司名、負責人等多重比對
+4. **測試**: 使用 `uv run pytest` 執行測試，測試位於 `tests/` 目錄，使用 in-memory SQLite 不影響正式 DB

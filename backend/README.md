@@ -222,3 +222,93 @@ uv run fastapi dev app/main.py
 
 - **API 文件**: `http://127.0.0.1:8000/docs`
 - **API 根路徑**: `http://127.0.0.1:8000/api/v1`
+
+## 測試
+
+### 技術棧
+
+- **框架**: [pytest](https://docs.pytest.org/)
+- **覆蓋率**: [pytest-cov](https://pytest-cov.readthedocs.io/) (coverage.py)
+- **HTTP 測試**: FastAPI [TestClient](https://fastapi.tiangolo.com/tutorial/testing/) (基於 httpx)
+- **測試資料庫**: In-memory SQLite（不影響正式資料）
+
+### 安裝測試依賴
+
+```bash
+uv sync --group dev
+```
+
+### 執行測試
+
+```bash
+# 執行所有測試
+uv run pytest
+
+# 執行特定測試檔案
+uv run pytest tests/test_company_service.py
+
+# 執行特定測試類別
+uv run pytest tests/test_company_matcher.py::TestCompanyMatcher
+
+# 執行特定測試方法
+uv run pytest tests/test_company_service.py::TestParseRocDate::test_standard_7digit
+
+# 顯示詳細輸出（含 print）
+uv run pytest -v -s
+```
+
+### 覆蓋率報告
+
+```bash
+# 終端報告（顯示哪些行未被覆蓋）
+uv run pytest --cov=app --cov-report=term-missing
+
+# 產生 HTML 報告（開 htmlcov/index.html 查看）
+uv run pytest --cov=app --cov-report=html
+```
+
+### 測試目錄結構
+
+```
+tests/
+├── __init__.py
+├── conftest.py                 # 共用 fixtures（Test DB、TestClient、seed data）
+├── test_company_service.py     # CompanyService 純函式單元測試
+├── test_company_matcher.py     # CompanyMatcher 比對邏輯測試
+└── test_api_companies.py       # API 整合測試
+```
+
+### 測試分層
+
+| 層級             | 目的                    | 範例                              | 需要 DB        |
+| ---------------- | ----------------------- | --------------------------------- | -------------- |
+| **單元測試**     | 測試獨立函式的輸入/輸出 | `_parse_roc_date`、`_parse_money` | ❌             |
+| **邏輯測試**     | 測試商業邏輯正確性      | `CompanyMatcher` 比對策略         | ✅ (in-memory) |
+| **API 整合測試** | 測試 HTTP 端點完整流程  | `GET /api/v1/companies`           | ✅ (in-memory) |
+
+### 新增測試的方法
+
+1. **純函式測試** — 直接建立 service instance，不需 fixture：
+
+   ```python
+   def test_my_helper(self):
+       service = CompanyService()
+       assert service._my_helper("input") == expected
+   ```
+
+2. **需要 DB 的測試** — 使用 `conftest.py` 的 `test_session` 和 `seed_companies` fixture：
+
+   ```python
+   def test_something(self, test_session, seed_companies):
+       # test_session 是綁定 in-memory SQLite 的 Session
+       # seed_companies 是預置的 3 筆公司資料（台積電、鴻海、精測）
+       result = session.exec(select(Company)).all()
+       assert len(result) == 3
+   ```
+
+3. **API 測試** — 使用 `client` fixture（已覆寫 DB dependency）：
+   ```python
+   def test_api(self, client):
+       response = client.get("/api/v1/companies")
+       assert response.status_code == 200
+   ```
