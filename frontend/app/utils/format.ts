@@ -7,7 +7,7 @@ export const formatDate = (dateString?: string | null): string => {
   if (!dateString) return '-'
   
   // Handle ROC date format like "080/01/01" or "0800101"
-  const rocMatch = dateString.match(/^(\d{2,3})[\/-]?(\d{2})[\/-]?(\d{2})$/)
+  const rocMatch = dateString.match(/^(\d{2,3})[-/]?(\d{2})[-/]?(\d{2})$/)
   if (rocMatch && rocMatch[1] && rocMatch[2] && rocMatch[3]) {
     const year = parseInt(rocMatch[1]) + 1911
     const month = rocMatch[2]

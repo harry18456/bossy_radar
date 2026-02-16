@@ -34,24 +34,24 @@ const activeTab = ref<"count" | "fine">("count");
         <!-- Tab Toggle -->
         <div class="flex bg-gray-100 dark:bg-slate-800 rounded-lg p-0.5 w-fit">
           <button
-            @click="activeTab = 'count'"
             class="px-3 py-1.5 text-xs font-medium rounded-md transition-all"
             :class="
               activeTab === 'count'
                 ? 'bg-white dark:bg-slate-700 text-orange-600 dark:text-orange-400 shadow-sm'
                 : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
             "
+            @click="activeTab = 'count'"
           >
             違規次數
           </button>
           <button
-            @click="activeTab = 'fine'"
             class="px-3 py-1.5 text-xs font-medium rounded-md transition-all"
             :class="
               activeTab === 'fine'
                 ? 'bg-white dark:bg-slate-700 text-orange-600 dark:text-orange-400 shadow-sm'
                 : 'text-gray-500 dark:text-slate-400 hover:text-gray-700'
             "
+            @click="activeTab = 'fine'"
           >
             罰鍰金額
           </button>
@@ -65,14 +65,14 @@ const activeTab = ref<"count" | "fine">("count");
     <!-- Loading state when data is null -->
     <div v-if="!data" class="divide-y divide-gray-100 dark:divide-slate-800">
       <div v-for="i in 5" :key="i" class="flex items-center px-4 md:px-6 py-3">
-        <div class="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-700 animate-pulse mr-3"></div>
+        <div class="w-6 h-6 rounded-full bg-gray-200 dark:bg-slate-700 animate-pulse mr-3"/>
         <div class="flex-1">
-          <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-2/3 mb-2 animate-pulse"></div>
-          <div class="h-3 bg-gray-100 dark:bg-slate-800 rounded w-1/4 animate-pulse"></div>
+          <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-2/3 mb-2 animate-pulse"/>
+          <div class="h-3 bg-gray-100 dark:bg-slate-800 rounded w-1/4 animate-pulse"/>
         </div>
         <div class="text-right ml-4">
-          <div class="h-5 bg-gray-200 dark:bg-slate-700 rounded w-12 mb-1 animate-pulse"></div>
-          <div class="h-3 bg-gray-100 dark:bg-slate-800 rounded w-16 animate-pulse"></div>
+          <div class="h-5 bg-gray-200 dark:bg-slate-700 rounded w-12 mb-1 animate-pulse"/>
+          <div class="h-3 bg-gray-100 dark:bg-slate-800 rounded w-16 animate-pulse"/>
         </div>
       </div>
     </div>

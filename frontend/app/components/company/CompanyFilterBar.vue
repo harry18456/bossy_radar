@@ -48,8 +48,8 @@ const toggleMarket = (value: string) => {
         <label for="search" class="block text-sm font-medium text-gray-700 dark:text-slate-300">關鍵字搜尋</label>
         <button 
           v-if="localSearchName || filters.name"
-          @click="() => { localSearchName = ''; filters.name = '' }"
           class="text-xs text-gray-500 hover:text-red-500 transition-colors"
+          @click="() => { localSearchName = ''; filters.name = '' }"
         >
           清空
         </button>
@@ -62,9 +62,9 @@ const toggleMarket = (value: string) => {
           @search="handleSearch"
         />
         <button 
-          @click="handleSearch(localSearchName)"
           class="absolute right-3 top-2.5 p-1 rounded-md text-gray-400 hover:text-blue-500 hover:bg-gray-100 dark:hover:bg-slate-800 transition-all"
           title="執行搜尋"
+          @click="handleSearch(localSearchName)"
         >
           <Icon name="lucide:arrow-right" class="w-4 h-4" />
         </button>
@@ -77,8 +77,8 @@ const toggleMarket = (value: string) => {
         <h3 class="text-sm font-semibold text-gray-900 dark:text-white">市場類別</h3>
         <button 
           v-if="(filters.market_type?.length || 0) > 0"
-          @click="filters.market_type = []"
           class="text-xs text-gray-500 hover:text-red-500 transition-colors"
+          @click="filters.market_type = []"
         >
           清空
         </button>
@@ -93,9 +93,9 @@ const toggleMarket = (value: string) => {
             type="checkbox" 
             :value="type.value" 
             :checked="filters.market_type?.includes(type.value)"
-            @change="toggleMarket(type.value)"
             class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:bg-slate-900 dark:border-slate-700"
-          />
+            @change="toggleMarket(type.value)"
+          >
           <span class="text-sm text-gray-600 dark:text-slate-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
             {{ type.label }}
           </span>
@@ -110,14 +110,14 @@ const toggleMarket = (value: string) => {
         <div class="flex items-center space-x-3">
           <button 
             v-if="(filters.industry?.length || 0) > 0"
-            @click="filters.industry = []"
             class="text-xs text-gray-500 hover:text-red-500 transition-colors"
+            @click="filters.industry = []"
           >
             清空
           </button>
           <button 
-            @click="isExpanded = !isExpanded"
             class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+            @click="isExpanded = !isExpanded"
           >
             {{ isExpanded ? '收合' : '展開' }}
           </button>
@@ -137,9 +137,9 @@ const toggleMarket = (value: string) => {
             type="checkbox" 
             :value="option.value" 
             :checked="filters.industry?.includes(option.value)"
-            @change="toggleIndustry(option.value)"
             class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 dark:bg-slate-900 dark:border-slate-700"
-          />
+            @change="toggleIndustry(option.value)"
+          >
           <span class="text-sm text-gray-600 dark:text-slate-400 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
             {{ option.label }}
           </span>

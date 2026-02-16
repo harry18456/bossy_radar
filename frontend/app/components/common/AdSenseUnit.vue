@@ -89,14 +89,15 @@ onMounted(() => {
     
     <!-- Production Ad Code -->
     <ClientOnly v-else>
-      <ins ref="adElement"
+      <ins
+ref="adElement"
            class="adsbygoogle"
            style="display:block; width: 100%; min-height: 100px; text-align: center;"
            :data-ad-client="adClient"
            :data-ad-slot="currentAdSlot"
            :data-ad-format="adFormat || 'auto'"
            :data-full-width-responsive="true"
-           :data-ad-layout-key="adLayoutKey"></ins>
+           :data-ad-layout-key="adLayoutKey"/>
     </ClientOnly>
   </div>
 </template>

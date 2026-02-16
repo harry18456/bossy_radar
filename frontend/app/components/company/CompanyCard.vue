@@ -66,10 +66,10 @@ const toggleWatch = (e: Event) => {
       
       <ClientOnly>
         <button
-          @click="toggleWatch"
           class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-800 transition-colors z-10"
           :class="isWatched ? 'text-red-500' : 'text-gray-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400'"
           aria-label="Toggle watchlist"
+          @click="toggleWatch"
         >
           <Icon 
             :name="isWatched ? 'heroicons:heart-20-solid' : 'lucide:heart'" 

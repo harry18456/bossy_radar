@@ -42,10 +42,10 @@ const visiblePages = computed(() => {
   <nav class="flex items-center justify-center space-x-2" aria-label="Pagination">
     <!-- Previous Button -->
     <button
-      @click="emit('change', current - 1)"
       :disabled="current === 1"
       class="p-2 rounded-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       aria-label="Previous page"
+      @click="emit('change', current - 1)"
     >
       <Icon name="lucide:chevron-left" class="w-5 h-5" />
     </button>
@@ -55,13 +55,13 @@ const visiblePages = computed(() => {
       <span v-if="page === '...'" class="px-4 py-2 text-gray-400">...</span>
       <button
         v-else
-        @click="emit('change', page as number)"
         :class="[
           'px-4 py-2 rounded-md border text-sm font-medium transition-colors',
           current === page
             ? 'bg-blue-600 text-white border-blue-600 cursor-default'
             : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 cursor-pointer'
         ]"
+        @click="emit('change', page as number)"
       >
         {{ page }}
       </button>
@@ -69,10 +69,10 @@ const visiblePages = computed(() => {
 
     <!-- Next Button -->
     <button
-      @click="emit('change', current + 1)"
       :disabled="current === total"
       class="p-2 rounded-md border border-gray-300 bg-white text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
       aria-label="Next page"
+      @click="emit('change', current + 1)"
     >
       <Icon name="lucide:chevron-right" class="w-5 h-5" />
     </button>

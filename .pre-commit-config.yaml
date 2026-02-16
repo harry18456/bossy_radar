@@ -12,3 +12,12 @@ repos:
       # Run the formatter.
       - id: ruff-format
         files: ^backend/
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint (frontend)
+        entry: cmd /c "cd frontend && npx --no-install eslint --no-warn-ignored"
+        language: system
+        files: ^frontend/.*\.(ts|vue|mjs)$
+        pass_filenames: false

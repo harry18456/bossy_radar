@@ -151,8 +151,8 @@ export const useStaticApi = () => {
         const key = isDesc ? sortKey.substring(1) : sortKey
         
         items.sort((a: any, b: any) => {
-          let valA = a[key]
-          let valB = b[key]
+          const valA = a[key]
+          const valB = b[key]
           
           // Handle null/undefined
           if (valA === null || valA === undefined) return 1

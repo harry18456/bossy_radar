@@ -21,7 +21,7 @@ import { Toaster } from 'vue-sonner'
 
     <CommonAppFooter />
     
-    <Toaster position="top-right" richColors />
+    <Toaster position="top-right" rich-colors />
     </div>
   </div>
 </template>

@@ -156,8 +156,8 @@ const clearWatchlist = () => {
 
         <div v-if="watchedCodes.length > 0" class="flex gap-4">
           <button
-            @click="clearWatchlist"
             class="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 px-4 py-2 rounded-lg transition-colors text-sm font-medium"
+            @click="clearWatchlist"
           >
             清空清單
           </button>
@@ -209,23 +209,23 @@ const clearWatchlist = () => {
               >
                 <div
                   class="h-4 w-24 bg-gray-200 dark:bg-slate-700 rounded mb-4"
-                ></div>
+                />
                 <div
                   class="h-6 w-48 bg-gray-200 dark:bg-slate-700 rounded mb-4"
-                ></div>
+                />
                 <div class="space-y-2">
                   <div
                     class="h-4 w-full bg-gray-200 dark:bg-slate-700 rounded"
-                  ></div>
+                  />
                   <div
                     class="h-4 w-full bg-gray-200 dark:bg-slate-700 rounded"
-                  ></div>
+                  />
                 </div>
               </div>
             </template>
             <CompanyCard
-              v-else
               v-for="company in companies"
+              v-else
               :key="company.code"
               :company="company"
             />
@@ -445,10 +445,10 @@ const clearWatchlist = () => {
             <div>
               <div
                 class="h-8 w-48 bg-gray-200 dark:bg-slate-700 rounded animate-pulse"
-              ></div>
+              />
               <div
                 class="h-4 w-32 bg-gray-200 dark:bg-slate-700 rounded mt-2 animate-pulse"
-              ></div>
+              />
             </div>
           </div>
           <div class="text-center py-12 text-gray-500 dark:text-slate-400">

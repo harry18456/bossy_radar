@@ -8,9 +8,9 @@ const toggleColorMode = () => {
 
 <template>
   <button
-    @click="toggleColorMode"
     class="group p-2 rounded-md transition-all duration-300 hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-yellow-400"
     aria-label="Toggle Dark Mode"
+    @click="toggleColorMode"
   >
     <ClientOnly>
       <div class="relative w-5 h-5 flex items-center justify-center">

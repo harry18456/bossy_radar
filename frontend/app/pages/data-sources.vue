@@ -140,7 +140,7 @@ definePageMeta({
           </div>
         </section>
 
-        <hr class="border-gray-100 dark:border-slate-800" />
+        <hr class="border-gray-100 dark:border-slate-800" >
 
         <!-- 2. 資料整合邏輯 -->
         <section>
@@ -175,7 +175,7 @@ definePageMeta({
           </div>
         </section>
 
-        <hr class="border-gray-100 dark:border-slate-800" />
+        <hr class="border-gray-100 dark:border-slate-800" >
 
         <!-- 3. 免責聲明 -->
         <section>

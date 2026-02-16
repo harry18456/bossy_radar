@@ -121,8 +121,8 @@ const isValidUrl = (url: string | null | undefined): boolean => {
   <div>
     <!-- Loading State -->
     <div v-if="status === 'pending'" class="animate-pulse space-y-8">
-      <div class="h-32 bg-gray-200 dark:bg-slate-800 rounded-xl"></div>
-      <div class="h-64 bg-gray-200 dark:bg-slate-800 rounded-xl"></div>
+      <div class="h-32 bg-gray-200 dark:bg-slate-800 rounded-xl"/>
+      <div class="h-64 bg-gray-200 dark:bg-slate-800 rounded-xl"/>
     </div>
 
     <!-- Error State -->
@@ -151,7 +151,7 @@ const isValidUrl = (url: string | null | undefined): boolean => {
         <!-- Decoration background -->
         <div
           class="absolute top-0 right-0 w-64 h-64 bg-blue-50 dark:bg-blue-900/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"
-        ></div>
+        />
 
         <div
           class="relative z-10 flex flex-col md:flex-row md:items-start justify-between gap-6"
@@ -198,13 +198,13 @@ const isValidUrl = (url: string | null | undefined): boolean => {
 
           <div class="flex items-center space-x-3">
             <button
-              @click="toggleWatch"
               class="flex items-center px-4 py-2 rounded-lg border transition-all duration-200"
               :class="
                 isWatched
                   ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400'
                   : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'
               "
+              @click="toggleWatch"
             >
               <Icon
                 :name="isWatched ? 'heroicons:heart-20-solid' : 'lucide:heart'"
@@ -228,13 +228,13 @@ const isValidUrl = (url: string | null | undefined): boolean => {
           <button
             v-for="tab in tabs"
             :key="tab.id"
-            @click="activeTab = tab.id"
             :class="[
               activeTab === tab.id
                 ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 md:bg-transparent md:dark:bg-transparent md:shadow-none md:border-blue-500 md:border-b-2'
                 : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-300 md:border-transparent md:border-b-2 md:hover:border-gray-300',
               'flex-1 text-center py-2 md:py-4 px-1 font-medium text-xs md:text-sm transition-all rounded-lg md:rounded-none cursor-pointer',
             ]"
+            @click="activeTab = tab.id"
           >
             {{ tab.label }}
           </button>
@@ -385,24 +385,24 @@ const isValidUrl = (url: string | null | undefined): boolean => {
             class="mb-4 bg-gray-50 dark:bg-slate-800/50 p-1 rounded-lg inline-flex"
           >
             <button
-              @click="violationType = 'labor'"
               :class="
                 violationType === 'labor'
                   ? 'bg-white dark:bg-slate-700 shadow-sm text-blue-600 dark:text-blue-400 font-medium'
                   : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
               "
               class="px-4 py-2 rounded-md text-sm transition-all"
+              @click="violationType = 'labor'"
             >
               勞動違規 ({{ profile.violations?.length || 0 }})
             </button>
             <button
-              @click="violationType = 'env'"
               :class="
                 violationType === 'env'
                   ? 'bg-white dark:bg-slate-700 shadow-sm text-green-600 dark:text-green-400 font-medium'
                   : 'text-gray-500 dark:text-slate-400 hover:text-gray-700 dark:hover:text-slate-200'
               "
               class="px-4 py-2 rounded-md text-sm transition-all"
+              @click="violationType = 'env'"
             >
               環保裁罰 ({{ profile.environmental_violations?.length || 0 }})
             </button>

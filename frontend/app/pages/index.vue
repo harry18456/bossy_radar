@@ -36,7 +36,7 @@ const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
         <span class="text-2xl text-gray-500 font-normal">(Bossy Radar)</span>
       </h1>
       <p class="text-xl text-gray-500 dark:text-slate-400 mb-8 max-w-2xl">
-        透明化職場資訊，避開慣老闆。<br />
+        透明化職場資訊，避開慣老闆。<br >
         查詢上市櫃公司薪資福利與違規紀錄。
       </p>
 
@@ -70,8 +70,8 @@ const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
               class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
             >
               <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"></div>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"></div>
+                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
+                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
               </div>
             </div>
           </template>
@@ -84,8 +84,8 @@ const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
               class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
             >
               <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"></div>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"></div>
+                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
+                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
               </div>
             </div>
           </template>
@@ -107,8 +107,8 @@ const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
               class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
             >
               <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"></div>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"></div>
+                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
+                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
               </div>
             </div>
           </template>
@@ -121,8 +121,8 @@ const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
               class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
             >
               <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"></div>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"></div>
+                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
+                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
               </div>
             </div>
           </template>
@@ -135,8 +135,8 @@ const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
               class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
             >
               <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"></div>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"></div>
+                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
+                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
               </div>
             </div>
           </template>

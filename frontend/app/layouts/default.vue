@@ -14,21 +14,21 @@ import { Toaster } from "vue-sonner";
 
       <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
         <!-- Top Ad (Always show on Default/Inner Layout) -->
-        <CommonAdSenseUnit slotKey="top" adFormat="horizontal" class="mb-8" />
+        <CommonAdSenseUnit slot-key="top" ad-format="horizontal" class="mb-8" />
 
         <slot />
 
         <!-- Bottom Ad (Always show on Default/Inner Layout) -->
         <CommonAdSenseUnit
-          slotKey="bottom"
-          adFormat="horizontal"
+          slot-key="bottom"
+          ad-format="horizontal"
           class="mt-8"
         />
       </main>
 
       <CommonAppFooter />
 
-      <Toaster position="top-right" richColors />
+      <Toaster position="top-right" rich-colors />
     </div>
   </div>
 </template>

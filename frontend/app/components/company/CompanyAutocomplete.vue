@@ -166,7 +166,7 @@ watch(query, () => {
         class="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:text-white transition-all"
         @keydown="handleKeyDown"
         @focus="isOpen = query.length >= 1"
-      />
+      >
       <Icon name="lucide:search" class="absolute left-3 top-2.5 w-5 h-5 text-gray-400" />
       
       <!-- Loading indicator -->
@@ -192,12 +192,12 @@ watch(query, () => {
           <li
             v-for="(company, index) in suggestions"
             :key="company.code"
-            @click="selectCompany(company)"
-            @mouseenter="selectedIndex = index"
             class="px-4 py-3 cursor-pointer transition-colors flex items-center justify-between"
             :class="[
               selectedIndex === index ? 'bg-blue-50 dark:bg-blue-900/20' : ''
             ]"
+            @click="selectCompany(company)"
+            @mouseenter="selectedIndex = index"
           >
             <div class="flex flex-col">
               <span class="text-sm font-bold text-gray-900 dark:text-white">

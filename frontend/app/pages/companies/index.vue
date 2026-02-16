@@ -58,8 +58,8 @@ const isSidebarOpen = ref(false)
     <div class="flex flex-col lg:flex-row gap-8">
       <!-- Mobile Filter Toggle -->
       <button 
-        @click="isSidebarOpen = !isSidebarOpen"
         class="lg:hidden flex items-center justify-center w-full py-3 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-lg shadow-sm font-medium text-gray-700 dark:text-slate-200"
+        @click="isSidebarOpen = !isSidebarOpen"
       >
         <Icon name="lucide:filter" class="w-5 h-5 mr-2" />
         {{ isSidebarOpen ? '收合篩選' : '顯示篩選條件' }}
@@ -111,15 +111,15 @@ const isSidebarOpen = ref(false)
 
         <!-- Loading State -->
         <div v-if="status === 'pending'" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <div v-for="n in 6" :key="n" class="bg-white dark:bg-slate-900 rounded-xl p-6 border border-gray-200 dark:border-slate-800 shadow-sm animate-pulse h-48"></div>
+          <div v-for="n in 6" :key="n" class="bg-white dark:bg-slate-900 rounded-xl p-6 border border-gray-200 dark:border-slate-800 shadow-sm animate-pulse h-48"/>
         </div>
 
         <!-- Error State -->
         <div v-else-if="error" class="text-center py-12 bg-red-50 dark:bg-red-900/10 rounded-xl border border-red-100 dark:border-red-900/30">
           <p class="text-red-600 dark:text-red-400 mb-2">發生錯誤，無法載入資料</p>
           <button 
-            @click="refresh()" 
-            class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline"
+            class="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline" 
+            @click="refresh()"
           >
             重試
           </button>
@@ -131,8 +131,8 @@ const isSidebarOpen = ref(false)
           <h3 class="text-lg font-medium text-gray-900 dark:text-white mb-2">找不到符合的公司</h3>
           <p class="text-gray-500 dark:text-slate-400 mb-6">請嘗試調整篩選條件或關鍵字</p>
           <button 
-            @click="resetFilters"
             class="px-4 py-2 bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors"
+            @click="resetFilters"
           >
             清除所有篩選
           </button>

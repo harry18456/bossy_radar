@@ -100,6 +100,7 @@ export default defineNuxtConfig({
     "@nuxtjs/color-mode",
     "@vueuse/nuxt",
     "@nuxtjs/sitemap",
+    "@nuxt/eslint",
   ],
   colorMode: {
     classSuffix: "",
@@ -117,7 +118,7 @@ export default defineNuxtConfig({
       // Pre-render all company detail pages for SEO and crawler accessibility
       routes: getCompanyUrls(),
       // Ignore invalid company routes (non-alphanumeric codes)
-      ignore: [/^\/companies\/[^A-Za-z0-9\/]+$/],
+      ignore: [/^\/companies\/[^A-Za-z0-9/]+$/],
     },
     compressPublicAssets: {
       gzip: true,
