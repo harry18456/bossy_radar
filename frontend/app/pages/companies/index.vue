@@ -73,7 +73,7 @@ const isSidebarOpen = ref(false)
         <div class="lg:sticky lg:top-8 space-y-6">
           <CompanyFilterBar 
             v-model:search="name"
-            :filters="filters"
+            v-model:filters="filters"
             @update:filter="updateFilter"
             @reset="resetFilters"
           />

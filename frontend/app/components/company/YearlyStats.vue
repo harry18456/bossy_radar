@@ -9,10 +9,10 @@ import {
   LinearScale,
   PointElement,
   LineElement,
-  type ChartOptions,
+  LineController,
+  BarController,
 } from "chart.js";
 import { Bar, Line, Chart } from "vue-chartjs";
-import { LineController, BarController } from "chart.js";
 
 ChartJS.register(
   CategoryScale,

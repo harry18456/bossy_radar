@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { LeaderboardsResponse, SalaryLeaderboardItem } from "~/types/api";
+import type { LeaderboardsResponse } from "~/types/api";
 
 const props = defineProps<{
   data: LeaderboardsResponse | null;

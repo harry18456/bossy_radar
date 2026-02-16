@@ -24,7 +24,7 @@ export const formatDate = (dateString?: string | null): string => {
       month: '2-digit',
       day: '2-digit'
     })
-  } catch (e) {
+  } catch {
     return dateString
   }
 }

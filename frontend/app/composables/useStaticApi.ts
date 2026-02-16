@@ -2,7 +2,6 @@ import type {
   Company, 
   CompanyProfile, 
   PaginatedResponse, 
-  Violation, 
   YearlySummaryResponse,
   YearlySummaryIndex,
   EmployeeBenefit,
@@ -24,7 +23,7 @@ export const useStaticApi = () => {
   if (import.meta.server) {
     try {
       ssrOrigin = useRequestURL().origin
-    } catch (e) {
+    } catch {
       console.warn('[useStaticApi] Could not capture request origin synchronously')
     }
   }

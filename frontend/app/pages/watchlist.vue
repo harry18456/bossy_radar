@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useApi } from "~/composables/useApi";
 import { useWatchlistStore } from "~/stores/watchlist";
-import type { YearlySummaryItem, Company } from "~/types/api";
+import type { YearlySummaryItem } from "~/types/api";
 
 usePageMeta({
   title: "追蹤清單",
@@ -53,7 +53,7 @@ watch(
 const {
   data: allComparisonData,
   status,
-  refresh,
+  refresh: _refresh,
 } = await useAsyncData(
   "watchlist-comparison",
   async () => {
@@ -100,8 +100,6 @@ watch(
 
 const sortedComparison = computed(() => {
   if (!allComparisonData.value || !selectedYear.value) return [];
-
-  const currentCodes = companies.value.map((c) => c.code);
 
   // Map EACH company in the watchlist to a result row.
   // If data exists, use it. If not, create a fallback object.

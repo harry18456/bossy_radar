@@ -88,6 +88,35 @@ frontend/
 
 ---
 
+## 🔍 程式碼檢查 (Linting)
+
+本專案使用 [ESLint](https://eslint.org/) + [`@nuxt/eslint`](https://eslint.nuxt.com/) 進行程式碼品質檢查，並已整合至 [pre-commit hook](https://pre-commit.com/)。
+
+### 檢查所有檔案
+
+```bash
+npm run lint
+```
+
+### 自動修正可修的問題
+
+```bash
+npm run lint:fix
+```
+
+### Pre-commit 自動檢查
+
+每次 `git commit` 時，pre-commit 會自動對 `frontend/` 下被修改的 `.ts`、`.vue`、`.mjs` 檔案執行 ESLint 檢查。若有 error 則 commit 會被擋下。
+
+> **注意**：需先在根目錄安裝 pre-commit（已包含在 backend dev dependencies 中）：
+>
+> ```bash
+> pip install pre-commit
+> pre-commit install
+> ```
+
+---
+
 ## 📦 部署 (Deployment)
 
 本專案目前採用 **Static Site Generation (SSG)** 模式部署至 Vercel。

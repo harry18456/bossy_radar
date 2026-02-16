@@ -2,40 +2,40 @@
 import { INDUSTRY_OPTIONS, MARKET_TYPES } from '~/constants'
 import type { CompanyFilters } from '~/composables/useCompanyFilters'
 
-const props = defineProps<{
-  filters: CompanyFilters
-}>()
+const filters = defineModel<CompanyFilters>('filters', { required: true })
 
 const isExpanded = ref(true)
 
 // Local state for search to prevent live query
-const localSearchName = ref(props.filters.name || '')
-watch(() => props.filters.name, (newVal) => {
+const localSearchName = ref(filters.value?.name || '')
+watch(() => filters.value?.name, (newVal) => {
   localSearchName.value = newVal || ''
 })
 
 const handleSearch = (val: string) => {
-  props.filters.name = val
+  if (filters.value) filters.value.name = val
 }
 
 // Helper for multi-select checkboxes
 const toggleIndustry = (value: string) => {
-  if (!props.filters.industry) props.filters.industry = []
-  const index = props.filters.industry.indexOf(value)
+  if (!filters.value) return
+  if (!filters.value.industry) filters.value.industry = []
+  const index = filters.value.industry.indexOf(value)
   if (index === -1) {
-    props.filters.industry.push(value)
+    filters.value.industry.push(value)
   } else {
-    props.filters.industry.splice(index, 1)
+    filters.value.industry.splice(index, 1)
   }
 }
 
 const toggleMarket = (value: string) => {
-  if (!props.filters.market_type) props.filters.market_type = []
-  const index = props.filters.market_type.indexOf(value)
+  if (!filters.value) return
+  if (!filters.value.market_type) filters.value.market_type = []
+  const index = filters.value.market_type.indexOf(value)
   if (index === -1) {
-    props.filters.market_type.push(value)
+    filters.value.market_type.push(value)
   } else {
-    props.filters.market_type.splice(index, 1)
+    filters.value.market_type.splice(index, 1)
   }
 }
 </script>

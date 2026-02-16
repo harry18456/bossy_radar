@@ -1,4 +1,4 @@
-export default defineNuxtPlugin((nuxtApp) => {
+export default defineNuxtPlugin((_nuxtApp) => {
   const config = useRuntimeConfig()
   const gaId = config.public.googleAnalyticsId
 
