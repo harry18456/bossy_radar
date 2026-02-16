@@ -22,8 +22,8 @@
 
 ### 從商店安裝
 
-- **Chrome**: *(即將上架 Chrome Web Store)*
-- **Edge**: *(即將上架 Edge Add-ons)*
+- **Chrome**: [Chrome Web Store](https://chromewebstore.google.com/detail/bossy-radar-104-%E5%85%AC%E5%8F%B8%E5%BF%AB%E6%9F%A5/ofkcclhbelkcnaghcdigdljkeonebigj)
+- **Edge**: *(審核中，即將上架 Edge Add-ons)*
 
 ### 開發者模式
 

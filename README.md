@@ -10,6 +10,24 @@ Bossy Radar 是一個專門用來追蹤與分析公司資料的工具，提供�
 - **公司治理**：連結至官方利害關係人與治理資訊區。
 - **響應式設計**：現代化且支援行動裝置的介面。
 
+## 瀏覽器擴充套件
+
+**[Bossy Radar - 104 公司快查](https://chromewebstore.google.com/detail/bossy-radar-104-%E5%85%AC%E5%8F%B8%E5%BF%AB%E6%9F%A5/ofkcclhbelkcnaghcdigdljkeonebigj)** — 在瀏覽 104 人力銀行時，自動顯示公司的勞動違規、環境違規與薪資資訊。
+
+- 瀏覽 104 公司頁面或職缺頁面時，自動彈出資訊卡片
+- 顯示勞動違規次數、環境違規次數、累計罰款金額
+- 顯示非主管員工中位數 / 平均年薪
+- 一鍵連結至 [Bossy Radar](https://www.bossy.eraser.tw/) 查看完整報告
+
+**安裝連結：**
+
+| 瀏覽器 | 狀態 | 連結 |
+|--------|------|------|
+| Chrome | 已上架 | [Chrome Web Store](https://chromewebstore.google.com/detail/bossy-radar-104-%E5%85%AC%E5%8F%B8%E5%BF%AB%E6%9F%A5/ofkcclhbelkcnaghcdigdljkeonebigj) |
+| Edge | 審核中 | *即將上架* |
+
+詳細說明請參考 [extension/README.md](extension/README.md)。
+
 ## 技術架構 (Tech Stack)
 
 本專案採用現代化的技術堆疊，強調效能與開發者體驗。
