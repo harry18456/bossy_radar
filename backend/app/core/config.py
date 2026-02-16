@@ -1,4 +1,4 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -7,8 +7,7 @@ class Settings(BaseSettings):
     MOENV_API_KEY: str = ""
     BACKEND_CORS_ORIGINS: list[str] = []
 
-    class Config:
-        env_file = ".env"
+    model_config = SettingsConfigDict(env_file=".env")
 
 
 settings = Settings()

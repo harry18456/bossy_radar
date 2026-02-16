@@ -4,7 +4,7 @@ MOPS 員工薪資/福利資料相關 Schemas
 
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 # ========== Employee Benefit (t100sb14) ==========
@@ -34,8 +34,7 @@ class EmployeeBenefitResponse(BaseModel):
     created_at: datetime
     last_updated: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ========== Non-Manager Salary (t100sb15) ==========
@@ -80,8 +79,7 @@ class NonManagerSalaryResponse(BaseModel):
     created_at: datetime
     last_updated: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ========== Welfare Policy (t100sb13) ==========
@@ -107,8 +105,7 @@ class WelfarePolicyResponse(BaseModel):
     created_at: datetime
     last_updated: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ========== Salary Adjustment (t222sb01) ==========
@@ -136,5 +133,4 @@ class SalaryAdjustmentResponse(BaseModel):
     created_at: datetime
     last_updated: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)

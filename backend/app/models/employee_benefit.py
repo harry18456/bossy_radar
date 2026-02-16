@@ -74,7 +74,3 @@ class EmployeeBenefit(SQLModel, table=True):
     last_updated: datetime = Field(
         default_factory=datetime.now, description="最後更新時間"
     )
-
-    class Config:
-        # Unique constraint: (raw_company_code, year, market_type)
-        pass

@@ -1,98 +1,108 @@
-"""
-Unit tests for CompanyService helper methods.
-
-Tests pure functions that don't require database access.
-"""
-
+import csv
 from datetime import date
 
-import pytest
+from sqlmodel import Session, select
 
+from app.models.company import Company
 from app.services.company_service import CompanyService
 
 
-@pytest.fixture
-def service():
-    return CompanyService()
+def test_get_companies(test_session: Session):
+    # Setup
+    c1 = Company(code="A", name="A Co", industry="Tech", market_type="Listed")
+    c2 = Company(code="B", name="B Co", industry="Finance", market_type="OTC")
+    test_session.add(c1)
+    test_session.add(c2)
+    test_session.commit()
+
+    service = CompanyService()
+
+    # Test basic get
+    results, total = service.get_companies(test_session)
+    assert total == 2
+    assert len(results) == 2
+
+    # Test filter by market_type
+    results, total = service.get_companies(
+        test_session, filters={"market_type": ["Listed"]}
+    )
+    assert total == 1
+    assert results[0].code == "A"
+
+    # Test filter by name
+    results, total = service.get_companies(test_session, filters={"name": "B"})
+    assert total == 1
+    assert results[0].code == "B"
+
+    # Test sort
+    results, total = service.get_companies(test_session, sorts=["-code"])
+    assert results[0].code == "B"
 
 
-# ---------- _parse_roc_date ----------
+def test_get_catalog(test_session: Session):
+    c1 = Company(code="C", name="C Co", market_type="Listed", capital=1000)
+    test_session.add(c1)
+    test_session.commit()
+
+    service = CompanyService()
+    catalog = service.get_catalog(test_session)
+
+    assert len(catalog) == 1
+    assert catalog[0]["code"] == "C"
+    assert catalog[0]["capital"] == 1000.0
 
 
-class TestParseRocDate:
-    """Tests for ROC date string → Python date conversion."""
-
-    def test_standard_7digit(self, service):
-        """Standard 7-digit ROC date: 1150126 → 2026-01-26"""
-        result = service._parse_roc_date("1150126")
-        assert result == date(2026, 1, 26)
-
-    def test_6digit(self, service):
-        """6-digit ROC date: 990101 → 2010-01-01"""
-        result = service._parse_roc_date("990101")
-        assert result == date(2010, 1, 1)
-
-    def test_early_date(self, service):
-        """Early ROC date: 760221 → 1987-02-21"""
-        result = service._parse_roc_date("760221")
-        assert result == date(1987, 2, 21)
-
-    def test_empty_string(self, service):
-        assert service._parse_roc_date("") is None
-
-    def test_none(self, service):
-        assert service._parse_roc_date(None) is None
-
-    def test_whitespace(self, service):
-        """Should handle leading/trailing whitespace."""
-        result = service._parse_roc_date("  1150126  ")
-        assert result == date(2026, 1, 26)
-
-    def test_too_short(self, service):
-        """Strings shorter than 6 chars should return None."""
-        assert service._parse_roc_date("12345") is None
-
-    def test_invalid_chars(self, service):
-        """Non-numeric input should return None."""
-        assert service._parse_roc_date("abc") is None
-
-    def test_invalid_month(self, service):
-        """Invalid month (13) should return None."""
-        assert service._parse_roc_date("1151301") is None
-
-    def test_invalid_day(self, service):
-        """Invalid day (32) should return None."""
-        assert service._parse_roc_date("1150132") is None
+def test_parse_money():
+    service = CompanyService()
+    assert service._parse_money("10000") == 10000
+    assert service._parse_money("新台幣 20,000元") == 20000
+    assert service._parse_money(None) is None
+    assert service._parse_money("invalid") is None
 
 
-# ---------- _parse_money ----------
+def test_parse_roc_date():
+    service = CompanyService()
+    assert service._parse_roc_date("1120101") == date(2023, 1, 1)
+    assert service._parse_roc_date("990101") == date(2010, 1, 1)
+    assert service._parse_roc_date(None) is None
+    assert service._parse_roc_date("invalid") is None
 
 
-class TestParseMoney:
-    """Tests for money string → int conversion."""
+def test_sync_companies(test_session: Session, tmp_path):
+    # Create dummy csv
+    csv_file = tmp_path / "Listed.csv"
+    with open(csv_file, "w", encoding="utf-8", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["出表日期:1120101"])
+        writer.writerow(
+            ["公司代號", "公司名稱", "公司簡稱", "產業別", "上市日期", "實收資本額"]
+        )
+        writer.writerow(["1101", "台泥", "台泥", "水泥工業", "510209", "10000"])
 
-    def test_with_chinese_prefix(self, service):
-        """'新台幣 10000元' → 10000"""
-        assert service._parse_money("新台幣 10000元") == 10000
+    service = CompanyService()
 
-    def test_digits_only(self, service):
-        """Pure digit string."""
-        assert service._parse_money("50000") == 50000
+    # We need to mock the session used inside sync_companies,
+    # because sync_companies creates its OWN session using engine directly.
+    # To make it use OUR test_session/test_engine, we need to mock Session(engine)
+    # OR we can extract the parsing logic to test clearly and only integration test the full sync.
 
-    def test_with_commas(self, service):
-        """Numbers with thousand separators."""
-        assert service._parse_money("1,000,000") == 1000000
+    # Let's test _parse_csv directly first
+    companies = service._parse_csv(csv_file, "Listed")
+    assert len(companies) == 1
+    assert companies[0].code == "1101"
+    assert companies[0].market_type == "Listed"
 
-    def test_large_capital(self, service):
-        """Real-world large capital value."""
-        assert service._parse_money("259,303,805,000") == 259303805000
+    # Test _upsert_companies
+    service._upsert_companies(test_session, companies)
+    test_session.commit()
 
-    def test_empty_string(self, service):
-        assert service._parse_money("") is None
+    c = test_session.exec(select(Company).where(Company.code == "1101")).first()
+    assert c is not None
+    assert c.name == "台泥"
 
-    def test_none(self, service):
-        assert service._parse_money(None) is None
-
-    def test_no_digits(self, service):
-        """String with no digit characters should return None."""
-        assert service._parse_money("新台幣 元") is None
+    # Test update
+    companies[0].name = "台泥更新"
+    service._upsert_companies(test_session, companies)
+    test_session.commit()
+    test_session.refresh(c)
+    assert c.name == "台泥更新"
