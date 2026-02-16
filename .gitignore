@@ -16,6 +16,7 @@ backend/.env
 .coverage
 htmlcov/
 .pytest_cache/
+.ruff_cache/
 test-results/
 
 # Ignore SQLite database files everywhere
