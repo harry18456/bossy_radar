@@ -23,7 +23,6 @@ test-results/
 *.db
 *.db-shm
 *.db-wal
-backend/uv.lock
 backend/data/
 
 # Node / Frontend
