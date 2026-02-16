@@ -242,6 +242,18 @@ uv sync --group dev
 
 本專案使用 [Ruff](https://docs.astral.sh/ruff/) 進行代碼檢查與格式化。
 
+**啟用規則**:
+
+- `E`, `W`: PEP 8 風格錯誤與警告
+- `F`: Pyflakes (邏輯錯誤，如 unused imports)
+- `I`: isort (Import 排序)
+- `UP`: pyupgrade (自動升級舊語法)
+- `B`: flake8-bugbear (常見 Bug 與設計陷阱)
+- `N`: pep8-naming (命名規範)
+- `SIM`: flake8-simplify (簡化邏輯)
+- `C4`: flake8-comprehensions (列表生成式優化)
+- `RUF`: Ruff 專屬規則
+
 ```bash
 # 格式化代碼 (類似 Black)
 uv run ruff format .
