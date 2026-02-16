@@ -53,7 +53,6 @@ def get_leaderboards(session: SessionDep):
     # 計算年份範圍
     current_year = date.today().year - 1911  # 今年民國年
     recent_years = _get_recent_years(current_year)
-    recent_years_ad = [y + 1911 for y in recent_years]  # 西元年
 
     # ========== Step 1: 取得必要的公司名稱 (只取有資料的) ==========
     # 先用 subquery 找出有違規或薪資資料的公司

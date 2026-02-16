@@ -252,7 +252,7 @@ class ViolationService:
             day = int(s[year_len + 2 :])
             actual_year = year_roc + 1911 if year_roc < 1000 else year_roc
             return date(actual_year, month, day)
-        except:
+        except Exception:
             return None
 
     def _parse_fine(self, fine_str: str) -> int:
@@ -264,5 +264,5 @@ class ViolationService:
             if digits:
                 return int(digits)
             return 0
-        except:
+        except Exception:
             return 0

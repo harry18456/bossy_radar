@@ -56,7 +56,7 @@ def fetch_and_analyze(year, market):
                 if count not in col_counts:
                     col_counts[count] = 0
                 col_counts[count] += 1
-        except:
+        except Exception:
             pass
 
     if not col_counts:

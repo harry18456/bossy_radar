@@ -464,12 +464,12 @@ class ExportService:
 
         logger.info("Exporting Leaderboards...")
 
-        LIMIT = 10
-        YEARS_TO_INCLUDE = 3
+        limit = 10
+        years_to_include = 3
 
         # 計算年份範圍
         current_year = date.today().year - 1911  # 今年民國年
-        recent_years = [current_year - i for i in range(YEARS_TO_INCLUDE)]
+        recent_years = [current_year - i for i in range(years_to_include)]
 
         # ========== Step 1: 取得必要的公司名稱 ==========
         company_codes_with_data = set()
@@ -484,7 +484,7 @@ class ExportService:
             .where(Violation.company_code.isnot(None))
             .group_by(Violation.company_code)
             .order_by(text("count DESC"))
-            .limit(LIMIT * 2)
+            .limit(limit * 2)
         ).all()
 
         labor_top_fine = session.exec(
@@ -496,7 +496,7 @@ class ExportService:
             .where(Violation.company_code.isnot(None))
             .group_by(Violation.company_code)
             .order_by(text("fine DESC"))
-            .limit(LIMIT * 2)
+            .limit(limit * 2)
         ).all()
 
         env_top_count = session.exec(
@@ -508,7 +508,7 @@ class ExportService:
             .where(EnvironmentalViolation.company_code.isnot(None))
             .group_by(EnvironmentalViolation.company_code)
             .order_by(text("count DESC"))
-            .limit(LIMIT * 2)
+            .limit(limit * 2)
         ).all()
 
         env_top_fine = session.exec(
@@ -520,7 +520,7 @@ class ExportService:
             .where(EnvironmentalViolation.company_code.isnot(None))
             .group_by(EnvironmentalViolation.company_code)
             .order_by(text("fine DESC"))
-            .limit(LIMIT * 2)
+            .limit(limit * 2)
         ).all()
 
         for row in labor_top_count + labor_top_fine + env_top_count + env_top_fine:
@@ -541,7 +541,7 @@ class ExportService:
                 .where(extract("year", Violation.penalty_date) == year_ad)
                 .group_by(Violation.company_code)
                 .order_by(text("count DESC"))
-                .limit(LIMIT * 2)
+                .limit(limit * 2)
             ).all()
 
             env_year = session.exec(
@@ -554,7 +554,7 @@ class ExportService:
                 .where(extract("year", EnvironmentalViolation.penalty_date) == year_ad)
                 .group_by(EnvironmentalViolation.company_code)
                 .order_by(text("count DESC"))
-                .limit(LIMIT * 2)
+                .limit(limit * 2)
             ).all()
 
             yearly_violation_data[year_roc] = {"labor": labor_year, "env": env_year}
@@ -572,7 +572,7 @@ class ExportService:
                 .where(NonManagerSalary.year == year_roc)
                 .where(NonManagerSalary.avg_salary.isnot(None))
                 .order_by(NonManagerSalary.avg_salary.desc())
-                .limit(LIMIT)
+                .limit(limit)
             ).all()
 
             bottom_avg = session.exec(
@@ -581,7 +581,7 @@ class ExportService:
                 .where(NonManagerSalary.year == year_roc)
                 .where(NonManagerSalary.avg_salary.isnot(None))
                 .order_by(NonManagerSalary.avg_salary.asc())
-                .limit(LIMIT)
+                .limit(limit)
             ).all()
 
             top_median = session.exec(
@@ -590,7 +590,7 @@ class ExportService:
                 .where(NonManagerSalary.year == year_roc)
                 .where(NonManagerSalary.median_salary.isnot(None))
                 .order_by(NonManagerSalary.median_salary.desc())
-                .limit(LIMIT)
+                .limit(limit)
             ).all()
 
             bottom_median = session.exec(
@@ -599,7 +599,7 @@ class ExportService:
                 .where(NonManagerSalary.year == year_roc)
                 .where(NonManagerSalary.median_salary.isnot(None))
                 .order_by(NonManagerSalary.median_salary.asc())
-                .limit(LIMIT)
+                .limit(limit)
             ).all()
 
             salary_data[year_roc] = {
@@ -637,7 +637,7 @@ class ExportService:
                     .where(NonManagerSalary.industry == industry)
                     .where(NonManagerSalary.median_salary.isnot(None))
                     .order_by(NonManagerSalary.median_salary.desc())
-                    .limit(LIMIT)
+                    .limit(limit)
                 ).all()
 
                 ind_bottom = session.exec(
@@ -647,7 +647,7 @@ class ExportService:
                     .where(NonManagerSalary.industry == industry)
                     .where(NonManagerSalary.median_salary.isnot(None))
                     .order_by(NonManagerSalary.median_salary.asc())
-                    .limit(LIMIT)
+                    .limit(limit)
                 ).all()
 
                 ind_top_eps = session.exec(
@@ -657,7 +657,7 @@ class ExportService:
                     .where(NonManagerSalary.industry == industry)
                     .where(NonManagerSalary.eps.isnot(None))
                     .order_by(NonManagerSalary.eps.desc())
-                    .limit(LIMIT)
+                    .limit(limit)
                 ).all()
 
                 ind_bottom_eps = session.exec(
@@ -667,7 +667,7 @@ class ExportService:
                     .where(NonManagerSalary.industry == industry)
                     .where(NonManagerSalary.eps.isnot(None))
                     .order_by(NonManagerSalary.eps.asc())
-                    .limit(LIMIT)
+                    .limit(limit)
                 ).all()
 
                 salary_by_industry_data[year_roc][industry] = {
@@ -708,13 +708,13 @@ class ExportService:
             by_fine = sorted(items, key=lambda x: x.total_fine, reverse=True)
 
             return ViolationLeaderboard(
-                top_by_count=by_count[:LIMIT],
-                bottom_by_count=by_count[-LIMIT:][::-1]
-                if len(by_count) >= LIMIT
+                top_by_count=by_count[:limit],
+                bottom_by_count=by_count[-limit:][::-1]
+                if len(by_count) >= limit
                 else by_count[::-1],
-                top_by_fine=by_fine[:LIMIT],
-                bottom_by_fine=by_fine[-LIMIT:][::-1]
-                if len(by_fine) >= LIMIT
+                top_by_fine=by_fine[:limit],
+                bottom_by_fine=by_fine[-limit:][::-1]
+                if len(by_fine) >= limit
                 else by_fine[::-1],
             )
 

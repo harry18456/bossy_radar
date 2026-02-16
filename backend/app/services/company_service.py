@@ -281,5 +281,5 @@ class CompanyService:
             if digits:
                 return int(digits)
             return None
-        except:
+        except Exception:
             return None

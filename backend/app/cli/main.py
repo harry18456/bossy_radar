@@ -347,7 +347,7 @@ def sync_all(
         typer.echo(f"{'=' * 50}")
 
         result = subprocess.run(
-            [sys.executable, "-m", "app.cli.main"] + cmd, cwd=Path.cwd()
+            [sys.executable, "-m", "app.cli.main", *cmd], cwd=Path.cwd()
         )
 
         if result.returncode != 0:

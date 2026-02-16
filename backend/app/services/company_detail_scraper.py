@@ -21,7 +21,7 @@ HEADERS = {
 
 
 class CompanyDetailScraper:
-    def __init__(self, data_dir: Path = None):
+    def __init__(self, data_dir: Path | None = None):
         self.data_dir = data_dir or Path("data/raw/company_details")
         self.data_dir.mkdir(parents=True, exist_ok=True)
 
@@ -75,8 +75,8 @@ class CompanyDetailScraper:
                 if not force:
                     # Only sync companies missing these URLs
                     query = query.where(
-                        (Company.stakeholder_url == None)
-                        | (Company.governance_url == None)
+                        (Company.stakeholder_url.is_(None))
+                        | (Company.governance_url.is_(None))
                     )
 
             companies = session.exec(query).all()

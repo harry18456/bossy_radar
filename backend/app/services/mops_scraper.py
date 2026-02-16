@@ -79,7 +79,7 @@ DATA_SOURCES = {
 
 
 class MopsScraper:
-    def __init__(self, data_dir: Path = None):
+    def __init__(self, data_dir: Path | None = None):
         """Initialize MOPS Scraper.
 
         Args:
@@ -92,7 +92,7 @@ class MopsScraper:
         """Get current ROC year (民國年)."""
         return datetime.now().year - 1911
 
-    def sync_all(self, start_year: int = None, end_year: int = None):
+    def sync_all(self, start_year: int | None = None, end_year: int | None = None):
         """Sync all MOPS data sources.
 
         Args:
@@ -781,7 +781,7 @@ class MopsScraper:
             if cleaned:
                 return int(cleaned)
             return None
-        except:
+        except Exception:
             return None
 
     def _parse_float(self, cell) -> float | None:
@@ -795,5 +795,5 @@ class MopsScraper:
             if cleaned:
                 return float(cleaned)
             return None
-        except:
+        except Exception:
             return None
