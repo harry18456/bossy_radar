@@ -16,14 +16,14 @@
 
 1. **統一編號** — 攔截 104 API 請求中的 `custNo` 參數，取前 8 碼作為統編比對
 2. **公司全名** — 從頁面 DOM 取得公司名稱，與資料庫精確比對
-3. **名稱分段** — 處理 104 常見的「品牌名_公司全名」格式
+3. **名稱分段** — 處理 104 常見的「品牌名\_公司全名」格式
 
 ## 安裝
 
 ### 從商店安裝
 
 - **Chrome**: [Chrome Web Store](https://chromewebstore.google.com/detail/bossy-radar-104-%E5%85%AC%E5%8F%B8%E5%BF%AB%E6%9F%A5/ofkcclhbelkcnaghcdigdljkeonebigj)
-- **Edge**: *(審核中，即將上架 Edge Add-ons)*
+- **Edge**: [Microsoft Edge Add-ons](https://microsoftedge.microsoft.com/addons/detail/bossy-radar-104-%E5%85%AC%E5%8F%B8%E5%BF%AB%E6%9F%A5/hahgkkffopmbccnocmkhncpopnmphoik)
 
 ### 開發者模式
 
@@ -52,11 +52,11 @@ extension/
 
 ## 權限說明
 
-| 權限 | 用途 |
-|------|------|
-| `storage` | 快取公司目錄資料，避免重複下載 |
+| 權限                                 | 用途                                  |
+| ------------------------------------ | ------------------------------------- |
+| `storage`                            | 快取公司目錄資料，避免重複下載        |
 | `host_permissions` (bossy.eraser.tw) | 從 Bossy Radar 取得公司違規與薪資資料 |
-| `content_scripts` (104.com.tw) | 在 104 頁面上顯示資訊卡片 |
+| `content_scripts` (104.com.tw)       | 在 104 頁面上顯示資訊卡片             |
 
 ## 隱私權
 
