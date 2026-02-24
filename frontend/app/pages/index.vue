@@ -54,6 +54,26 @@ const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
           我的收藏
         </NuxtLink>
       </div>
+
+      <!-- Extension Banner -->
+      <p class="mt-4 text-sm text-gray-400 dark:text-slate-500 flex items-center gap-2 flex-wrap justify-center">
+        <Icon name="lucide:puzzle" class="w-4 h-4 shrink-0" />
+        瀏覽 104 職缺時即時顯示公司資訊 —
+        <a
+          href="https://chromewebstore.google.com/detail/bossy-radar-104-%E5%85%AC%E5%8F%B8%E5%BF%AB%E6%9F%A5/ofkcclhbelkcnaghcdigdljkeonebigj"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="underline underline-offset-2 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
+        >Chrome</a>
+        ·
+        <a
+          href="https://microsoftedge.microsoft.com/addons/detail/bossy-radar-104-%E5%85%AC%E5%8F%B8%E5%BF%AB%E6%9F%A5/hahgkkffopmbccnocmkhncpopnmphoik"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="underline underline-offset-2 hover:text-gray-600 dark:hover:text-slate-300 transition-colors"
+        >Edge</a>
+        擴充套件免費安裝
+      </p>
     </div>
 
     <!-- Latest Year Leaderboards Section -->
