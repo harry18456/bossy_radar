@@ -572,6 +572,9 @@ const allocationRatioChartOptions = computed<any>(() => ({
       </div>
     </div>
 
+    <!-- Industry Comparison Chart -->
+    <CompanyIndustryComparison :stats="stats" />
+
     <!-- Indexed Growth Chart (EPS vs Median Salary) -->
     <div
       v-if="hasIndexedData"
@@ -590,9 +593,6 @@ const allocationRatioChartOptions = computed<any>(() => ({
         <Line :data="indexedGrowthData" :options="indexedGrowthChartOptions" />
       </div>
     </div>
-
-    <!-- Industry Comparison Chart -->
-    <CompanyIndustryComparison :stats="stats" />
 
     <!-- Salary Metrics (Disparity + Employee Count) -->
     <div class="lg:col-span-2">
