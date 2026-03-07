@@ -102,7 +102,7 @@ const disparityOptions = computed<ChartOptions<"line">>(() => ({
       callbacks: {
         label: (context) => {
           const value = context.parsed.y;
-          const status = value > 0 ? "偏態分佈" : "正常";
+          const status = value > 100 ? "高薪集中" : "分布均勻";
           return `差距: ${value?.toLocaleString() ?? "-"} 仟元 (${status})`;
         },
       },
@@ -200,14 +200,14 @@ const latestDisparity = computed(() => {
               : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
           "
         >
-          {{ latestDisparity > 100 ? "偏態" : "正常" }}
+          {{ latestDisparity > 100 ? "高薪集中" : "分布均勻" }}
         </span>
       </div>
       <div class="h-48">
         <Line :data="disparityData" :options="disparityOptions" />
       </div>
       <p class="mt-3 text-xs text-gray-500 dark:text-slate-400 text-center">
-        * 差距 = 平均薪資 - 中位數薪資，差距越大表示薪資分佈越偏態
+        * 差距 = 平均薪資 - 中位數薪資。差距 &gt; 10 萬時標記「高薪集中」，代表少數高薪員工把平均拉高，多數人實際拿到的低於平均值。
       </p>
     </div>
 
