@@ -29,6 +29,9 @@ openapi.json
 # Agent
 .agent
 
+# OpenSpec (dev workflow, not for public repo)
+openspec/
+
 # public data
 public/data
 .vercel
