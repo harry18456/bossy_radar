@@ -507,10 +507,18 @@
       try {
         // 先嘗試直接從頁面 HTML 獲取 (不需網路請求)
         const html = document.documentElement.innerHTML
-        const match = html.match(/["']cust[Nn]o["']\s*:\s*["']?(\d{8,})["']?/i)
-        if (match) {
-           const taxId = match[1].substring(0, 8)
-           if (tryMatchByTaxId(taxId)) return
+        const patterns = [
+          /(?:ads-)?cust[Nn]o["']?\s*[:=]\s*["']?(\d{8,})["']?/i,
+          /["']?company["']?\s*:\s*\{\s*["']?name["']?\s*:\s*["']?(\d{8,})["']?/i
+        ]
+        
+        for (const pattern of patterns) {
+          const match = html.match(pattern)
+          if (match) {
+             const taxId = match[1].substring(0, 8)
+             if (tryMatchByTaxId(taxId)) return
+             break
+          }
         }
 
         if (jobPage) {

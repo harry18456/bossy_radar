@@ -46,9 +46,18 @@
   const processResponseText = (text, source) => {
     try {
       if (!text) return;
-      const match = text.match(/["']cust[Nn]o["']\s*:\s*["']?(\d{8,})["']?/i);
-      if (match) {
-        handleDiscoveredCustNo(match[1], source);
+      
+      const patterns = [
+        /(?:ads-)?cust[Nn]o["']?\s*[:=]\s*["']?(\d{8,})["']?/i,
+        /["']?company["']?\s*:\s*\{\s*["']?name["']?\s*:\s*["']?(\d{8,})["']?/i
+      ];
+      
+      for (const pattern of patterns) {
+        const match = text.match(pattern);
+        if (match) {
+          handleDiscoveredCustNo(match[1], source);
+          break;
+        }
       }
     } catch {}
   };
