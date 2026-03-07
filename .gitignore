@@ -34,3 +34,6 @@ frontend/.env
 
 # Claude
 .claude/
+
+# Agent
+.agent/
