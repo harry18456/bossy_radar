@@ -41,9 +41,13 @@ const COLORS = [
   "#84cc16",
 ];
 
-// All years sorted ascending
+// Only years where at least one company has median_salary data
 const allYears = computed(() => {
-  const years = new Set(props.data.map((d) => d.year));
+  const years = new Set(
+    props.data
+      .filter((d) => d.non_manager_salary?.median_salary != null)
+      .map((d) => d.year),
+  );
   return Array.from(years).sort((a, b) => a - b);
 });
 
