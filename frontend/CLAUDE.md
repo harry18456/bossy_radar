@@ -1,101 +1,75 @@
-# Frontend
+# CLAUDE.md
 
-Nuxt 4 前端應用，提供公司查詢、薪資比較、違規追蹤等功能。
-
-## 技術棧
-
-- **框架**: Nuxt 4 (Vue 3)
-- **樣式**: Tailwind CSS v4
-- **狀態管理**: Pinia + pinia-plugin-persistedstate
-- **圖表**: vue-chartjs (Chart.js)
-- **圖示**: @nuxt/icon (Lucide Icons)
-- **工具**: VueUse, Zod
-
-## 專案結構
-
-```
-frontend/
-├── app/
-│   ├── assets/        # CSS、圖片等靜態資源
-│   ├── components/    # Vue 元件
-│   │   ├── common/    # 共用元件 (Pagination, ThemeToggle)
-│   │   └── company/   # 公司相關元件 (Card, Filter, Charts)
-│   ├── composables/   # 邏輯複用 (useApi, useCompanyFilters)
-│   ├── constants/     # 常數定義
-│   ├── layouts/       # 頁面佈局 (Header, Footer)
-│   ├── pages/         # 路由頁面
-│   │   ├── index.vue           # 首頁
-│   │   ├── companies/          # 公司列表
-│   │   │   └── [id].vue        # 公司詳情
-│   │   └── watchlist.vue       # 追蹤清單
-│   ├── plugins/       # Nuxt 插件
-│   ├── stores/        # Pinia 狀態管理
-│   ├── types/         # TypeScript 型別定義
-│   ├── utils/         # 工具函式 (formatCurrency, formatDate)
-│   └── app.vue        # 根元件
-├── public/
-│   └── data/          # 靜態 JSON 資料 (SSG 模式用)
-├── nuxt.config.ts     # Nuxt 設定
-├── tailwind.config.ts # Tailwind 設定
-└── package.json
-```
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## 常用指令
 
 ```bash
-npm install      # 安裝依賴
-npm run dev      # 開發伺服器 (http://localhost:3000)
-npm run build    # 建置
-npm run generate # 生成靜態網頁 (SSG)
-npm run preview  # 預覽建置結果
+npm run dev        # 開發伺服器 (http://localhost:3000)
+npm run generate   # SSG 靜態生成（需先匯出靜態 JSON）
+npm run build      # 建置（SSR 模式）
+npm run lint       # ESLint 檢查
+npm run lint:fix   # ESLint 自動修正
 ```
 
 ## 環境變數
 
 ```properties
-# .env
-NUXT_PUBLIC_API_BASE=http://localhost:8000    # 後端 API URL
-NUXT_PUBLIC_DATA_MODE=static                   # 資料模式 (static/api)
-NUXT_PUBLIC_GA4_ID=G-XXXXXXXXXX               # Google Analytics
-NUXT_PUBLIC_GOOGLE_ADSENSE_ID=ca-pub-XXXXXXXX # Google AdSense
+NUXT_PUBLIC_DATA_MODE=static        # static | dynamic（預設 dynamic）
+NUXT_PUBLIC_API_BASE=http://localhost:8000
+NUXT_PUBLIC_GA4_ID=G-XXXXXXXXXX
+NUXT_PUBLIC_GOOGLE_ADSENSE_ID=ca-pub-XXXXXXXX
 ```
 
-## 主要功能
+## 架構核心：雙模式資料存取
 
-### 頁面
+`useApi` composable 根據 `NUXT_PUBLIC_DATA_MODE` 切換實作：
 
-| 路由 | 說明 |
-|------|------|
-| `/` | 首頁 |
-| `/companies` | 公司列表 (支援篩選、排序、搜尋) |
-| `/companies/[id]` | 公司詳情 (薪資趨勢圖、違規紀錄) |
-| `/watchlist` | 追蹤清單 (本地儲存) |
+| 模式 | 實作 | 資料來源 |
+|------|------|----------|
+| `static` | `useStaticApi` | `public/data/*.json`（SSG 用） |
+| `dynamic` | 直接打 FastAPI | `NUXT_PUBLIC_API_BASE` |
 
-### 功能特色
+**SSG 生產流程**：
+1. 後端 CLI 匯出靜態 JSON → `public/data/`
+2. `npm run generate` 讀取 JSON 預渲染所有公司頁面
 
-- **多重篩選**: 產業別、市場別、關鍵字搜尋
-- **排序**: 資本額、上市日期等
-- **薪資趨勢圖**: 歷年非主管薪資 (平均數/中位數) 與 EPS
-- **違規紀錄**: 勞動部裁罰紀錄
-- **追蹤清單**: LocalStorage 持久化
-- **深色模式**: 自動跟隨系統或手動切換
-- **響應式設計**: 完整支援手機/桌機
+`useStaticApi` 內部根據執行環境有三種策略：
+- **預渲染時** (`import.meta.prerender`)：直接用 `node:fs` 讀檔，繞過 HTTP
+- **SSR 時**：用 `useRequestURL().origin` 組成絕對 URL
+- **客戶端時**：相對路徑 `/data/...`
 
-## 部署
+## 靜態 JSON 檔案結構
 
-採用 **Static Site Generation (SSG)** 模式部署至 Vercel：
-
-```bash
-# 1. 生成靜態網頁
-npm run generate
-
-# 2. 部署到 Vercel
-npx vercel deploy .output/public --prod --archive=tgz
+```
+public/data/
+├── company-catalog.json            # 所有公司清單（CompanyCatalog[]）
+├── companies/
+│   └── {code}.json                 # 個別公司完整資料（CompanyProfile）
+├── yearly-summaries/
+│   ├── index.json                  # 可用年份索引
+│   └── {year}.json                 # 各年份摘要資料
+├── mops/
+│   ├── employee-benefits.json
+│   ├── non-manager-salaries.json
+│   ├── welfare-policies.json
+│   └── salary-adjustments.json
+├── leaderboards.json
+└── system-status.json
 ```
 
-## 開發注意事項
+`nuxt.config.ts` 在建置時讀取 `company-catalog.json` 自動產生 sitemap 和預渲染路由（`nitro.prerender.routes`）。
 
-1. **資料模式**: SSG 模式下從 `public/data/` 讀取靜態 JSON，API 模式下從後端 API 取得資料
-2. **狀態持久化**: 追蹤清單使用 LocalStorage，不依賴後端
-3. **URL 同步**: Filter/Sort 狀態同步至 URL query string
-4. **SEO**: 包含 sitemap、structured data、canonical URLs
+## 狀態管理
+
+- **`useCompanyStore`**：快取公司 catalog（1 小時），使用 `useApi()` 取得資料
+- **`useWatchlistStore`**：僅將公司代碼（`codes: string[]`）持久化至 localStorage；公司詳細資料（`_companies`）不持久化，每次頁面載入時重新 hydrate
+- **`useCompanyFilters`**：雙向同步篩選條件與 URL query string（page、size、sort、name、industry、market_type）
+
+## 關鍵慣例
+
+- **圖示**：`@nuxt/icon`，使用 `lucide:` 和 `heroicons:` 前綴
+- **深色模式**：`@nuxtjs/color-mode`，`classSuffix: ""`（即 `.dark` class），`nuxt.config.ts` 有 inline blocking script 防止 FOUC
+- **Toast 通知**：`vue-sonner`，透過 `useNuxtApp().$toast` 使用
+- **市場類型值**：前端用 `Listed / OTC / Emerging / Public`，靜態 API 內部有 mapping 轉換至後端值（`sii / otc / rotc / pub`）
+- **排序參數**：前綴 `-` 代表降序，例如 `-capital`
