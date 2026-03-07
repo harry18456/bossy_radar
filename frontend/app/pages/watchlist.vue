@@ -239,6 +239,7 @@ const clearWatchlist = () => {
             跨年趨勢
           </h2>
           <WatchlistTrendChart :data="allComparisonData ?? []" />
+          <WatchlistEpsChart :data="allComparisonData ?? []" />
           <WatchlistGapChart :data="allComparisonData ?? []" />
         </section>
 
