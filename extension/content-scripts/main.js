@@ -505,8 +505,16 @@
       trying = true
 
       try {
+        // 先嘗試直接從頁面 HTML 獲取 (不需網路請求)
+        const html = document.documentElement.innerHTML
+        const match = html.match(/["']cust[Nn]o["']\s*:\s*["']?(\d{8,})["']?/i)
+        if (match) {
+           const taxId = match[1].substring(0, 8)
+           if (tryMatchByTaxId(taxId)) return
+        }
+
         if (jobPage) {
-          // Job 頁面：先試 slug → 統編，再 fallback 名稱
+          // Job 頁面：再試 slug → 統編，再 fallback 名稱
           const slug = getCompanySlugFromDOM()
           if (slug) {
             const taxId = await fetchTaxIdBySlug(slug)
