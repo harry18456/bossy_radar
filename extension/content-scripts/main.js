@@ -129,7 +129,7 @@
       // 方法 2: 從 og:title 解析 「職缺名｜公司名－104 人力銀行」
       const ogTitle = document.querySelector('meta[property="og:title"]')?.content
       if (ogTitle) {
-        const match = ogTitle.match(/｜(.+?)－104/)
+        const match = ogTitle.match(/[｜|](.+?)[－\-–—]104/)
         if (match) return match[1].trim()
       }
 

@@ -8,7 +8,7 @@
   'use strict'
 
   const extractCustNo = (url) => {
-    const match = url.match(/custNo=(\d+)/)
+    const match = url.match(/custno=(\d+)/i)
     return match ? match[1] : null
   }
 
