@@ -257,6 +257,161 @@ const adjustmentData = computed(() => ({
     },
   ],
 }));
+
+// Indexed Growth Chart (EPS vs Median Salary)
+const hasIndexedData = computed(() => {
+  const valid = sortedStats.value.filter(
+    (s) => s.eps != null && s.median_salary != null,
+  );
+  return valid.length >= 2;
+});
+
+const indexedGrowthData = computed(() => {
+  const base = sortedStats.value.find(
+    (s) => s.eps != null && s.median_salary != null,
+  );
+  if (!base) return { labels: [], datasets: [] };
+  const valid = sortedStats.value.filter(
+    (s) => s.eps != null && s.median_salary != null,
+  );
+  return {
+    labels: valid.map((s) => s.year + "年"),
+    datasets: [
+      {
+        label: "EPS 指數",
+        data: valid.map((s) =>
+          Math.round((s.eps! / base.eps!) * 100 * 10) / 10,
+        ),
+        borderColor: "#3b82f6",
+        backgroundColor: "rgba(59, 130, 246, 0.1)",
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
+      },
+      {
+        label: "非主管薪資中位數指數",
+        data: valid.map((s) =>
+          Math.round((s.median_salary! / base.median_salary!) * 100 * 10) / 10,
+        ),
+        borderColor: "#eab308",
+        backgroundColor: "rgba(234, 179, 8, 0.1)",
+        fill: false,
+        tension: 0.3,
+        pointRadius: 5,
+      },
+    ],
+  };
+});
+
+const indexedGrowthChartOptions = computed<any>(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: "top",
+      labels: { color: isDark.value ? "#e2e8f0" : "#475569" },
+    },
+    tooltip: {
+      mode: "index",
+      intersect: false,
+      callbacks: {
+        label: (context: any) => {
+          const value = context.parsed.y;
+          return `${context.dataset.label}: ${value?.toFixed(1) ?? "-"}`;
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: { color: isDark.value ? "#334155" : "#e2e8f0" },
+      ticks: { color: isDark.value ? "#94a3b8" : "#64748b" },
+    },
+    y: {
+      grid: { color: isDark.value ? "#334155" : "#e2e8f0" },
+      ticks: { color: isDark.value ? "#94a3b8" : "#64748b" },
+      title: {
+        display: true,
+        text: "指數（基準年 = 100）",
+        color: isDark.value ? "#94a3b8" : "#64748b",
+      },
+    },
+  },
+}));
+
+// Allocation Ratio Chart
+const hasAllocationRatioData = computed(() =>
+  sortedAdjustments.value.some(
+    (a) => a.pretax_net_profit > 0 && a.total_allocation_amount != null,
+  ),
+);
+
+const allocationRatioData = computed(() => ({
+  labels: sortedAdjustments.value.map((a) => a.year + "年"),
+  datasets: [
+    {
+      label: "提撥比率 (%)",
+      data: sortedAdjustments.value.map((a) => {
+        if (
+          !a.pretax_net_profit ||
+          a.pretax_net_profit <= 0 ||
+          a.total_allocation_amount == null
+        )
+          return null;
+        return (
+          Math.round((a.total_allocation_amount / a.pretax_net_profit) * 10000) / 100
+        );
+      }),
+      borderColor: "#8b5cf6",
+      backgroundColor: "rgba(139, 92, 246, 0.1)",
+      fill: true,
+      tension: 0.3,
+      spanGaps: false,
+      pointRadius: 5,
+    },
+  ],
+}));
+
+const allocationRatioChartOptions = computed<any>(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { display: false },
+    tooltip: {
+      callbacks: {
+        label: (context: any) => {
+          const idx = context.dataIndex;
+          const adj = sortedAdjustments.value[idx];
+          const ratio = context.parsed.y;
+          const lines: string[] = [`提撥比率: ${ratio?.toFixed(2) ?? "-"}%`];
+          if (adj?.total_allocation_amount != null)
+            lines.push(`提撥金額: ${adj.total_allocation_amount.toLocaleString()} 元`);
+          if (adj?.pretax_net_profit != null)
+            lines.push(`稅前淨利: ${adj.pretax_net_profit.toLocaleString()} 元`);
+          return lines;
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: { color: isDark.value ? "#334155" : "#e2e8f0" },
+      ticks: { color: isDark.value ? "#94a3b8" : "#64748b" },
+    },
+    y: {
+      grid: { color: isDark.value ? "#334155" : "#e2e8f0" },
+      ticks: {
+        color: isDark.value ? "#94a3b8" : "#64748b",
+        callback: (value: any) => `${value}%`,
+      },
+      title: {
+        display: true,
+        text: "提撥佔稅前淨利 (%)",
+        color: isDark.value ? "#94a3b8" : "#64748b",
+      },
+    },
+  },
+}));
 </script>
 
 <template>
@@ -417,12 +572,50 @@ const adjustmentData = computed(() => ({
       </div>
     </div>
 
+    <!-- Indexed Growth Chart (EPS vs Median Salary) -->
+    <div
+      v-if="hasIndexedData"
+      class="lg:col-span-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm"
+    >
+      <h3
+        class="text-lg font-bold text-gray-900 dark:text-white mb-2 flex items-center"
+      >
+        <Icon name="lucide:git-merge" class="w-5 h-5 mr-2 text-blue-500" />
+        EPS vs 薪資指數化成長比較
+      </h3>
+      <p class="text-xs text-gray-500 dark:text-slate-400 mb-6">
+        以首年有效資料為基準（= 100），呈現 EPS 與非主管薪資中位數的相對成長幅度。兩線差距越大，代表獲利果實流向員工的比例越少。
+      </p>
+      <div class="h-64">
+        <Line :data="indexedGrowthData" :options="indexedGrowthChartOptions" />
+      </div>
+    </div>
+
     <!-- Industry Comparison Chart -->
     <CompanyIndustryComparison :stats="stats" />
 
     <!-- Salary Metrics (Disparity + Employee Count) -->
     <div class="lg:col-span-2">
       <CompanySalaryMetrics :stats="stats" />
+    </div>
+
+    <!-- Allocation Ratio Trend Chart -->
+    <div
+      v-if="hasAllocationRatioData"
+      class="lg:col-span-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm"
+    >
+      <h3
+        class="text-lg font-bold text-gray-900 dark:text-white mb-2 flex items-center"
+      >
+        <Icon name="lucide:pie-chart" class="w-5 h-5 mr-2 text-violet-500" />
+        員工酬勞提撥比率趨勢
+      </h3>
+      <p class="text-xs text-gray-500 dark:text-slate-400 mb-6">
+        提撥金額 ÷ 稅前淨利（%）。比率下降代表員工分到的獲利比例縮小；EPS 成長但比率下降，是「分蛋糕」縮水的直接證據。
+      </p>
+      <div class="h-64">
+        <Line :data="allocationRatioData" :options="allocationRatioChartOptions" />
+      </div>
     </div>
 
     <!-- Salary Adjustment Chart (New) -->
