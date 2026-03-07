@@ -587,7 +587,7 @@ const allocationRatioChartOptions = computed<any>(() => ({
         EPS vs 薪資指數化成長比較
       </h3>
       <p class="text-xs text-gray-500 dark:text-slate-400 mb-6">
-        以首年有效資料為基準（= 100），呈現 EPS 與非主管薪資中位數的相對成長幅度。兩線差距越大，代表獲利果實流向員工的比例越少。
+        把首年資料都設為 100，比較 EPS 與薪資誰漲得快。EPS 線跑在薪資線上方，代表公司賺更多，但員工薪資沒有等比例跟上。
       </p>
       <div class="h-64">
         <Line :data="indexedGrowthData" :options="indexedGrowthChartOptions" />
