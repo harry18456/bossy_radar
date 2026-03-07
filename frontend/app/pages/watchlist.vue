@@ -230,6 +230,17 @@ const clearWatchlist = () => {
           </div>
         </section>
 
+        <!-- Cross-year Trend Section (not controlled by year selector) -->
+        <section v-if="(allComparisonData ?? []).length > 0">
+          <h2
+            class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"
+          >
+            <Icon name="lucide:trending-up" class="w-5 h-5 mr-2" />
+            跨年趨勢
+          </h2>
+          <WatchlistTrendChart :data="allComparisonData ?? []" />
+        </section>
+
         <!-- Comparison Section -->
         <section v-if="sortedComparison.length > 0">
           <!-- Year Selector (controls all charts) -->
@@ -419,17 +430,6 @@ const clearWatchlist = () => {
           <p class="mt-2 text-xs text-gray-500 dark:text-slate-400 text-right">
             * 資料來源：{{ selectedYear }}年度公開資訊 (若無資料顯示為 -)
           </p>
-        </section>
-
-        <!-- Cross-year Trend Section (not controlled by year selector) -->
-        <section v-if="(allComparisonData ?? []).length > 0">
-          <h2
-            class="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center"
-          >
-            <Icon name="lucide:trending-up" class="w-5 h-5 mr-2" />
-            跨年趨勢
-          </h2>
-          <WatchlistTrendChart :data="allComparisonData ?? []" />
         </section>
 
         <!-- Error state for no comparison data -->
