@@ -274,6 +274,9 @@ const clearWatchlist = () => {
           <!-- Multi-dimension Radar Chart -->
           <WatchlistRadarChart :data="sortedComparison" :year="selectedYear" />
 
+          <!-- Cross-year Trend Chart (all years, not filtered by selectedYear) -->
+          <WatchlistTrendChart :data="allComparisonData ?? []" />
+
           <h2
             class="text-xl font-bold text-gray-900 dark:text-white flex items-center mb-6"
           >
