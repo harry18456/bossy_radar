@@ -90,6 +90,30 @@ const medianGrowthRates = computed(() =>
   }),
 );
 
+// 低於最低工資調漲率的年份（兩者皆有值才比較）
+const yearsBelowMinWage = computed(() =>
+  validYears.value
+    .map((year, i) => {
+      const medianRate = medianGrowthRates.value[i];
+      const minWageRate = minWageGrowthRates.value[i];
+      if (medianRate == null || minWageRate == null) return null;
+      return medianRate < minWageRate
+        ? { year, medianRate, minWageRate }
+        : null;
+    })
+    .filter((v): v is { year: number; medianRate: number; minWageRate: number } => v !== null),
+);
+
+// 中位數折線各點顏色：低於最低工資調漲率的點標紅
+const medianPointColors = computed(() =>
+  validYears.value.map((year, i) => {
+    const medianRate = medianGrowthRates.value[i];
+    const minWageRate = minWageGrowthRates.value[i];
+    if (medianRate == null || minWageRate == null) return "#eab308";
+    return medianRate < minWageRate ? "#ef4444" : "#eab308";
+  }),
+);
+
 const chartData = computed(() => ({
   labels: validYears.value.map((y) => y + "年"),
   datasets: [
@@ -98,9 +122,11 @@ const chartData = computed(() => ({
       data: medianGrowthRates.value,
       borderColor: "#eab308",
       backgroundColor: "rgba(234, 179, 8, 0.1)",
+      pointBackgroundColor: medianPointColors.value,
+      pointBorderColor: medianPointColors.value,
       fill: true,
       tension: 0.3,
-      pointRadius: 5,
+      pointRadius: 6,
       spanGaps: false,
     },
     {
@@ -179,6 +205,30 @@ const chartOptions = computed<any>(() => ({
     </p>
     <div class="h-64">
       <Line :data="chartData" :options="chartOptions" />
+    </div>
+
+    <!-- 低於最低工資調漲率警示 -->
+    <div
+      v-if="yearsBelowMinWage.length > 0"
+      class="mt-4 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20"
+    >
+      <Icon
+        name="lucide:alert-triangle"
+        class="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400"
+      />
+      <div class="text-sm text-amber-800 dark:text-amber-300">
+        <span class="font-semibold">薪資漲幅低於最低工資調漲率：</span>
+        <span>
+          以下
+          {{ yearsBelowMinWage.length }} 個年度，公司中位數薪資成長率未達政府公告最低工資調漲幅度——
+        </span>
+        <span
+          v-for="(item, i) in yearsBelowMinWage"
+          :key="item.year"
+        >
+          <span class="font-medium">{{ item.year }}年</span>（{{ item.medianRate.toFixed(1) }}% vs {{ item.minWageRate.toFixed(1) }}%）<span v-if="i < yearsBelowMinWage.length - 1">、</span>
+        </span>
+      </div>
     </div>
   </div>
 </template>
