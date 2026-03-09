@@ -567,6 +567,9 @@ const allocationRatioChartOptions = computed<any>(() => ({
         <Icon name="lucide:trending-up" class="w-5 h-5 mr-2 text-green-500" />
         薪資成長率趨勢 (YoY %)
       </h3>
+      <p class="text-xs text-gray-500 dark:text-slate-400 mb-6">
+        年增率 =（本年度薪資 − 上年度薪資）÷ 上年度薪資 × 100%。資料來自 MOPS 申報之非主管全時員工薪資，單位為仟元／年。
+      </p>
       <div class="h-64">
         <Line :data="salaryGrowthData" :options="growthChartOptions" />
       </div>
