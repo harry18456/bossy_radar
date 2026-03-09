@@ -1,0 +1,184 @@
+<script setup lang="ts">
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  PointElement,
+  LineElement,
+  LinearScale,
+  CategoryScale,
+  LineController,
+} from "chart.js";
+import { Line } from "vue-chartjs";
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  LineElement,
+  LineController,
+  PointElement,
+  Title,
+  Tooltip,
+  Legend,
+);
+
+const props = defineProps<{
+  stats: any[]; // NonManagerSalary[]
+}>();
+
+// 最低工資月薪歷史對照表（勞動部公告）
+// 資料來源：https://www.mol.gov.tw/topic/3067/14530/
+// 更新時請同步修改此常數表
+const MIN_WAGE_MONTHLY: Record<number, number> = {
+  106: 21009,
+  107: 22000,
+  108: 23100,
+  109: 23800,
+  110: 24000,
+  111: 25250,
+  112: 26400,
+  113: 27470,
+  114: 28590,
+  115: 29500,
+};
+
+const sortedStats = computed(() =>
+  [...props.stats].sort((a, b) => a.year - b.year),
+);
+
+// 有效年份：公司有 median_salary 且最低工資常數表也有對應年份
+const validYears = computed(() =>
+  sortedStats.value
+    .filter((s) => s.median_salary != null && s.year in MIN_WAGE_MONTHLY)
+    .map((s) => s.year),
+);
+
+// 至少需要 2 年才能計算成長率
+const hasMinWageData = computed(() => validYears.value.length >= 2);
+
+// 各年 median_salary 查找表
+const yearToMedian = computed(() =>
+  Object.fromEntries(
+    sortedStats.value
+      .filter((s) => s.median_salary != null)
+      .map((s) => [s.year, s.median_salary as number]),
+  ),
+);
+
+// 最低工資 YoY 成長率（第一個有效年份為 null）
+const minWageGrowthRates = computed(() =>
+  validYears.value.map((year, i) => {
+    if (i === 0) return null;
+    const prevYear = validYears.value[i - 1];
+    const prevWage = MIN_WAGE_MONTHLY[prevYear];
+    const currWage = MIN_WAGE_MONTHLY[year];
+    if (!prevWage || !currWage) return null;
+    return ((currWage - prevWage) / prevWage) * 100;
+  }),
+);
+
+// 非主管中位數薪資 YoY 成長率（第一個有效年份為 null）
+const medianGrowthRates = computed(() =>
+  validYears.value.map((year, i) => {
+    if (i === 0) return null;
+    const prevYear = validYears.value[i - 1];
+    const prevSalary = yearToMedian.value[prevYear];
+    const currSalary = yearToMedian.value[year];
+    if (!prevSalary || !currSalary) return null;
+    return ((currSalary - prevSalary) / prevSalary) * 100;
+  }),
+);
+
+const chartData = computed(() => ({
+  labels: validYears.value.map((y) => y + "年"),
+  datasets: [
+    {
+      label: "非主管中位數薪資成長率 (%)",
+      data: medianGrowthRates.value,
+      borderColor: "#eab308",
+      backgroundColor: "rgba(234, 179, 8, 0.1)",
+      fill: true,
+      tension: 0.3,
+      pointRadius: 5,
+      spanGaps: false,
+    },
+    {
+      label: "最低工資調漲率 (%)",
+      data: minWageGrowthRates.value,
+      borderColor: "#ef4444",
+      backgroundColor: "rgba(239, 68, 68, 0.08)",
+      borderDash: [6, 4],
+      fill: true,
+      tension: 0.3,
+      pointRadius: 5,
+      spanGaps: false,
+    },
+  ],
+}));
+
+const isDark = useDark();
+
+const chartOptions = computed<any>(() => ({
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: "top",
+      labels: {
+        color: isDark.value ? "#e2e8f0" : "#475569",
+      },
+    },
+    tooltip: {
+      mode: "index",
+      intersect: false,
+      callbacks: {
+        label: (context: any) => {
+          const value = context.parsed.y;
+          if (value == null) return `${context.dataset.label}: -`;
+          return `${context.dataset.label}: ${value.toFixed(2)}%`;
+        },
+      },
+    },
+  },
+  scales: {
+    x: {
+      grid: {
+        color: isDark.value ? "#334155" : "#e2e8f0",
+      },
+      ticks: {
+        color: isDark.value ? "#94a3b8" : "#64748b",
+      },
+    },
+    y: {
+      grid: {
+        color: isDark.value ? "#334155" : "#e2e8f0",
+      },
+      ticks: {
+        color: isDark.value ? "#94a3b8" : "#64748b",
+        callback: (value: any) => `${value}%`,
+      },
+    },
+  },
+}));
+</script>
+
+<template>
+  <div
+    v-if="hasMinWageData"
+    class="lg:col-span-2 bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-4 md:p-6 shadow-sm"
+  >
+    <h3
+      class="text-lg font-bold text-gray-900 dark:text-white mb-2 flex items-center"
+    >
+      <Icon name="lucide:landmark" class="w-5 h-5 mr-2 text-red-500" />
+      薪資成長率 vs 最低工資調漲率
+    </h3>
+    <p class="text-xs text-gray-500 dark:text-slate-400 mb-6">
+      比較公司非主管中位數薪資的年增率（%）與政府公告最低工資調漲率。若公司線長期低於紅色基準線，代表薪資漲幅跑輸基本工資。
+    </p>
+    <div class="h-64">
+      <Line :data="chartData" :options="chartOptions" />
+    </div>
+  </div>
+</template>

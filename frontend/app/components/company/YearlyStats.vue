@@ -572,6 +572,9 @@ const allocationRatioChartOptions = computed<any>(() => ({
       </div>
     </div>
 
+    <!-- Min Wage vs Median Salary Growth Rate Chart -->
+    <CompanyMinWageChart :stats="stats" />
+
     <!-- Industry Comparison Chart -->
     <CompanyIndustryComparison :stats="stats" />
 
