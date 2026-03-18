@@ -35,5 +35,10 @@ frontend/.env
 # Claude
 .claude/
 
+# Extension build artifacts
+extension/*.zip
+
 # Agent
 .agent/
+.spectra/
+openspec/.vector-search.db*
