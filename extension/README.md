@@ -35,6 +35,31 @@
 4. 點選「載入未封裝項目」，選擇 `extension/` 資料夾
 5. 前往 [104 人力銀行](https://www.104.com.tw/) 瀏覽任意公司頁面
 
+## 發布新版本
+
+### 1. 修改版本號
+
+編輯 `manifest.json`，更新 `"version"` 欄位（遵循 semver）。
+
+### 2. 打包
+
+在專案根目錄執行：
+
+```powershell
+powershell -Command "Compress-Archive -Path extension\background,extension\content-scripts,extension\icons,extension\manifest.json -DestinationPath extension\store\bossy-radar-<版本號>.zip -Force"
+```
+
+產出的 zip 會放在 `extension/store/`。
+
+### 3. 上傳至商店
+
+- **Chrome**: [Chrome Web Store Developer Dashboard](https://chrome.google.com/webstore/devconsole)
+  → 選擇套件 → 「封裝項目」→「上傳新套件」→ 上傳 zip
+- **Edge**: [Microsoft Partner Center](https://partner.microsoft.com/dashboard/microsoftedge/overview)
+  → 選擇套件 → 「Update」→ 上傳 zip
+
+審核通常需要 1–3 個工作天。
+
 ## 架構
 
 ```
