@@ -26,6 +26,8 @@
   };
 
   const seen = new Set();
+  // 只 dispatch 第一個找到的 custno，避免相似公司列表等 API 回應覆蓋當前頁面公司
+  let dispatched = false;
 
   const processUrl = (url, source) => {
     const custNo = extractCustNo(url);
@@ -34,10 +36,12 @@
   };
 
   const handleDiscoveredCustNo = (custNo, source) => {
+    if (dispatched) return;
     const taxId = extractTaxId(custNo);
     if (!taxId || seen.has(taxId)) return;
 
     seen.add(taxId);
+    dispatched = true;
     // 存到 DOM data attribute，讓 content script 跨 world 讀取
     document.documentElement.setAttribute("data-bossy-tax-id", taxId);
     dispatchTaxId(taxId, source);

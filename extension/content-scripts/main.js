@@ -466,6 +466,8 @@
 
     const tryMatchByTaxId = (taxId) => {
       if (!taxId) return false
+      // 已透過 tax_id 成功比對後，不允許其他 custno 覆蓋（避免相似公司列表誤觸發）
+      if (currentMatch && matchMethod === 'tax_id') return false
       detectedTaxId = taxId
       const match = matchByTaxId(taxId)
       if (match) {

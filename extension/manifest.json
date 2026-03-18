@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Bossy Radar - 104 公司快查",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "在 104 人力銀行頁面上顯示公司勞動違規、薪資等資訊",
   "permissions": ["storage"],
   "host_permissions": ["https://www.bossy.eraser.tw/*"],
