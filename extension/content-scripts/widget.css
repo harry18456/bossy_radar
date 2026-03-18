@@ -68,6 +68,13 @@
   color: #4ecca3;
 }
 
+.br-version {
+  font-size: 11px;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.45);
+  letter-spacing: 0.03em;
+}
+
 .br-close {
   background: none;
   border: none;

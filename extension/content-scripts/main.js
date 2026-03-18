@@ -239,6 +239,8 @@
     document.getElementById('bossy-radar-widget')?.remove()
     document.getElementById('bossy-radar-toggle')?.remove()
 
+    const version = chrome.runtime.getManifest().version
+
     const widget = document.createElement('div')
     widget.id = 'bossy-radar-widget'
     widget.innerHTML = `
@@ -246,6 +248,7 @@
         <div class="br-header">
           <div class="br-header-title">
             <span class="br-logo">BR</span> Bossy Radar
+            <span class="br-version">v${version}</span>
           </div>
           <button class="br-close" id="bossy-radar-close">&times;</button>
         </div>
