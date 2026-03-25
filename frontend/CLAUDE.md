@@ -12,6 +12,8 @@ npm run lint       # ESLint 檢查
 npm run lint:fix   # ESLint 自動修正
 ```
 
+> 本專案目前無測試框架設定。
+
 ## 環境變數
 
 ```properties
@@ -39,6 +41,8 @@ NUXT_PUBLIC_GOOGLE_ADSENSE_ID=ca-pub-XXXXXXXX
 - **SSR 時**：用 `useRequestURL().origin` 組成絕對 URL
 - **客戶端時**：相對路徑 `/data/...`
 
+靜態模式下，分頁和篩選（名稱、產業、市場類型）均在**客戶端**執行；動態模式下由後端處理。
+
 ## 靜態 JSON 檔案結構
 
 ```
@@ -64,7 +68,24 @@ public/data/
 
 - **`useCompanyStore`**：快取公司 catalog（1 小時），使用 `useApi()` 取得資料
 - **`useWatchlistStore`**：僅將公司代碼（`codes: string[]`）持久化至 localStorage；公司詳細資料（`_companies`）不持久化，每次頁面載入時重新 hydrate
-- **`useCompanyFilters`**：雙向同步篩選條件與 URL query string（page、size、sort、name、industry、market_type）
+- **`useCompanyFilters`**：以 Zod schema 驗證並雙向同步篩選條件與 URL query string（page、size、sort、name、industry、market_type）
+
+## 新增頁面時的必要步驟
+
+1. 在 `app/pages/` 建立 `.vue` 檔案
+2. 在 `<script setup>` 中呼叫 `usePageMeta()` 設定 SEO 元資料
+3. 在首頁等特殊頁面用 `definePageMeta({ layout: 'home' })` 切換佈局（預設使用 `default.vue`）
+4. 需要結構化資料（JSON-LD）時呼叫 `useStructuredData()`
+
+## 型別定義與工具
+
+- **`app/types/api.ts`**：所有 API 相關型別的唯一來源（`Company`、`CompanyProfile`、`Violation`、`PaginatedResponse<T>` 等）
+- **`app/utils/format.ts`**：`formatDate()`、`rocToWestern()`、`formatCurrency()`
+- **`app/constants/index.ts`**：`INDUSTRIES`（42 個產業代碼→名稱）、`MARKET_TYPES`、`DEFAULT_PAGE_SIZE`
+
+## 圖表實作
+
+圖表使用 **Chart.js v4 + vue-chartjs v5**。在 `app/components/company/` 和 `app/components/watchlist/` 中有多個圖表組件可參考其模式（Line、Bar、Doughnut、Radar、Scatter 等）。
 
 ## 關鍵慣例
 

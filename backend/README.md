@@ -199,6 +199,32 @@
   - `system-status.json`: 系統更新狀態
   - `companies/{code}.json`: 各公司詳細資料
 
+### 7. 重新建立與同步資料庫 (重建 DB)
+
+如果你需要從頭建立一個乾淨的系統並重新拉取所有資料，請依循以下步驟：
+
+**Step 0: 清空舊資料庫 (選擇性)**
+刪除 `backend/` 下的 `bossy_radar.db` 與 `archive.db` 檔案。程式執行時若找不到檔案，會自動建立空白的資料表結構。
+
+**Step 1: 一鍵自動同步所有資料 (推薦)**
+使用內建的 `sync-all` 指令，自動依序（公司基本資料 -> 違規 -> 負責人擴充 -> MOPS 薪資福利 -> 匯出）執行完整的同步：
+
+```bash
+uv run python -m app.cli.main sync-all
+```
+
+**手動分步執行順序 (若需個別除錯/更新)**：
+1. **建立公司主表** (所有資料依賴此表，必須首位)：
+   `uv run python -m app.cli.main sync-companies --type all`
+2. **抓取違規資料**：
+   `uv run python -m app.cli.main sync-violations --source all`
+   `uv run python -m app.cli.main sync-env`
+3. **抓取需要大量請求的詳細資料**：
+   `uv run python -m app.cli.main sync-company-details --retries -1 --retry-delay 5`
+   `uv run python -m app.cli.main sync-mops`
+4. **輸出靜態檔案供前端讀取**：
+   `uv run python -m app.cli.main export`
+
 ## 本地開發
 
 ### 前置需求

@@ -171,7 +171,7 @@ def sync_violations(
 @app.command()
 def sync_mops(
     start_year: int | None = typer.Option(
-        None, "--start-year", help="Start ROC year (default: current - 4)"
+        None, "--start-year", help="Start ROC year (default: 107)"
     ),
     end_year: int | None = typer.Option(
         None, "--end-year", help="End ROC year (default: current)"
@@ -195,7 +195,7 @@ def sync_mops(
 
     # Calculate year range
     current_roc = scraper.get_current_roc_year()
-    start_year = start_year or (current_roc - 4)
+    start_year = start_year or 107
     end_year = end_year or current_roc
     years = list(range(start_year, end_year + 1))
     markets = ["sii", "otc"]
