@@ -53,6 +53,21 @@
     }
   }
 
+  // ── UBN 校驗（與 interceptor 同步，防止 main.js HTML 掃描傳入無效統編）──
+
+  const isValidUBN = (taxId) => {
+    if (!taxId || taxId.length !== 8 || !/^\d{8}$/.test(taxId)) return false
+    const weights = [1, 2, 1, 2, 1, 2, 4, 1]
+    let sum = 0
+    for (let i = 0; i < 8; i++) {
+      const product = parseInt(taxId[i], 10) * weights[i]
+      sum += Math.floor(product / 10) + (product % 10)
+    }
+    if (sum % 10 === 0) return true
+    if (taxId[6] === '7' && (sum - 1) % 10 === 0) return true
+    return false
+  }
+
   // ── Matching ──
 
   const matchByTaxId = (taxId) =>
@@ -94,7 +109,9 @@
         // 公司名通常在第二段（排除最後的 "外國人才..." 和 "104 外籍..."）
         if (parts.length >= 3) return parts[1]
       } else {
-        // go.104 company: "公司名 ｜ 友善企業職缺｜104 外籍求職專區"
+        // go.104 company: "Jobs at 公司名 in Taiwan ｜ ..." 或 "公司名 ｜ 友善企業職缺｜..."
+        const jobsAtMatch = ogTitle.match(/Jobs at (.+?) in Taiwan/i)
+        if (jobsAtMatch) return jobsAtMatch[1].trim()
         const match = ogTitle.match(/^(.+?)\s*[｜|]/)
         if (match) return match[1].trim()
       }
@@ -147,14 +164,17 @@
       'X-Requested-With': 'XMLHttpRequest',
     }
 
-    // 在 JSON response 中遞迴搜尋含 custNo 的欄位
+    // 在 JSON response 中遞迴搜尋含 custNo 的欄位，並驗證 UBN
     const findCustNo = (obj, depth = 0) => {
       if (!obj || typeof obj !== 'object' || depth > 5) return null
       for (const [key, value] of Object.entries(obj)) {
         // custNo 值可能是 string 或 number
         if (/custno/i.test(key) && value) {
           const str = String(value)
-          if (str.length >= 8) return str.substring(0, 8)
+          if (str.length >= 8) {
+            const taxId = str.substring(0, 8)
+            if (isValidUBN(taxId)) return taxId
+          }
         }
         if (typeof value === 'object' && !Array.isArray(value)) {
           const found = findCustNo(value, depth + 1)
@@ -188,7 +208,7 @@
           // 非 JSON，用 regex 找
         }
 
-        // 從原始文字中找 custNo 模式
+        // 從原始文字中找 custNo 模式，並驗證 UBN
         const patterns = [
           /custNo[=:"'\s]+(\d{8,})/i,
           /cust_no[=:"'\s]+(\d{8,})/i,
@@ -196,7 +216,10 @@
         ]
         for (const pattern of patterns) {
           const match = text.match(pattern)
-          if (match) return match[1].substring(0, 8)
+          if (match) {
+            const taxId = match[1].substring(0, 8)
+            if (isValidUBN(taxId)) return taxId
+          }
         }
       } catch {
         // ignore
@@ -208,7 +231,10 @@
       const htmlRes = await fetch(`https://www.104.com.tw/company/${slug}`)
       const html = await htmlRes.text()
       const custMatch = html.match(/custNo[=:"'\s]+(\d{8,})/i)
-      if (custMatch) return custMatch[1].substring(0, 8)
+      if (custMatch) {
+        const taxId = custMatch[1].substring(0, 8)
+        if (isValidUBN(taxId)) return taxId
+      }
     } catch {
       // ignore
     }
@@ -467,18 +493,33 @@
     const readTaxIdFromDOM = () =>
       document.documentElement.getAttribute('data-bossy-tax-id') || null
 
+    // 交叉驗證：catalog 公司名與 DOM 公司名是否有重疊（子字串關係）
+    const namesOverlap = (catalogName, domName) => {
+      if (!catalogName || !domName) return true // DOM 名稱尚未載入，暫時接受
+      const c = catalogName.toLowerCase()
+      const d = domName.toLowerCase()
+      return c.includes(d) || d.includes(c)
+    }
+
     const tryMatchByTaxId = (taxId) => {
       if (!taxId) return false
+      if (!isValidUBN(taxId)) return false // UBN 校驗失敗，跳過
       // 已透過 tax_id 成功比對後，不允許其他 custno 覆蓋（避免相似公司列表誤觸發）
       if (currentMatch && matchMethod === 'tax_id') return false
       detectedTaxId = taxId
       const match = matchByTaxId(taxId)
-      if (match) {
-        matchMethod = 'tax_id'
-        handleMatch(match)
-        return true
+      if (!match) return false
+
+      // 交叉驗證：tax_id 比對到的公司名須與 DOM 公司名相關
+      const domName = getCompanyNameFromDOM()
+      if (!namesOverlap(match.name, domName)) {
+        // 比對結果與頁面公司名不符，降級為名稱比對
+        return false
       }
-      return false
+
+      matchMethod = 'tax_id'
+      handleMatch(match)
+      return true
     }
 
     // 先檢查 interceptor 是否已抓到（在 catalog 載入期間發生的）
@@ -520,9 +561,9 @@
         for (const pattern of patterns) {
           const match = html.match(pattern)
           if (match) {
-             const taxId = match[1].substring(0, 8)
-             if (tryMatchByTaxId(taxId)) return
-             break
+            const taxId = match[1].substring(0, 8)
+            if (tryMatchByTaxId(taxId)) return // isValidUBN 在 tryMatchByTaxId 內部驗證
+            break
           }
         }
 
