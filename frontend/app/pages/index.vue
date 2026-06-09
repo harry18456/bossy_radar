@@ -20,8 +20,7 @@ injectOrganizationSchema();
 const api = useApi();
 const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
   "home-leaderboards",
-  () => api.getLeaderboards(),
-  { server: false }
+  () => api.getLeaderboards()
 );
 </script>
 
@@ -83,33 +82,9 @@ const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
         最新年度排行
       </h2>
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <ClientOnly>
-          <HomeViolationLeaderboard :data="leaderboardData || null" />
-          <template #fallback>
-            <div
-              class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
-            >
-              <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
-              </div>
-            </div>
-          </template>
-        </ClientOnly>
+        <HomeViolationLeaderboard :data="leaderboardData || null" />
 
-        <ClientOnly>
-          <HomeSalaryRanking :data="leaderboardData || null" />
-          <template #fallback>
-            <div
-              class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
-            >
-              <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
-              </div>
-            </div>
-          </template>
-        </ClientOnly>
+        <HomeSalaryRanking :data="leaderboardData || null" />
       </div>
     </section>
 
@@ -120,47 +95,11 @@ const { data: leaderboardData } = await useAsyncData<LeaderboardsResponse>(
         更多統計資料
       </h2>
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <ClientOnly>
-          <HomeAllTimeViolation :data="leaderboardData || null" />
-          <template #fallback>
-            <div
-              class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
-            >
-              <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
-              </div>
-            </div>
-          </template>
-        </ClientOnly>
+        <HomeAllTimeViolation :data="leaderboardData || null" />
 
-        <ClientOnly>
-          <HomeIndustryEps :data="leaderboardData || null" />
-          <template #fallback>
-            <div
-              class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
-            >
-              <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
-              </div>
-            </div>
-          </template>
-        </ClientOnly>
+        <HomeIndustryEps :data="leaderboardData || null" />
 
-        <ClientOnly>
-          <HomeIndustrySalary :data="leaderboardData || null" />
-          <template #fallback>
-            <div
-              class="bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 rounded-xl p-8 text-center"
-            >
-              <div class="animate-pulse space-y-4">
-                <div class="h-6 bg-gray-200 dark:bg-slate-700 rounded w-1/3 mx-auto"/>
-                <div class="h-4 bg-gray-200 dark:bg-slate-700 rounded w-1/2 mx-auto"/>
-              </div>
-            </div>
-          </template>
-        </ClientOnly>
+        <HomeIndustrySalary :data="leaderboardData || null" />
       </div>
     </section>
   </div>

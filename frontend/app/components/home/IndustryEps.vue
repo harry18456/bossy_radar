@@ -8,29 +8,23 @@ const props = defineProps<{
 // Get latest year from salary_by_industry data (find year with actual data)
 const latestYear = computed(() => {
   if (!props.data?.salary_by_industry) {
-    console.log("No salary_by_industry in data", props.data);
     return null;
   }
   const years = Object.keys(props.data.salary_by_industry)
     .map(Number)
     .sort((a, b) => b - a);
 
-  console.log("Available years in salary_by_industry:", years);
-  
   // Find first year that has actual industry EPS data
   const yearWithData = years.find(year => {
     const yearData = props.data?.salary_by_industry?.[String(year)];
-    console.log(`Checking year ${year} for EPS data...`, yearData);
     // Check if any industry has top_by_eps data
     const hasData = yearData && Object.values(yearData).some(industry => {
       const hasEps = industry.top_by_eps?.length > 0;
-      if (hasEps) console.log("Found EPS data in industry:", industry);
       return hasEps;
     });
     return hasData;
   });
 
-  console.log("Found year with EPS data:", yearWithData);
   return yearWithData || null;
 });
 

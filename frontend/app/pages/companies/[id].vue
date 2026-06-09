@@ -89,11 +89,18 @@ const toggleWatch = () => {
 
 // Ensure URL has protocol prefix (safety for dirty data)
 const ensureProtocol = (url: string) => {
-  if (!url) return "";
-  if (url.startsWith("http://") || url.startsWith("https://")) {
-    return url;
+  const trimmedUrl = url.trim();
+  if (!trimmedUrl) return "";
+  const href =
+    trimmedUrl.startsWith("http://") || trimmedUrl.startsWith("https://")
+      ? trimmedUrl
+      : `https://${trimmedUrl}`;
+  try {
+    decodeURIComponent(href);
+    return href;
+  } catch {
+    return href.replace(/%/g, "%25");
   }
-  return `https://${url}`;
 };
 
 // Known placeholder values from MOPS (synced with backend INVALID_URL_VALUES)

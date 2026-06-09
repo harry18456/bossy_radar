@@ -54,9 +54,13 @@ npm install
 請在專案根目錄建立 `.env` 檔案：
 
 ```properties
-# Backend API URL (FastAPI)
+# Data mode defaults to static JSON. Use dynamic only with a runtime FastAPI.
+NUXT_PUBLIC_DATA_MODE=static
+# Backend API URL (FastAPI, required only for dynamic mode)
 NUXT_PUBLIC_API_BASE=http://localhost:8000
 ```
+
+Runtime FastAPI mode requires `NUXT_PUBLIC_DATA_MODE=dynamic`. Empty or unset `NUXT_PUBLIC_DATA_MODE` uses static JSON from `public/data`.
 
 ### 3. 啟動開發伺服器
 
@@ -143,8 +147,10 @@ npm run lint:fix
 
 3.  **推送到 Vercel**
     使用 Vercel CLI 將打包好的資料夾推上去 (無需在 Vercel 雲端 Build)。
+    Run from the `frontend` project root so `frontend/vercel.json` applies headers and `outputDirectory=.output/public`.
+
     ```bash
-    npx vercel deploy .output/public --prod --archive=tgz
+    npx vercel deploy --prod --archive=tgz
     ```
 
 > **注意**：每次更新資料或程式碼時，都需重複步驟 2 與 3。

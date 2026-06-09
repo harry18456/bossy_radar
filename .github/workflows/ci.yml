@@ -64,3 +64,8 @@ jobs:
         run: |
           cd frontend
           npm run lint
+
+      - name: Generate static site
+        run: |
+          cd frontend
+          npm run generate

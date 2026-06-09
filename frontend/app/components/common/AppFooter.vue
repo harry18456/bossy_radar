@@ -5,6 +5,9 @@ const api = useApi()
 const config = useRuntimeConfig()
 const status = ref<SystemSyncStatus | null>(null)
 const isLoading = ref(true)
+const dataModeLabel = computed(() =>
+  String(config.public.dataMode || '').trim() === 'dynamic' ? 'dynamic' : 'static'
+)
 
 const fetchStatus = async () => {
   isLoading.value = true
@@ -134,7 +137,7 @@ const aggregatedStatus = computed(() => {
           </NuxtLink>
         </p>
         <div class="flex items-center space-x-3 text-xs text-gray-500 dark:text-slate-400">
-          <span>v{{ config.public.appVersion }} ({{ config.public.dataMode }})</span>
+          <span>v{{ config.public.appVersion }} ({{ dataModeLabel }})</span>
           <span class="border-l border-gray-300 dark:border-slate-700 h-3"/>
           <a href="https://buymeacoffee.com/harry18456" target="_blank" class="text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors" title="請我喝杯咖啡">
             <Icon name="simple-icons:buymeacoffee" class="w-3.5 h-3.5" />

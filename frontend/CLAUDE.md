@@ -17,7 +17,7 @@ npm run lint:fix   # ESLint 自動修正
 ## 環境變數
 
 ```properties
-NUXT_PUBLIC_DATA_MODE=static        # static | dynamic（預設 dynamic）
+NUXT_PUBLIC_DATA_MODE=static        # static | dynamic（預設 static）
 NUXT_PUBLIC_API_BASE=http://localhost:8000
 NUXT_PUBLIC_GA4_ID=G-XXXXXXXXXX
 NUXT_PUBLIC_GOOGLE_ADSENSE_ID=ca-pub-XXXXXXXX

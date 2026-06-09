@@ -5,6 +5,13 @@ import { resolve } from "path";
 
 import pkg from "./package.json";
 
+const dataMode =
+  process.env.NUXT_PUBLIC_DATA_MODE?.trim() === "dynamic"
+    ? "dynamic"
+    : "static";
+const googleAdSenseId = process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_ID?.trim() || "";
+const googleAnalyticsId = process.env.NUXT_PUBLIC_GA4_ID?.trim() || "";
+
 // Read company catalog at build time for sitemap generation
 function getCompanyUrls(): string[] {
   const catalogPath = resolve(__dirname, "public/data/company-catalog.json");
@@ -24,9 +31,6 @@ function getCompanyUrls(): string[] {
       .map((c) => c.code)
       .filter((code) => code && /^[A-Za-z0-9]+$/.test(code));
 
-    console.log(
-      `[Sitemap] Loaded ${validCodes.length} company codes for sitemap`,
-    );
     return validCodes.map((code) => `/companies/${code}`);
   } catch (e) {
     console.error("[Sitemap] Failed to read company catalog:", e);
@@ -41,16 +45,16 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       appVersion: pkg.version,
-      dataMode: process.env.NUXT_PUBLIC_DATA_MODE || "dynamic",
+      dataMode,
       apiBase: process.env.NUXT_PUBLIC_API_BASE || "http://localhost:8000",
       googleAdSense: {
-        id: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_ID || "",
+        id: googleAdSenseId,
         slots: {
           top: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_SLOT_TOP || "",
           bottom: process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_SLOT_BOTTOM || "",
         },
       },
-      googleAnalyticsId: process.env.NUXT_PUBLIC_GA4_ID || "",
+      googleAnalyticsId,
     },
   },
   site: {
@@ -81,12 +85,16 @@ export default defineNuxtConfig({
           `,
           tagPosition: "head",
         },
-        {
-          src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${process.env.NUXT_PUBLIC_GOOGLE_ADSENSE_ID}`,
-          async: true,
-          crossorigin: "anonymous",
-          tagPosition: "bodyClose",
-        },
+        ...(googleAdSenseId
+          ? [
+              {
+                src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${googleAdSenseId}`,
+                async: true,
+                crossorigin: "anonymous",
+                tagPosition: "bodyClose" as const,
+              },
+            ]
+          : []),
       ],
     },
   },
@@ -114,7 +122,7 @@ export default defineNuxtConfig({
   },
   nitro: {
     prerender: {
-      failOnError: false,
+      failOnError: true,
       // Pre-render all company detail pages for SEO and crawler accessibility
       routes: getCompanyUrls(),
       // Ignore invalid company routes (non-alphanumeric codes)

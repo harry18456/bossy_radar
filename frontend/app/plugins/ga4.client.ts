@@ -3,7 +3,6 @@ export default defineNuxtPlugin((_nuxtApp) => {
   const gaId = config.public.googleAnalyticsId
 
   if (!gaId) {
-    console.warn('Google Analytics 4 ID not found')
     return
   }
 
@@ -16,14 +15,9 @@ export default defineNuxtPlugin((_nuxtApp) => {
 
   if (import.meta.dev) {
     // Mock mode for Development
-    console.log('[GA4] running in Dev Mode (events will be logged to console)')
-    gtag = (...args: any[]) => {
-      console.log('[GA4 Event]:', ...args)
-    }
+    gtag = () => {}
   } else {
     // Real mode for Production
-    console.log('[GA4] Initializing Production Mode with ID:', gaId)
-    
     // Use useHead to inject the script tag
     useHead({
       script: [

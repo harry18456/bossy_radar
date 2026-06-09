@@ -15,12 +15,11 @@ import type {
 
 export const useApi = () => {
   const config = useRuntimeConfig()
-  const mode = config.public.dataMode
+  const mode = String(config.public.dataMode || '').trim()
 
   // Dynamic API Implementation (Original)
   const useDynamicApi = () => {
     const baseURL = config.public.apiBase as string
-    console.log('[useApi] Dynamic mode, baseURL:', baseURL)
     const { $toast } = useNuxtApp()
 
     const api = $fetch.create({
@@ -62,9 +61,8 @@ export const useApi = () => {
   }
 
   // Switch based on mode
-  if (mode === 'static') {
-    return useStaticApi()
-  } else {
+  if (mode === 'dynamic') {
     return useDynamicApi()
   }
+  return useStaticApi()
 }
