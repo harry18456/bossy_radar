@@ -121,10 +121,15 @@ export default defineNuxtConfig({
     plugins: [tailwindcss()],
   },
   nitro: {
+    // Force pure static SSG. Without this, Nitro auto-detects the `vercel-static`
+    // preset inside Vercel's build container and writes to `.vercel/output/static`,
+    // which mismatches vercel.json `outputDirectory: .output/public` and drops
+    // company-page chunks. Explicit preset overrides the auto-detection.
+    preset: "static",
     prerender: {
       failOnError: true,
       // Pre-render all company detail pages for SEO and crawler accessibility
-      routes: getCompanyUrls(),
+      routes: ["/sitemap.xml", ...getCompanyUrls()],
       // Ignore invalid company routes (non-alphanumeric codes)
       ignore: [/^\/companies\/[^A-Za-z0-9/]+$/],
     },
