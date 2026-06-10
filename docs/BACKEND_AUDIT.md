@@ -10,6 +10,23 @@
 
 ---
 
+## 🔁 第二輪複查（2026-06-10）
+
+> 對照當前程式碼重新對抗式驗證。後端 remediation（changes 3-9）**尚未動工**。
+
+**仍成立（逐項確認，零修復、零誤判）**：H1/H2（latent，API 未公開）、H3 `retries=-1` 無限重試、H4 export 非原子 rmtree、H5 空 `disposition_no` 重插、H6 零 `UniqueConstraint`、M4/M5 MOPS 半寫/維護頁快取、M6/M7 無 WAL/busy_timeout/FK PRAGMA、M8 只 `create_all`、M11 CLI 假性成功 exit 0。**程式碼與報告完全一致。**
+
+**新發現（本輪，報告原本遺漏）**
+- 🟠 **NF1 [Medium] `export_yearly_summaries` 已「實際」drift（非僅「會」）**（`export_service.py:194-408` vs `aggregation.py:107-419`）：route 端受 `include_violations/...` 控制（未 include 的表不查），export 端**無 include 概念、永遠查全部 6 表並全塞入** → SSG 靜態 JSON 與帶 `include` 的 API 回應形狀不一致。報告 H8 只說「會 drift」，此為已發生的具體實例。修法同 H8：抽單一共用組裝函式（參數含 include 集合），route 與 exporter 共用。
+- 🟠 **NF2 [Medium] leaderboard `bottom_by_*` 榜語意錯誤（route + export 同源）**（`export_service.py:707-772`、`leaderboard.py:291-308`）：`bottom_by_count` 取的是「被 `limit*2` 截斷的 top 池**尾端** 10 名」而非全體真正最後 10 名。修法：bottom 榜獨立查 `order by count asc`，勿從 top 池尾端切。
+- 🟠 **NF3 [Medium] `sync-mops` 例外不 rollback → session 連環污染**（`mops_scraper.py:149-170`）：例外被 per-(year,market) `except continue` 吞掉後，共用 `session`/`archive_session` **從未 rollback**；若例外發生在 flush 後，下個市場查詢丟 `PendingRollbackError`，導致該 source **後續所有年度/市場連環失敗**，CLI 仍印 completed（複合 M11）。比 M4 更嚴重的並發/狀態風險。修法：`except` 內對兩 session `rollback()`，或每 (year,market) 用獨立 session/savepoint。
+- ⚖️ **NF4 [Medium→法律暴露] M1/M2 違規歸屬被低估**：把 A 公司違規掛到 B 公司，對指名公布違規的平台是**妨害名譽**法律風險，非單純技術 medium。資料完整性 change #5 修的是「不重複插入」，**不修「不掛錯公司」**。建議升優先級、獨立成 change（見 REMEDIATION_PLAN）。
+- 🟡 **NF5 [Low] 確認**：scripts/ 6 個打 live 政府站的探索腳本仍在版控（= L22）；MOENV_API_KEY 入 query string（latent log 洩漏，gov API 限制，記載即可）。
+
+**乾淨確認**：無硬編碼 secret、`.env` 從未被 commit、`*.db` 從未被 commit、依賴版本無已知 CVE。
+
+---
+
 ## 整體判斷
 
 **做得好的部分（已驗證）**
@@ -101,13 +118,13 @@
 
 ## 🟠 Medium（驗證後）
 
-### [ ] M1. branch-prefix 比對回傳「第一個」startswith 命中（非確定性、錯誤連結）
+### [ ] M1. branch-prefix 比對回傳「第一個」startswith 命中（非確定性、錯誤連結）⚖️ 第二輪升級：法律暴露（妨害名譽），見複查 NF4
 - **位置**：`company_matcher.py:97-101`，**同邏輯複製於** `violation_service.py:170-175`、`mops_scraper.py:758-762`（共 3 處）
 - **問題**：`self.branch_list` 以 raw DB row 序建立（無 order_by），回傳第一個 name 是輸入前綴者，無最長前綴、無邊界字、無 tie-break。兩公司全名互為前綴時，連到哪家取決於 DB 順序、跨 DB 重建會變。
 - **影響**：公開違規歸屬平台上，違規可能被默默掛到錯誤上市公司，且 run-to-run 不穩定。
 - **修法**：選所有候選中**最長前綴**（並要求前綴後有 廠/分公司/營業所 等邊界字，或多個 code 符合時拒絕）；去重成單一實作，其他處委派 `CompanyMatcher`。
 
-### [ ] M2. 董事長/負責人姓名比對可把個人違規錯掛到上市公司
+### [ ] M2. 董事長/負責人姓名比對可把個人違規錯掛到上市公司 ⚖️ 第二輪升級：法律暴露（妨害名譽），見複查 NF4
 - **位置**：`company_matcher.py:103-119`（Level-4 fallback）；勞動路徑實作於 `violation_service.py:177-182`
 - **問題**：Level 4 拿違規 `company_name` 直接比對 chairman map，唯一候選即連結。勞動違規「事業單位名稱或負責人」欄常是個人姓名且**完全不抽 tax_id**，若該人名恰為某上市公司唯一董事長 → 違規被掛到該公司。唯一守門只有「chairman 字串唯一」。
 - **影響**：sole-proprietor/個人違規被誤掛上市公司，誹謗級資料完整性風險。

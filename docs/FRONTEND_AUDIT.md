@@ -10,6 +10,26 @@
 
 ---
 
+## 🔁 第二輪複查（2026-06-10）
+
+> 對照當前程式碼重新對抗式驗證。`frontend-ssg-correctness-and-headers`（commit `fc6478b`）已實作並 archive。
+
+**已修復（fc6478b，待重新部署生效）** — 經實際讀 code 確認修對、無回歸：
+- **H2** 首頁 leaderboards 改 SSG：`index.vue:21-24` 已移除 `server:false`/`ClientOnly`，實測 `.output/public/index.html` 含真實排行榜連結（`/companies/2619` 等）。
+- **H4** `failOnError:true`（`nuxt.config.ts:125`）+ CI 新增 `npm run generate` 會擋壞 build。
+- **H5** `dataMode` 預設改 static（`nuxt.config.ts:8-11` + `.env.example`）。
+- **M8** AdSense loader 改條件注入 guard（`nuxt.config.ts:88-97`）。
+- **L15** IndustryEps `console.log` 已清；**L2** footer rel **僅 index.vue 擴充連結修了**（footer 自身仍缺，見下 NF3）。
+
+**仍成立（尚未動工，逐項確認）**：C1 / H1 / M1 / M2 watchlist 41MB + 分頁契約 bug（`page_size`/`limit`）、H3 autocomplete ARIA、M4 無 `error.vue`、M5/M6/M7 a11y、M9/M11 型別安全 — 全部仍在，零誤判。
+
+**新發現（本輪，報告原本遺漏）**
+- ✅ **NF1 [HIGH]（已修，change 0 `frontend-csp-hardening`，待部署）`vercel.json` CSP 形同虛設**（`frontend/vercel.json:25-27`）：CSP 只有 `object-src 'none'; base-uri 'self'; frame-ancestors 'self'`，**缺 `default-src` 與 `script-src`** → 未列出的 `script-src` 完全不受限，等於允許任意來源 / inline script。fc6478b 自稱補的「所有 stored-XSS 的最後防線」實際**未建立**，且 REMEDIATION_PLAN 完成判準抓不到此半套修復。修法：補明確 `script-src 'self' https://pagead2.googlesyndication.com https://www.googletagmanager.com …` + `connect-src`/`frame-src`，先盤點 AdSense/GA 網域避免擋廣告，最好以 nonce 取代 inline。**重新部署前處理。**
+- ✅ **NF2 [Low]（已修，change 0）生產 console 殘留**（`AdSenseUnit.vue:37,53`、`useStaticApi.ts:27/49/58`、`stores/company.ts:23`）：fc6478b 只清了 IndustryEps/GA4，AdSense 重試/錯誤路徑仍會印。包 `import.meta.dev` 守衛或移除。
+- ✅ **NF3 [Low]（已修，change 0）footer 外連缺 `rel="noopener noreferrer"`**（`AppFooter.vue:142,146`，= 報告 L2，change 0 已補）。
+
+---
+
 ## 整體判斷
 
 **做得好的部分（已驗證）**
@@ -60,7 +80,7 @@
 - **問題**：`api.getCompanies({ company_code, page_size: watchedCodes.length })`。static 與 backend 都只認 `size`（`page_size` 全前端僅此一處、無人讀）。`Number(undefined)||20` → 預設 20。`hydrateCompanies` 整批替換 `_companies`，grid、`sortedComparison`、比較表、salary/EPS/radar 圖全被截斷成 20，但 header 仍顯示「共追蹤 N 間」。dynamic 模式同樣壞（且硬上限 100）。
 - **修法**：改傳 `size: watchedCodes.length`；以明確 company_code 清單抓取時應跳過分頁回傳全部；用 typed param 介面防再漂移。
 
-### [ ] H2. 首頁 leaderboards 用 `server:false` → SSG 預渲染首頁 ship 空白排行榜
+### [x] H2. 首頁 leaderboards 用 `server:false` → SSG 預渲染首頁 ship 空白排行榜 ✅ 已修（fc6478b，待部署）
 - **面向**：pages-routing（seo）
 - **位置**：`app/pages/index.vue:21-25`
 - **問題**：首頁是 SEO/行銷入口，唯一資料（violation/salary 排行）用 `useAsyncData(..., { server:false })` 抓，且每個排行榜區塊再包 `<ClientOnly>`。**實測**已產出的 `.output/public/index.html` 只含骨架占位、**零真實資料**（無 `台塑石化`、無 `/companies/6505` 連結）。爬蟲與無 JS 使用者看到空白，首屏有 empty→populated 閃動。`leaderboards.json` 是環境無關的本地檔，可在 build time 讀取。
@@ -73,14 +93,14 @@
 - **影響**：公開資訊平台的主要搜尋功能對報讀器使用者實質不可用。
 - **修法**：補完整 combobox ARIA（role/aria-* 如上）、input 給 id 連 label、加 `aria-live` 結果數區域。
 
-### [ ] H4. `nitro.prerender.failOnError:false` 靜默出貨壞掉/不完整的 SSG 站
+### [x] H4. `nitro.prerender.failOnError:false` 靜默出貨壞掉/不完整的 SSG 站 ✅ 已修（fc6478b）
 - **面向**：config / reliability
 - **位置**：`nuxt.config.ts:115-122`
 - **問題**：`getCompanyUrls()` 餵 ~2615 條 `/companies/{code}` 進 prerender；任一頁渲染丟例外（缺檔/壞 JSON/fetch 失敗）時，Nuxt 只 warn 並繼續、**exit 0**。**驗證** nitropack 原始碼：只有 `failOnError===true` 才會 throw。CI（`.github/workflows/ci.yml`）只跑 eslint、不跑 `nuxt generate` → prerender 失敗永不被發現。
 - **影響**：一筆壞匯出記錄或暫時錯誤 → 公開站缺頁/空頁、零建置訊號、爬蟲索引死頁。
 - **修法**：`failOnError:true`（或 prod/CI build gate）；若有少數已知壞 route 要容忍，明確從 routes 過濾而非全域吞錯。
 
-### [ ] H5. `dataMode` 預設 `'dynamic'` 但 production 需 `'static'` → 缺 env 出貨錯模式
+### [x] H5. `dataMode` 預設 `'dynamic'` 但 production 需 `'static'` → 缺 env 出貨錯模式 ✅ 已修（fc6478b）
 - **面向**：config / reliability
 - **位置**：`nuxt.config.ts:44`
 - **問題**：`dataMode: process.env.NUXT_PUBLIC_DATA_MODE || 'dynamic'`。production 是 SSG/static（兩份 CLAUDE.md + 作者本地 `.env`），但 **committed `.env.example` 是空值** → 解析為 `dynamic` → `useDynamicApi` 打 `apiBase` 預設 `http://localhost:8000`。乾淨 checkout / 新 CI / 新貢獻者的 build 全指向 localhost，全站資料呼叫失敗。作者本地 `.env`（gitignored）正確，所以自己沒踩到。
@@ -133,7 +153,7 @@
 - **問題**：四 tab（基本資料/薪資趨勢/違規紀錄/員工福利）是 `<nav aria-label="Tabs">` 內純 button + v-if panel，無 `role=tablist/tab/tabpanel`、無 `aria-selected`、無 roving tabindex、無方向鍵。button 仍可聚焦/Enter 觸發、文字會被報讀，故非 blocker，但 active 狀態與 tab 語意缺失。
 - **修法**：套 WAI-ARIA tabs（tablist/tab/tabpanel + aria-selected + tabindex + Left/Right 方向鍵）。
 
-### [ ] M8. AdSense loader 無條件注入、env 缺時送 `client=undefined`
+### [x] M8. AdSense loader 無條件注入、env 缺時送 `client=undefined` ✅ 已修（fc6478b）
 - **面向**：config（reliability）/ performance / security（consent）
 - **位置**：`nuxt.config.ts:84-89`
 - **問題**：`app.head.script` 無守衛地注入 `adsbygoogle.js?client=${process.env...}`，直接讀 `process.env`（非 runtimeConfig 的 `|| ""` fallback）。env 未設時 ship `client=undefined`，每頁一個壞的跨域請求。對照 GA4（`ga4.client.ts` 有 `if(!gaId) return`）與 `AdSenseUnit.vue`（守 `adClient`），唯獨此 loader 無守衛、也無 consent gating。

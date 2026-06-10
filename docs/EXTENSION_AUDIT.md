@@ -10,6 +10,21 @@
 
 ---
 
+## 🔁 第二輪複查（2026-06-10）
+
+> 對照當前程式碼重新對抗式驗證。擴充 remediation（changes 6-7）**尚未動工**。注意實際檔案在子目錄（`content-scripts/`、`background/`），行號與報告扁平路徑略有差異。
+
+**仍成立（逐項確認，零修復、零誤判）**：H1/H2/H3 三個 `innerHTML` XSS sink（`content-scripts/main.js:356/408/411`）、M1 無 escape 層、M2 `custno=` 不限 domain 且 P3 最高（`interceptor.js:148-181`）、M3 SW 無 schema 驗證、L2/L3/L4/L6/L7/L8/L10/L11/L14 — 全部仍在。
+- 關鍵釐清：`57be302`/`276ffed` 兩 commit 都在報告基準（6-07）**之前**，未影響 M2 判定；`is104Domain` 只守 response body（P2），**不守 URL param（P3）**，M2 攻擊面完整保留。
+- 出貨完整性複核通過：`manifest.json` 當前 `0.3.4`，與 `store/bossy-radar-0.3.4.zip` **逐檔一致**、無版本漂移；所有 zip 已 gitignore、未被 git 追蹤（L14 的「git 追蹤殘留」已不成立，僅剩本地磁碟雜物）。
+
+**新發現（本輪，較報告更廣）**
+- 🟠 **NF1 [Medium] 隱私政策矛盾範圍比 M4 更廣**（`PRIVACY_POLICY.md` vs `content-scripts/main.js:161-243` `fetchTaxIdBySlug`）：政策只承認「在職缺頁透過 104 API 取統編」，但實際會**主動 fetch 104 的 `/company/ajax/content|summary/{slug}`、甚至 fallback 抓整頁 company HTML，且帶使用者已登入的 104 session cookie**，範圍超出政策宣稱。屬 Web Store「準確揭露」下架風險。修法：政策揭露 per-company 請求 + `fetchTaxIdBySlug` 主動帶 cookie 探測。
+- 🟡 **NF2 [Low] `fetchTaxIdBySlug` HTML fallback 無上限/timeout**（`main.js:230-240`）：`await htmlRes.text()` 對整頁 104 HTML 無 `Content-Length`/timeout/Content-Type 守衛，直接跑 regex。加 `AbortSignal.timeout`、限制讀取大小。
+- 🟡 **NF3 [Low] `extension/CLAUDE.md` 仍描述已移除的 `dispatched=true` latch**（= L5）：`57be302` 已改 priority 系統，但文件未更新，會誤導後續 AI agent 的威脅模型評估。
+
+---
+
 ## 整體判斷
 
 **做得好的部分（已驗證）**

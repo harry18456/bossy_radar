@@ -7,6 +7,22 @@
 
 ---
 
+## 🔁 第二輪複查（2026-06-10）
+
+> `frontend-ssg-correctness-and-headers`（commit `fc6478b`）已實作。以下對照原始碼修復狀態。**注意：LIVE_RECON 是對線上站勘查，原始碼修復須重新 `npm run generate` + Vercel 部署後才在生產生效。**
+
+| §2 生產發現 | 修復狀態 | 證據 |
+|---|---|---|
+| 首頁預渲染空白 | **已修（待部署）** | `index.vue` 移除 ClientOnly/`server:false`，預渲染 HTML 已含排行榜資料 |
+| console.log 外洩（IndustryEps 5 行） | **已修（待部署）** | `IndustryEps.vue` 5 處 console 全刪 |
+| GA4 ID 印 console | **已修（待部署）** | `ga4.client.ts` dev 改 `gtag=()=>{}`，全檔 0 console |
+| 缺安全標頭 | **已修（待部署）** | `vercel.json` 補了 X-Content-Type-Options/Referrer-Policy/Permissions-Policy/X-Frame-Options；CSP 於 change 0 補完整 script-src allowlist（見下，已解決）|
+| watchlist 41MB（FE H1） | **未修** | fc6478b 未觸碰；仍 Critical |
+
+**✅ 已由 change 0 `frontend-csp-hardening` 修正（待部署）。** 原始發現（⚠️ §4 自稱的「XSS 最後防線」名實不符）：`vercel.json:25-27` 的 CSP 原本只有 `object-src 'none'; base-uri 'self'; frame-ancestors 'self'`，**缺 `default-src`/`script-src`** → script 來源完全不受限。§4 把「補安全標頭」定位為「所有 stored-XSS 發現的最後防線」，但這道防線實際**未建立**。需在重新部署前補完整 `script-src`（self + 列明的 AdSense/GA 網域，最好 nonce 取代 inline），並先盤點廣告網域避免擋廣告（§4 自己也叮囑了這點）。
+
+---
+
 ## 1. 部署現況（最重要的重排訊號）
 
 | 事實 | 證據 |
