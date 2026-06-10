@@ -24,7 +24,9 @@ export const useStaticApi = () => {
     try {
       ssrOrigin = useRequestURL().origin
     } catch {
-      console.warn('[useStaticApi] Could not capture request origin synchronously')
+      if (import.meta.dev) {
+        console.warn('[useStaticApi] Could not capture request origin synchronously')
+      }
     }
   }
   
@@ -46,7 +48,9 @@ export const useStaticApi = () => {
           const content = await fs.readFile(filePath, 'utf-8')
           return JSON.parse(content)
         } catch (err) {
-          console.warn(`[StaticApi] FS read failed for ${path}, falling back to fetch.`, err)
+          if (import.meta.dev) {
+            console.warn(`[StaticApi] FS read failed for ${path}, falling back to fetch.`, err)
+          }
         }
       }
 
@@ -55,7 +59,9 @@ export const useStaticApi = () => {
       }
       return await $fetch<T>(`/data/${path}`)
     } catch (e) {
-      console.error(`Failed to fetch static data: ${path}`, e)
+      if (import.meta.dev) {
+        console.error(`Failed to fetch static data: ${path}`, e)
+      }
       $toast?.error('無法讀取靜態資料，請稍後再試')
       throw e
     }

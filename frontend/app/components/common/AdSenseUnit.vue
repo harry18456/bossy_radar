@@ -34,7 +34,6 @@ onMounted(() => {
         try {
           // Check visibility (offsetParent is null if display:none) and width
           if (adElement.value.offsetParent === null || adElement.value.offsetWidth === 0) {
-            console.warn(`[AdSense] Ad container hidden or 0 width (Attempt ${retryCount + 1}/${maxRetries}). Retrying...`)
             if (retryCount < maxRetries) {
               retryCount++
               setTimeout(pushAd, 500)
@@ -50,7 +49,7 @@ onMounted(() => {
           if (e?.message?.includes('All \'ins\' elements')) {
              // pass
           } else {
-            console.error('[AdSense] Unexpected error:', e);
+            // Ignore unexpected AdSense runtime errors in production.
           }
         }
       }

@@ -139,11 +139,11 @@ const aggregatedStatus = computed(() => {
         <div class="flex items-center space-x-3 text-xs text-gray-500 dark:text-slate-400">
           <span>v{{ config.public.appVersion }} ({{ dataModeLabel }})</span>
           <span class="border-l border-gray-300 dark:border-slate-700 h-3"/>
-          <a href="https://buymeacoffee.com/harry18456" target="_blank" class="text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors" title="請我喝杯咖啡">
+          <a href="https://buymeacoffee.com/harry18456" target="_blank" rel="noopener noreferrer" class="text-yellow-600 dark:text-yellow-500 hover:text-yellow-700 dark:hover:text-yellow-400 transition-colors" title="請我喝杯咖啡">
             <Icon name="simple-icons:buymeacoffee" class="w-3.5 h-3.5" />
           </a>
           <span class="border-l border-gray-300 dark:border-slate-700 h-3"/>
-          <a href="https://github.com/harry18456/bossy_radar" target="_blank" class="text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white transition-colors">
+          <a href="https://github.com/harry18456/bossy_radar" target="_blank" rel="noopener noreferrer" class="text-gray-500 hover:text-gray-900 dark:text-slate-400 dark:hover:text-white transition-colors">
             <Icon name="lucide:github" class="w-3.5 h-3.5" />
           </a>
         </div>

@@ -20,7 +20,9 @@ export const useCompanyStore = defineStore('company', () => {
       catalog.value = data
       lastFetched.value = Date.now()
     } catch (error) {
-      console.error('Failed to fetch company catalog:', error)
+      if (import.meta.dev) {
+        console.error('Failed to fetch company catalog:', error)
+      }
     } finally {
       isLoading.value = false
     }

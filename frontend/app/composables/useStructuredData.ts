@@ -20,6 +20,8 @@ interface LocalBusinessSchema {
   address?: string
 }
 
+const serializeJsonLd = (schema: unknown) => JSON.stringify(schema).replace(/</g, '\\u003c')
+
 /**
  * Composable for injecting JSON-LD structured data into the page head.
  * This helps Google Search Console understand the content of your pages.
@@ -51,7 +53,7 @@ export const useStructuredData = () => {
       script: [
         {
           type: 'application/ld+json',
-          innerHTML: JSON.stringify(schema),
+          innerHTML: serializeJsonLd(schema),
         } as Script
       ]
     })
@@ -74,7 +76,7 @@ export const useStructuredData = () => {
       script: [
         {
           type: 'application/ld+json',
-          innerHTML: JSON.stringify(schema),
+          innerHTML: serializeJsonLd(schema),
         } as Script
       ]
     })
@@ -100,7 +102,7 @@ export const useStructuredData = () => {
       script: [
         {
           type: 'application/ld+json',
-          innerHTML: JSON.stringify(schema),
+          innerHTML: serializeJsonLd(schema),
         } as Script
       ]
     })
@@ -125,7 +127,7 @@ export const useStructuredData = () => {
       script: [
         {
           type: 'application/ld+json',
-          innerHTML: JSON.stringify(schema),
+          innerHTML: serializeJsonLd(schema),
         } as Script
       ]
     })
