@@ -154,3 +154,9 @@ npm run lint:fix
     ```
 
 > **注意**：每次更新資料或程式碼時，都需重複步驟 2 與 3。
+
+> ⚠️ **部署踩雷防呆（務必遵守）**
+> 1. **勿移除** `nuxt.config.ts` 的 `nitro.preset: "static"`。Vercel 雲端 build 會自動把 `nuxt generate` 切成 `vercel-static` preset（輸出到 `.vercel/output`），與 `outputDirectory: .output/public` 不一致，導致公司頁 `_nuxt` chunk 全部 404、無法 hydration（tab/圖表失效）。`preset: "static"` 強制純 SSG 輸出、壓過自動偵測。
+> 2. **勿執行 `rm -rf .vercel`**。這會清掉專案連結，下次 `vercel deploy` 會誤連/誤建到別的專案（例如名為 `frontend` 的新專案），www 不會更新。若已誤連，用 `npx vercel link --yes --project bossy-radar` 修回，並確認 `.vercel/project.json` 的 `projectName` 是 `bossy-radar`。
+> 3. **部署後務必確認** CLI 回傳的 Production 網址前綴是 `bossy-radar-…`（不是 `frontend-…`），並隨機開一個公司頁（如 `/companies/2330`）確認 tab 能切換、圖表會出現。
+> 4. Windows 上若 `npx vercel deploy --archive=tgz` 報路徑錯誤（`~\…\D:\…` 之類），改用 **PowerShell**（`Set-Location <frontend 絕對路徑>; npx vercel deploy …`）避開 Git Bash 的路徑轉譯 bug。
