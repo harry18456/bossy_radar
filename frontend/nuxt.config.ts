@@ -113,6 +113,17 @@ export default defineNuxtConfig({
   colorMode: {
     classSuffix: "",
   },
+  icon: {
+    // SSG: bundle icons into the client so hydration-time icon swaps work offline.
+    // e.g. the watchlist heart toggles lucide:heart <-> heroicons:heart-20-solid on
+    // hydration; without a client bundle the static site has no /api/_nuxt_icon
+    // endpoint and the runtime iconify fetch fails, leaving the heart blank/outline.
+    clientBundle: {
+      scan: true,
+      icons: ["heroicons:heart-20-solid", "lucide:heart"],
+      sizeLimitKb: 512,
+    },
+  },
   sitemap: {
     urls: getCompanyUrls(),
     exclude: ["/privacy", "/data-sources"],
