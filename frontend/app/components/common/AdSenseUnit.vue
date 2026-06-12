@@ -58,8 +58,8 @@ onMounted(() => {
     // Lazy load using Intersection Observer
     const { stop } = useIntersectionObserver(
       adElement,
-      async ([{ isIntersecting }]) => {
-        if (isIntersecting) {
+      async (entries) => {
+        if (entries[0]?.isIntersecting) {
           stop()
           await nextTick()
           requestAnimationFrame(() => {

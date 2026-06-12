@@ -99,13 +99,13 @@ const industryData = computed(() => ({
   datasets: [
     {
       label: "公司平均",
-      data: sortedStats.value.map((s) => s.avg_salary),
+      data: sortedStats.value.map((s) => s.avg_salary ?? null),
       backgroundColor: "#3b82f6",
       borderRadius: 4,
     },
     {
       label: "同業平均",
-      data: sortedStats.value.map((s) => s.industry_avg_salary),
+      data: sortedStats.value.map((s) => s.industry_avg_salary ?? null),
       backgroundColor: "#94a3b8",
       borderRadius: 4,
     },

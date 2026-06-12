@@ -81,7 +81,7 @@ const employeeData = computed(() => ({
   datasets: [
     {
       label: "員工人數",
-      data: sortedStats.value.map((s) => s.employee_count),
+      data: sortedStats.value.map((s) => s.employee_count ?? null),
       borderColor: "#6366f1",
       backgroundColor: "rgba(99, 102, 241, 0.1)",
       fill: true,
@@ -102,7 +102,7 @@ const disparityOptions = computed<ChartOptions<"line">>(() => ({
       callbacks: {
         label: (context) => {
           const value = context.parsed.y;
-          const status = value > 100 ? "高薪集中" : "分布均勻";
+          const status = (value ?? 0) > 100 ? "高薪集中" : "分布均勻";
           return `差距: ${value?.toLocaleString() ?? "-"} 仟元 (${status})`;
         },
       },

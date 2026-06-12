@@ -10,7 +10,8 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix"
+    "lint:fix": "eslint . --fix",
+    "test": "vitest run"
   },
   "dependencies": {
     "@nuxt/icon": "^2.2.1",
@@ -36,6 +37,9 @@
     "@iconify-json/lucide": "^1.2.87",
     "@nuxt/eslint": "^1.15.1",
     "@types/node": "^25.1.0",
-    "eslint": "^9.39.2"
+    "eslint": "^9.39.2",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8",
+    "vue-tsc": "^3.3.4"
   }
 }

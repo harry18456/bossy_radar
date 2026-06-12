@@ -94,7 +94,12 @@ const radarData = computed(() => {
         item.company_name.length > 6
           ? item.company_name.substring(0, 6) + "..."
           : item.company_name,
-      data: [normSalary[i], normMedian[i], normEps[i], normViolations[i]],
+      data: [
+        normSalary[i] ?? null,
+        normMedian[i] ?? null,
+        normEps[i] ?? null,
+        normViolations[i] ?? null,
+      ],
       fill: true,
       backgroundColor: `${colors[i % colors.length]}20`,
       borderColor: colors[i % colors.length],

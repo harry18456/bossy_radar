@@ -1,7 +1,9 @@
-import type { 
-  Company, 
-  CompanyProfile, 
-  PaginatedResponse, 
+import type {
+  Company,
+  CompanyListParams,
+  CompanyProfile,
+  PaginatedResponse,
+  YearlySummaryParams,
   YearlySummaryResponse,
   YearlySummaryIndex,
   EmployeeBenefit,
@@ -55,9 +57,9 @@ export const useStaticApi = () => {
       }
 
       if (import.meta.server && ssrOrigin) {
-        return await $fetch<T>(`/data/${path}`, { baseURL: ssrOrigin })
+        return await $fetch(`/data/${path}`, { baseURL: ssrOrigin }) as T
       }
-      return await $fetch<T>(`/data/${path}`)
+      return await $fetch(`/data/${path}`) as T
     } catch (e) {
       if (import.meta.dev) {
         console.error(`Failed to fetch static data: ${path}`, e)
@@ -88,12 +90,11 @@ export const useStaticApi = () => {
 
   return {
     // Companies (Client-side Search from Catalog)
-    getCompanies: async (params?: any) => {
+    getCompanies: async (params?: CompanyListParams) => {
       let items = await fetchJson<CompanyCatalog[]>('company-catalog.json')
-      
-      // Filter by company codes (used by watchlist)
-      // Support both 'company_code' (matching backend API) and 'code' (backwards compat)
-      const codeFilter = params?.company_code || params?.code
+
+      // Filter by company codes (matching the backend API contract)
+      const codeFilter = params?.company_code
       if (codeFilter) {
         const codes = Array.isArray(codeFilter) ? codeFilter : [codeFilter]
         const validCodes = codes.filter((c: string) => c !== '')
@@ -104,8 +105,7 @@ export const useStaticApi = () => {
       }
       
       // Filter Logic
-      // Check for 'name' (used by companies page) or 'keyword' (fallback)
-      const search = params?.name || params?.keyword
+      const search = params?.name
       if (search) {
         const k = search.toLowerCase()
         items = items.filter(c => 
@@ -121,7 +121,7 @@ export const useStaticApi = () => {
         const validIndustries = industries.filter((i: string) => i !== '')
         
         if (validIndustries.length > 0) {
-           items = items.filter(c => validIndustries.includes(c.industry))
+           items = items.filter(c => c.industry != null && validIndustries.includes(c.industry))
         }
       }
       
@@ -151,7 +151,7 @@ export const useStaticApi = () => {
 
       // Sorting Logic
       if (params?.sort) {
-        const sortKey = params.sort as string
+        const sortKey = params.sort
         const isDesc = sortKey.startsWith('-')
         const key = isDesc ? sortKey.substring(1) : sortKey
         
@@ -177,7 +177,7 @@ export const useStaticApi = () => {
         last_updated: new Date().toISOString()
       } as unknown as Company))
 
-      return paginate(companyItems, Number(params?.page) || 1, Number(params?.size) || 20)
+      return paginate(companyItems, params?.page || 1, params?.size || 20)
     },
     
     getCompanyCatalog: () => 
@@ -196,7 +196,7 @@ export const useStaticApi = () => {
       }
     },
     
-    getYearlySummary: async (params?: any) => {
+    getYearlySummary: async (params?: YearlySummaryParams) => {
         const index = await fetchJson<{ years: number[] }>('yearly-summaries/index.json')
         
         // Determine which years to load

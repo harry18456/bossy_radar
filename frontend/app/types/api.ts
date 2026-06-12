@@ -214,6 +214,25 @@ export interface PaginatedResponse<T> {
   total_pages: number;
 }
 
+// Parameter contracts shared by the static and dynamic API implementations.
+// Both modes recognize `size` (never `page_size` / `limit`) — see
+// openspec/specs/frontend-company-list-pagination.
+export interface CompanyListParams {
+  page?: number;
+  size?: number;
+  name?: string;
+  sort?: string;
+  industry?: string[] | string;
+  market_type?: string[] | string;
+  company_code?: string[] | string;
+}
+
+export interface YearlySummaryParams {
+  year?: number[] | number;
+  company_code?: string[] | string;
+  include?: string[];
+}
+
 export interface CategorySyncStatus {
   last_updated: string | null;
   count: number;

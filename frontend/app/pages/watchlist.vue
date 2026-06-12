@@ -1,7 +1,13 @@
 <script setup lang="ts">
 import { useApi } from "~/composables/useApi";
 import { useWatchlistStore } from "~/stores/watchlist";
-import type { YearlySummaryItem } from "~/types/api";
+import { buildYearlySummaryItems } from "~/utils/yearlySummary";
+import type {
+  Company,
+  CompanyCatalog,
+  CompanyProfile,
+  YearlySummaryItem,
+} from "~/types/api";
 
 usePageMeta({
   title: "追蹤清單",
@@ -17,19 +23,31 @@ const watchedCodes = computed(() => watchlistStore.codes);
 // Get hydrated companies (populated after fetch)
 const companies = computed(() => watchlistStore.companies);
 
-// Fetch fresh company data from catalog and hydrate store
+// The catalog has no per-company timestamp; CompanyCard does not read it.
+const toCompanyDisplay = (item: CompanyCatalog): Company => ({
+  code: item.code,
+  name: item.name,
+  abbreviation: item.abbreviation,
+  market_type: item.market_type,
+  industry: item.industry,
+  capital: item.capital,
+  establishment_date: item.establishment_date,
+  listing_date: item.listing_date,
+  last_updated: "",
+});
+
+// Fetch fresh company data from catalog and hydrate store.
+// Filtering the full catalog avoids pagination contracts entirely, so the
+// watchlist is never truncated by a default page size.
 const { data: catalogData, status: catalogStatus } = await useAsyncData(
   "watchlist-catalog",
   async () => {
     if (watchedCodes.value.length === 0) return [];
 
-    // Fetch company catalog to get fresh company data
-    const response = await api.getCompanies({
-      company_code: watchedCodes.value,
-      page_size: watchedCodes.value.length,
-    });
+    const catalog = await api.getCompanyCatalog();
+    const watched = new Set(watchedCodes.value);
 
-    return response.items;
+    return catalog.filter((c) => watched.has(c.code)).map(toCompanyDisplay);
   },
   {
     watch: [watchedCodes],
@@ -49,26 +67,25 @@ watch(
   { immediate: true },
 );
 
-// Comparison Data
-const {
-  data: allComparisonData,
-  status,
-  refresh: _refresh,
-} = await useAsyncData(
+// Comparison Data: fetch one profile per watched company in parallel and
+// assemble yearly summary items client-side. Download volume scales with the
+// watchlist size instead of the whole yearly-summaries dataset.
+// allSettled keeps one failed profile from blanking the other companies.
+const { data: allComparisonData, status } = await useAsyncData(
   "watchlist-comparison",
   async () => {
     if (watchedCodes.value.length === 0) return [];
 
-    // Fetch data for these companies
-    const response = await api.getYearlySummary({
-      company_code: watchedCodes.value,
-      include: ["all"],
-    });
-
-    // Client-side filter to ensure we ONLY have data for companies currently in the watchlist
-    return response.items.filter((item) =>
-      watchedCodes.value.includes(item.company_code),
+    const results = await Promise.allSettled(
+      watchedCodes.value.map((code) => api.getCompanyProfile(code)),
     );
+
+    return results
+      .filter(
+        (r): r is PromiseFulfilledResult<CompanyProfile> =>
+          r.status === "fulfilled",
+      )
+      .flatMap((r) => buildYearlySummaryItems(r.value));
   },
   {
     watch: [watchedCodes],

@@ -90,7 +90,7 @@ export default defineNuxtConfig({
               {
                 src: `https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${googleAdSenseId}`,
                 async: true,
-                crossorigin: "anonymous",
+                crossorigin: "anonymous" as const,
                 tagPosition: "bodyClose" as const,
               },
             ]

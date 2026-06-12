@@ -60,8 +60,8 @@ export const useWatchlistStore = defineStore('watchlist', {
   persist: {
     // Only persist the codes array, not the hydrated companies
     pick: ['codes'],
-    // Use localStorage on client-side for persistence across browser restarts
-    // On server-side (SSR), this will fall back to cookies automatically
+    // Client-only persistence via localStorage. During SSR `storage` is
+    // undefined, so nothing is persisted or restored on the server.
     storage: typeof window !== 'undefined' ? localStorage : undefined
   }
 })

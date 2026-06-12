@@ -1,4 +1,4 @@
-import type { Script } from '@unhead/schema'
+import type { Script } from '@unhead/vue'
 
 interface WebSiteSchema {
   name: string

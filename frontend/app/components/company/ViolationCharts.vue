@@ -178,7 +178,7 @@ const areaChartOptions = computed<ChartOptions<"line">>(() => ({
       callbacks: {
         label: (context) => {
           const value = context.parsed.y;
-          return `${context.dataset.label}: ${value.toLocaleString()} 元`;
+          return `${context.dataset.label}: ${(value ?? 0).toLocaleString()} 元`;
         },
       },
     },

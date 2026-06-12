@@ -1,8 +1,10 @@
-import type { 
-  Company, 
-  CompanyProfile, 
-  PaginatedResponse, 
-  Violation, 
+import type {
+  Company,
+  CompanyListParams,
+  CompanyProfile,
+  PaginatedResponse,
+  Violation,
+  YearlySummaryParams,
   YearlySummaryResponse,
   EmployeeBenefit,
   NonManagerSalary,
@@ -39,10 +41,10 @@ export const useApi = () => {
     })
 
     return {
-      getCompanies: (params?: any) => api<PaginatedResponse<Company>>('/api/v1/companies/', { params }),
+      getCompanies: (params?: CompanyListParams) => api<PaginatedResponse<Company>>('/api/v1/companies/', { params }),
       getCompanyCatalog: () => api<CompanyCatalog[]>('/api/v1/companies/catalog'),
       getCompanyProfile: (companyCode: string) => api<CompanyProfile>(`/api/v1/companies/${companyCode}/profile`),
-      getYearlySummary: (params?: any) => api<YearlySummaryResponse>('/api/v1/companies/yearly-summary', { params }),
+      getYearlySummary: (params?: YearlySummaryParams) => api<YearlySummaryResponse>('/api/v1/companies/yearly-summary', { params }),
       getYearlySummaryIndex: async () => {
         // Fetch yearly summary without filters to get available years from backend
         const response = await api<YearlySummaryResponse>('/api/v1/companies/yearly-summary', { params: { size: 1 } })

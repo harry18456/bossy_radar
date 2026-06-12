@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useApi } from '~/composables/useApi'
 import { useCompanyFilters } from '~/composables/useCompanyFilters'
+import type { CompanyListParams } from '~/types/api'
 
 usePageMeta({
   title: '搜尋公司',
@@ -18,15 +19,18 @@ const {
 
 const api = useApi()
 
-// Computed parameters for API to ensure reactivity is tracked precisely
+// Computed parameters for API to ensure reactivity is tracked precisely.
+// `satisfies` keeps the literal under excess-property checking, so a wrong
+// key like page_size/limit fails compilation. (A computed<T> generic alone
+// does NOT catch excess keys returned from the getter callback.)
 const queryParams = computed(() => ({
   industry: [...(filters.industry || [])],
   market_type: [...(filters.market_type || [])],
   name: name.value,
   sort: sort.value,
   page: page.value,
-  limit: 12
-}))
+  size: 12
+} satisfies CompanyListParams))
 
 // Use useAsyncData with specific watcher on the computed params
 // Key includes stringified params to ensure unique caching/hydration and force update

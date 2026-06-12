@@ -64,7 +64,7 @@ const chartOptions = computed<ChartOptions<"bar">>(() => ({
       callbacks: {
         label: (context) => {
           const value = context.parsed.x;
-          return `${context.dataset.label}: ${value.toLocaleString()} 仟元`;
+          return `${context.dataset.label}: ${(value ?? 0).toLocaleString()} 仟元`;
         },
       },
     },

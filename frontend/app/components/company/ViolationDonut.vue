@@ -112,8 +112,8 @@ const donutOptions = computed(() => ({
         label: (context: any) => {
           const stats = articleStats.value[context.dataIndex];
           return [
-            `次數: ${stats[1].count}`,
-            `罰鍰: ${stats[1].fine.toLocaleString()} 元`,
+            `次數: ${stats?.[1].count ?? 0}`,
+            `罰鍰: ${(stats?.[1].fine ?? 0).toLocaleString()} 元`,
           ];
         },
       },

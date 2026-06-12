@@ -21,7 +21,7 @@
 - **M8** AdSense loader 改條件注入 guard（`nuxt.config.ts:88-97`）。
 - **L15** IndustryEps `console.log` 已清；**L2** footer rel **僅 index.vue 擴充連結修了**（footer 自身仍缺，見下 NF3）。
 
-**仍成立（尚未動工，逐項確認）**：C1 / H1 / M1 / M2 watchlist 41MB + 分頁契約 bug（`page_size`/`limit`）、H3 autocomplete ARIA、M4 無 `error.vue`、M5/M6/M7 a11y、M9/M11 型別安全 — 全部仍在，零誤判。
+**仍成立（尚未動工，逐項確認）**：~~C1 / H1 / M1 / M2 watchlist 41MB + 分頁契約 bug（`page_size`/`limit`）~~（已修，change 2 `frontend-watchlist-static-profile-loading`，2026-06-13）、H3 autocomplete ARIA、M4 無 `error.vue`、M5/M6/M7 a11y、M9/M11 型別安全（M11 的 getCompanies/getYearlySummary 已型別化，其餘 params:any 仍在）— 其餘仍在，零誤判。
 
 **新發現（本輪，報告原本遺漏）**
 - ✅ **NF1 [HIGH]（已修，change 0 `frontend-csp-hardening`，待部署）`vercel.json` CSP 形同虛設**（`frontend/vercel.json:25-27`）：CSP 只有 `object-src 'none'; base-uri 'self'; frame-ancestors 'self'`，**缺 `default-src` 與 `script-src`** → 未列出的 `script-src` 完全不受限，等於允許任意來源 / inline script。fc6478b 自稱補的「所有 stored-XSS 的最後防線」實際**未建立**，且 REMEDIATION_PLAN 完成判準抓不到此半套修復。修法：補明確 `script-src 'self' https://pagead2.googlesyndication.com https://www.googletagmanager.com …` + `connect-src`/`frame-src`，先盤點 AdSense/GA 網域避免擋廣告，最好以 nonce 取代 inline。**重新部署前處理。**
@@ -63,7 +63,7 @@
 
 ## 🔴 Critical（驗證後）
 
-### [ ] C1. watchlist 把全部年度摘要（~42-49MB JSON）載入瀏覽器只為顯示少數公司
+### [x] C1. watchlist 把全部年度摘要（~42-49MB JSON）載入瀏覽器只為顯示少數公司 ✅ 已修（change 2：改平行抓 per-company profile + 客戶端組裝，下載量與追蹤數成正比）
 - **面向**：performance
 - **位置**：`frontend/app/composables/useStaticApi.ts:193-223`（`getYearlySummary`），由 `pages/watchlist.vue:63-66` 呼叫
 - **問題**：watchlist 呼叫 `getYearlySummary({ company_code, include:['all'] })` **無 year 參數**，於是 `yearsToLoad = [...index.years]`（全部），對每年 `await fetchJson` 後 concat。**實測** `public/data/yearly-summaries/` 17 個檔共 ~42MB（107-114.json 各 ~5MB）。`company_code` 過濾在**載入全部之後**才做（zero download 節省）。即使只追蹤 1 間公司也下載整個歷史資料集。而且 `await` 在 for-loop 內 → 17 個 round-trip 序列化。
@@ -74,7 +74,7 @@
 
 ## 🔴 High（驗證後）
 
-### [ ] H1. watchlist 用 `page_size`（不存在的參數）→ >20 間追蹤公司被靜默截斷成 20
+### [x] H1. watchlist 用 `page_size`（不存在的參數）→ >20 間追蹤公司被靜默截斷成 20 ✅ 已修（change 2：卡片改 getCompanyCatalog 過濾，實測 25 間全顯示）
 - **面向**：data-fetching（high）/ pages-routing（medium）
 - **位置**：`frontend/app/pages/watchlist.vue:27-30`
 - **問題**：`api.getCompanies({ company_code, page_size: watchedCodes.length })`。static 與 backend 都只認 `size`（`page_size` 全前端僅此一處、無人讀）。`Number(undefined)||20` → 預設 20。`hydrateCompanies` 整批替換 `_companies`，grid、`sortedComparison`、比較表、salary/EPS/radar 圖全被截斷成 20，但 header 仍顯示「共追蹤 N 間」。dynamic 模式同樣壞（且硬上限 100）。
@@ -111,13 +111,13 @@
 
 ## 🟠 Medium（驗證後）
 
-### [ ] M1. companies 列表頁傳 `limit:12` 但兩模式都不讀 → 每頁顯示 20 而非 12
+### [x] M1. companies 列表頁傳 `limit:12` 但兩模式都不讀 → 每頁顯示 20 而非 12 ✅ 已修（change 2：size:12 + satisfies CompanyListParams，實測 12/頁、218 頁）
 - **面向**：data-fetching / pages-routing
 - **位置**：`app/pages/companies/index.vue:28`
 - **問題**：`queryParams` 含 `limit:12` 無 `size`。static `getCompanies` 用 `Number(params?.size)||20`；backend 用 `size`（FastAPI 丟棄 `limit`）。兩模式都 fallback 20。SSG production 顯示 20/頁，dynamic 顯示 12，內部不一致。
 - **修法**：統一參數名 `size:12`（或讓 static 把 `limit` 當 `size` 別名）。挑一套 param 契約給兩個 `useApi` 實作共用。
 
-### [ ] M2. `getYearlySummary` 無 year 參數時每次呼叫載入並 concat 全部年份檔
+### [x] M2. `getYearlySummary` 無 year 參數時每次呼叫載入並 concat 全部年份檔 ✅ 已修（change 2：watchlist 不再呼叫 getYearlySummary；該函式保留但已無呼叫端）
 - **面向**：data-fetching / performance
 - **位置**：`useStaticApi.ts:193-223`
 - **問題**：與 C1 同根，但泛指所有無 year 的呼叫。序列化 `await` for-loop、無 memoization、`company_code` 過濾在 load 之後。
@@ -192,7 +192,7 @@
 | [ ] L7 | `fetchJson` 吞錯後 rethrow，非 useAsyncData caller 可能未處理 rejection | `useStaticApi.ts:57-61` | 統一錯誤策略；`getYearlySummary` 的 index 讀加 fallback；console gate `import.meta.dev` |
 | [ ] L8 | Zod `filterSchema` 宣告卻從未 `.parse()`（文件謊稱有驗證） | `useCompanyFilters.ts:4-13` | 實際 `safeParse` URL query，失敗 fallback 預設 |
 | [ ] L9 | watchlist `_companies` 重載後對非 watchlist 頁的 consumer 為空（但 count 非零） | `stores/watchlist.ts` | persist 最小顯示投影，或從 catalog lazy hydrate |
-| [ ] L10 | persist `storage` 註解謊稱有 SSR cookie fallback | `stores/watchlist.ts:60-66` | 修正/移除註解 |
+| [x] L10 | persist `storage` 註解謊稱有 SSR cookie fallback ✅ 已修（change 2） | `stores/watchlist.ts:60-66` | 修正/移除註解 |
 | [ ] L11 | catalog cache 吞 fetch 錯誤、無 error state、無 stale-while-revalidate | `stores/company.ts:22-26` | 暴露 error ref；TTL 過期時背景 revalidate |
 | [ ] L12 | `formatDate` 用 `toLocaleDateString('zh-TW')`，時區依賴 + hydration mismatch | `utils/format.ts:18-29` | 用 UTC 元件或固定時區格式化（負時區訪客 off-by-one） |
 | [ ] L13 | `companies/[id].vue` 936 行 God component（兩段 ~140 行違規表格近重複） | `companies/[id].vue` | 抽 `<ViolationTable>`/`<WelfarePolicyCard>`；`isValidUrl`/`ensureProtocol` 移到 utils |
