@@ -1,8 +1,13 @@
+import logging
+from datetime import datetime
 from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
+from sqlmodel import select
 
-from app.services.mops_scraper import MopsScraper
+from app.models.non_manager_salary import NonManagerSalary
+from app.services.mops_scraper import DATA_SOURCES, MopsScraper
 
 
 @pytest.fixture
@@ -268,3 +273,206 @@ class TestMopsParser:
             mock_nms.assert_called_once()
             mock_wp.assert_called_once()
             mock_sa.assert_called_once()
+
+
+class TestMopsIntegrity:
+    """MOPS batch integrity, rollback, and cache validation (BACKEND_AUDIT M4/M5/NF3)."""
+
+    def test_bad_row_does_not_abort_batch(
+        self, scraper, test_session, seed_companies, caplog
+    ):
+        """A row that fails to build is skipped+logged; siblings still written."""
+        code_map = {"2330": "2330", "2317": "2317", "6510": "6510"}
+        name_map = {"台積電": "2330", "鴻海": "2317", "精測": "6510"}
+        records = [
+            {
+                "raw_company_code": "2330",
+                "company_name": "台積電",
+                "year": 113,
+                "market_type": "sii",
+                "avg_salary": 3000,
+            },
+            # Missing required `year` -> model construction raises -> skipped
+            {
+                "raw_company_code": "2317",
+                "company_name": "鴻海",
+                "market_type": "sii",
+                "avg_salary": 1200,
+            },
+            {
+                "raw_company_code": "6510",
+                "company_name": "精測",
+                "year": 113,
+                "market_type": "otc",
+                "avg_salary": 800,
+            },
+        ]
+
+        with caplog.at_level(logging.WARNING, logger="app.services.mops_scraper"):
+            written, skipped = scraper._upsert_data(
+                session=test_session,
+                archive_session=test_session,
+                records=records,
+                model_class=NonManagerSalary,
+                company_code_map=code_map,
+                company_name_map=name_map,
+                company_branch_map=[],
+            )
+
+        assert written == 2
+        assert skipped == 1
+        rows = test_session.exec(select(NonManagerSalary)).all()
+        assert {r.raw_company_code for r in rows} == {"2330", "6510"}
+        assert "2317" in caplog.text
+
+    def test_upsert_does_not_commit_mid_batch(self, scraper, test_session, monkeypatch):
+        """Commits are owned by the (year, market) caller, not _upsert_data."""
+        commits = {"n": 0}
+        monkeypatch.setattr(
+            test_session, "commit", lambda: commits.__setitem__("n", commits["n"] + 1)
+        )
+        records = [
+            {
+                "raw_company_code": f"X{i:04d}",
+                "company_name": f"C{i}",
+                "year": 113,
+                "market_type": "sii",
+                "avg_salary": i,
+            }
+            for i in range(600)
+        ]
+
+        written, skipped = scraper._upsert_data(
+            session=test_session,
+            archive_session=test_session,
+            records=records,
+            model_class=NonManagerSalary,
+            company_code_map={},
+            company_name_map={},
+            company_branch_map=[],
+        )
+
+        assert commits["n"] == 0
+        assert written == 600
+        assert skipped == 0
+
+    def test_failed_unit_rolls_back_both_sessions(
+        self, scraper, test_session, seed_companies, monkeypatch
+    ):
+        """First (year, market) raises after a flush; second still commits clean."""
+        calls = {"n": 0}
+
+        def fake_fetch(**kwargs):
+            calls["n"] += 1
+            sess = kwargs["session"]
+            if calls["n"] == 1:
+                sess.add(
+                    NonManagerSalary(
+                        raw_company_code="2330",
+                        company_name="台積電",
+                        year=113,
+                        market_type="sii",
+                        company_code="2330",
+                        avg_salary=111,
+                    )
+                )
+                sess.flush()
+                raise RuntimeError("boom in first unit")
+            sess.add(
+                NonManagerSalary(
+                    raw_company_code="2317",
+                    company_name="鴻海",
+                    year=113,
+                    market_type="otc",
+                    company_code="2317",
+                    avg_salary=222,
+                )
+            )
+            return (1, 0)
+
+        monkeypatch.setattr(scraper, "_fetch_and_process", fake_fetch)
+
+        result = scraper._sync_data_source(
+            "t100sb15",
+            [113],
+            ["sii", "otc"],
+            session=test_session,
+            archive_session=test_session,
+        )
+
+        rows = test_session.exec(select(NonManagerSalary)).all()
+        codes = {r.company_code for r in rows}
+        assert "2317" in codes, "second unit must commit after first rolled back"
+        assert "2330" not in codes, "first unit's flushed row must be rolled back"
+        assert result.success is False
+        assert result.rows_written == 1
+
+    def test_maintenance_page_not_cached_and_fails(self, tmp_path, test_session):
+        """A maintenance page is not cached and fails its unit (BACKEND_AUDIT M5)."""
+        scraper = MopsScraper(data_dir=tmp_path)
+        config = DATA_SOURCES["t100sb15"]
+
+        with patch("app.services.mops_scraper.httpx.Client") as mock_cls:
+            inst = mock_cls.return_value.__enter__.return_value
+            inst.post.return_value.text = "<html>服務暫時無法提供，請稍後再試</html>"
+            inst.post.return_value.raise_for_status = MagicMock()
+
+            with pytest.raises(ValueError):
+                scraper._fetch_and_process(
+                    source_key="t100sb15",
+                    config=config,
+                    year=113,
+                    market="sii",
+                    session=test_session,
+                    archive_session=test_session,
+                    company_code_map={},
+                    company_name_map={},
+                    company_branch_map=[],
+                )
+
+        assert list(tmp_path.rglob("*.html")) == []
+
+    def test_zero_record_cache_is_refetched_once(
+        self, tmp_path, test_session, monkeypatch
+    ):
+        """A cache hit that parses to 0 records is dropped and refetched once."""
+        scraper = MopsScraper(data_dir=tmp_path)
+        config = DATA_SOURCES["t100sb15"]
+
+        date_str = datetime.now().strftime("%Y%m%d")
+        cache_dir = tmp_path / date_str
+        cache_dir.mkdir(parents=True)
+        cache_path = cache_dir / "t100sb15_sii_113.html"
+        cache_path.write_text("<html><table></table></html>", encoding="utf-8")
+
+        # Parser yields nothing for both the cached and the refetched content.
+        monkeypatch.setattr(scraper, "_parse_table", lambda *a, **k: [])
+
+        post_calls = {"n": 0}
+
+        def fake_post(*args, **kwargs):
+            post_calls["n"] += 1
+            resp = MagicMock()
+            resp.text = "<html><table></table></html>"
+            resp.raise_for_status = MagicMock()
+            return resp
+
+        with patch("app.services.mops_scraper.httpx.Client") as mock_cls:
+            inst = mock_cls.return_value.__enter__.return_value
+            inst.post.side_effect = fake_post
+
+            written, skipped = scraper._fetch_and_process(
+                source_key="t100sb15",
+                config=config,
+                year=113,
+                market="sii",
+                session=test_session,
+                archive_session=test_session,
+                company_code_map={},
+                company_name_map={},
+                company_branch_map=[],
+            )
+
+        assert post_calls["n"] == 1
+        assert written == 0
+        assert skipped == 0

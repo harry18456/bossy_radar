@@ -45,7 +45,9 @@ uv run python -m app.cli.main sync-companies --type all
 uv run python -m app.cli.main sync-violations --source all
 uv run python -m app.cli.main sync-env
 uv run python -m app.cli.main sync-mops --start-year 113 --end-year 113
-uv run python -m app.cli.main sync-company-details --retries -1 --retry-delay 5
+uv run python -m app.cli.main sync-company-details --retries 5 --retry-delay 5
+# 注意：--retries 為負值代表「重試到上限」，但仍受 50 次絕對嘗試上限約束（不會無限重試）；
+# 連續 5 次偵測到 MOPS 維護頁會觸發斷路器中止整輪同步。
 uv run python -m app.cli.main export --output-dir ../frontend/public/data
 uv run python -m app.cli.main sync-all    # 依序執行所有同步
 ```

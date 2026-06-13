@@ -19,7 +19,7 @@
 **新發現（本輪，報告原本遺漏）**
 - ✅ ~~🟠 **NF1 [Medium] `export_yearly_summaries` 已「實際」drift（非僅「會」）**~~（已修，change 3：抽單一共用組裝函式 `yearly_summary_builder.py`（參數含 include 集合），route 與 exporter 共用，exporter 以 include=all 呼叫並由 builder 結果推導 index；parity 測試鎖定，實測重匯出 18765 筆零語意變化）。
 - ✅ ~~🟠 **NF2 [Medium] leaderboard `bottom_by_*` 榜語意錯誤（route + export 同源）**~~（已修，change 3：改全量 group by 彙總後 top desc / bottom asc 精確切片，route 與 export 共用 `leaderboard_builder.py`；實測新 bottom 榜為 1,1,1,...（升冪）取代舊的 top 池尾端 7,8,9,...）。
-- 🟠 **NF3 [Medium] `sync-mops` 例外不 rollback → session 連環污染**（`mops_scraper.py:149-170`）：例外被 per-(year,market) `except continue` 吞掉後，共用 `session`/`archive_session` **從未 rollback**；若例外發生在 flush 後，下個市場查詢丟 `PendingRollbackError`，導致該 source **後續所有年度/市場連環失敗**，CLI 仍印 completed（複合 M11）。比 M4 更嚴重的並發/狀態風險。修法：`except` 內對兩 session `rollback()`，或每 (year,market) 用獨立 session/savepoint。
+- ✅ ~~🟠 **NF3 [Medium] `sync-mops` 例外不 rollback → session 連環污染**~~（已修，change 4：`_sync_units` 的 except 路徑對 session 與 archive_session 都 `rollback()` 後再 continue，commit 邊界改每 (year,market) 一次。**真實驗證**：t100sb15/sii 失敗後 otc 照常嘗試、後續 t100sb13 正常 commit，全程零 `PendingRollbackError`）。
 - ⚖️ **NF4 [Medium→法律暴露] M1/M2 違規歸屬被低估**：把 A 公司違規掛到 B 公司，對指名公布違規的平台是**妨害名譽**法律風險，非單純技術 medium。資料完整性 change #5 修的是「不重複插入」，**不修「不掛錯公司」**。建議升優先級、獨立成 change（見 REMEDIATION_PLAN）。
 - 🟡 **NF5 [Low] 確認**：scripts/ 6 個打 live 政府站的探索腳本仍在版控（= L22）；MOENV_API_KEY 入 query string（latent log 洩漏，gov API 限制，記載即可）。
 
@@ -73,7 +73,7 @@
 - **影響**：記憶體/CPU 隨整個資料集成長（非分頁大小），公開端點的 DoS 放大器。
 - **修法**：把 filter/join/sort/LIMIT 推進 SQL，或在 ETL/export 階段預算 matrix；至少強制一個收斂 filter，並把「存在性檢查」與「完整物件」拆開。
 
-### [ ] H3. `retries=-1` 無限重試卡死整個 sync
+### [x] H3. `retries=-1` 無限重試卡死整個 sync ✅ 已修（change 4：`_fetch_with_retry` 改有界迴圈 MAX_TOTAL_ATTEMPTS=50；連續 5 次維護頁觸發斷路器；CLAUDE.md 範例改有限值，test_bounded_retries.py 覆蓋）
 - **面向**：scrapers / cli-etl（雙面向）
 - **位置**：`backend/app/services/company_detail_scraper.py:164-206`；CLI `cli/main.py:288-290`；`backend/CLAUDE.md` 把 `--retries -1` 當範例
 - **問題**：`while True` 只在 `retries >= 0 and attempt > retries` 時 break；retries<0 時 break 永不可達，唯一出口是成功 return。對 hard-down 或持續限流的主機會永遠重試（backoff 上限 60s）。更糟：MOPS 維護頁 `服務暫時無法提供`/`請稍後再試` 被當成 retryable，等於對正在限流的伺服器無限自旋。外層 per-company `try/except continue` 無法救（因為 inner loop 永不 raise/return）。
@@ -135,12 +135,12 @@
 - **問題**：每列建構包在 `except Exception: pass`，註解寫「Log but continue」但**沒有 log**。對照 `environmental_service.py:221` 至少 debug log。無 skip 計數，上游 schema 改動可默默丟掉大量違規，下游仍印「Parsed N records」。
 - **修法**：log 例外與列識別碼（warning），維護並輸出 skipped 計數。
 
-### [ ] M4. MOPS 批次單列失敗在部分 commit 後中止整個年度/市場
+### [x] M4. MOPS 批次單列失敗在部分 commit 後中止整個年度/市場 ✅ 已修（change 4：`_upsert_data` per-record try/except + (written,skipped) 回傳、移除 500 列中途 commit、commit 邊界改每 (year,market) 一次，test_mops_scraper.py::TestMopsIntegrity 覆蓋）
 - **位置**：`mops_scraper.py:690-739`（`_upsert_data`）+ `151-167`（per-(year,market) try/except）
 - **問題**：per-record loop 無 try/except，`model_class(**record)` 等可丟 ValidationError；每 500 列 `commit()`。任一列失敗 → 例外冒泡到 per-(year,market) `except continue`，但已 flush 的 500-boundary 列已落地 → 半寫不一致、無 rollback、無紀錄哪些列被丟。額外風險：未 rollback 的 session 被下一市場重用可能 `PendingRollbackError`。
 - **修法**：per-record body 包 try/except（仿 parser 的 per-row 防護）；或每 (year,market) 一次 commit / 用 savepoint，失敗乾淨 rollback。
 
-### [ ] M5. MOPS 暫時性錯誤/維護頁被快取、當日所有 rerun 重用
+### [x] M5. MOPS 暫時性錯誤/維護頁被快取、當日所有 rerun 重用 ✅ 已修（change 4：`_is_valid_mops_html` 寫 cache 前驗證（非空/有 table/無維護標記），無效視為失敗不寫 cache；cache 命中卻 parse 0 列作廢重抓一次。**真實驗證**：t100sb15/114 拿到維護頁→拒絕快取、標 FAILED、exit 1，未污染 cache）
 - **位置**：`mops_scraper.py:216-243`
 - **問題**：cache key 以今日日期命名，fetch 只 `raise_for_status()`（維護頁是 HTTP 200 過不了）就無條件寫入 cache，**無內容驗證**（不像 `CompanyDetailScraper` 會檢查維護字串與 >1000 byte）。當日後續 run 走 cache 分支重解析垃圾頁 → 0 列、靜默「成功」直到隔日。
 - **修法**：寫 cache 前驗證內容（非空、有預期表格、無維護標記）；既有 cache 命中卻 parse 出 0 列時視為訊號重抓。
@@ -172,7 +172,7 @@
 - **修法**：此端點本為搜尋建議用，加硬上限/快取，或直接走已存在的靜態 JSON export（ETag/gzip）。
 - **註**：SSG 部署下前端與擴充功能實際讀的是靜態 `company-catalog.json`，live 端點較少用 → routes-api 面向把此項降為 low，security-config 面向維持 medium（端點仍公開可重複呼叫）。
 
-### [ ] M11. CLI 各 source 失敗被吞、整體仍報成功、exit 0
+### [x] M11. CLI 各 source 失敗被吞、整體仍報成功、exit 0 ✅ 已修（change 4：新增 `SyncReport`/`SourceResult`，sync-companies/violations/mops/company-details 回傳並印 per-source 摘要、`has_failures` 時 `raise typer.Exit(1)`、下載失敗計為 source 失敗；violation parser 的 bare pass 改 warning+skip 計數。test_sync_fail_loud.py 覆蓋）
 - **位置**：`mops_scraper.py:149-167`（per-(year,market) `except continue`）；`cli/main.py:98/168/229`（無條件印 completed）；`violation_service.py:137-139`（bare pass）
 - **問題**：`sync-mops`/`sync-companies`/`sync-violations` 下載或解析失敗只 log，不 abort、不設非零 exit，最後印「completed successfully」。只有 `sync-env`（`cli/main.py:263-267`）會 `raise typer.Exit(1)`。
 - **影響**：半數來源失敗的 run 仍 exit 0，排程器/CI 把部分或空 sync 當健康。

@@ -10,6 +10,7 @@ from app.services.crawler_service import CrawlerService
 from app.services.environmental_service import EnvironmentalService
 from app.services.export_service import ExportService
 from app.services.mops_scraper import MopsScraper
+from app.services.sync_report import SourceResult, SyncReport
 from app.services.violation_service import ViolationService
 
 # Setup logging
@@ -82,6 +83,7 @@ def sync_companies(
 
     # 1. Download Step
     typer.echo("--- Starting Download ---")
+    download_failed: list[str] = []
     for m_type in target_types:
         url = URLS[m_type]
         save_path = data_dir / f"{m_type}.csv"
@@ -89,12 +91,20 @@ def sync_companies(
             success = crawler_service.download_file(url, save_path)
             if not success:
                 logger.error(f"Failed to download {m_type}")
+                download_failed.append(m_type)
         else:
             logger.info(f"File already exists: {save_path}")
 
     # 2. Sync Step
     typer.echo("--- Starting Sync ---")
-    company_service.sync_companies(data_dir, target_types)
+    to_sync = [t for t in target_types if t not in download_failed]
+    report = company_service.sync_companies(data_dir, to_sync)
+    for m_type in download_failed:
+        report.add(SourceResult(name=m_type, success=False, error="download failed"))
+
+    typer.echo(report.render_summary())
+    if report.has_failures:
+        raise typer.Exit(code=1)
     typer.echo("Sync completed successfully.")
 
 
@@ -134,37 +144,29 @@ def sync_violations(
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
     }
 
-    # Need to override Crawler to support headers?
-    # Actually CrawlerService default implementation uses requests.get without custom headers argument exposed.
-    # Let's check CrawlerService implementation.
-    # It just takes url. We might need to update CrawlerService if websites block empty UA.
-    # For now let's hope it works or we update CrawlerService. The previous analysis required UA.
-
-    # Let's quickly patch/use direct request here if CrawlerService is too simple,
-    # OR better: Update CrawlerService to accept headers.
-    # But for now, let's try using the existing one. If it fails we'll know.
-    # Wait, the analysis script failed without UA. So we MUST update CrawlerService or pass headers.
-    # Let's assume we update CrawlerService in the next step or right before this.
-    # Actually, I'll update CrawlerService to accept kwargs.
-
+    download_failed: list[str] = []
     for src in target_sources:
         url = VIOLATION_URLS[src]
         save_path = data_dir / f"{src}.json"
 
         if not save_path.exists():
-            # Pass headers via kwargs if we update CrawlerService,
-            # Or currently just rely on it.
-            # Given the previous experience, I should probably update CrawlerService first.
-            # But let's write this code assuming I will update CrawlerService to take **kwargs.
             success = crawler_service.download_file(url, save_path, headers=headers)
             if not success:
                 logger.error(f"Failed to download {src}")
+                download_failed.append(src)
         else:
             logger.info(f"File already exists: {save_path}")
 
     # 2. Sync
     typer.echo("--- Starting Violation Sync ---")
-    violation_service.sync_violations(data_dir, target_sources)
+    to_sync = [s for s in target_sources if s not in download_failed]
+    report = violation_service.sync_violations(data_dir, to_sync)
+    for src in download_failed:
+        report.add(SourceResult(name=src, success=False, error="download failed"))
+
+    typer.echo(report.render_summary())
+    if report.has_failures:
+        raise typer.Exit(code=1)
     typer.echo("Violation Sync completed.")
 
 
@@ -220,12 +222,16 @@ def sync_mops(
             raise typer.Exit(code=1)
 
         typer.echo(f"Syncing data type: {data_type}")
-        data_type_map[data_type](years, markets)
+        report = SyncReport()
+        report.add(data_type_map[data_type](years, markets))
     else:
         # Sync all
         typer.echo("Syncing all MOPS data types...")
-        scraper.sync_all(start_year=start_year, end_year=end_year)
+        report = scraper.sync_all(start_year=start_year, end_year=end_year)
 
+    typer.echo(report.render_summary())
+    if report.has_failures:
+        raise typer.Exit(code=1)
     typer.echo("MOPS Sync completed.")
 
 
@@ -297,13 +303,16 @@ def sync_company_details(
     """
     scraper = CompanyDetailScraper()
     typer.echo("--- Starting Company Detail Sync (t05st03) ---")
-    scraper.sync_all_details(
+    report = scraper.sync_all_details(
         limit=limit,
         force=force,
         company_code=company_code,
         retries=retries,
         delay=retry_delay,
     )
+    typer.echo(report.render_summary())
+    if report.has_failures:
+        raise typer.Exit(code=1)
     typer.echo("Company Detail Sync completed.")
 
 

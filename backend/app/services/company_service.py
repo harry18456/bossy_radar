@@ -8,6 +8,7 @@ from sqlmodel import Session, asc, col, desc, func, select
 
 from app.db.session import engine
 from app.models.company import Company
+from app.services.sync_report import SourceResult, SyncReport
 
 logger = logging.getLogger(__name__)
 
@@ -118,27 +119,52 @@ class CompanyService:
             )
         return catalog
 
-    def sync_companies(self, data_dir: Path, target_types: list[str]):
-        """
-        Sync companies from downloaded CSVs to DB.
+    def sync_companies(self, data_dir: Path, target_types: list[str]) -> SyncReport:
+        """Sync companies from downloaded CSVs to DB.
+
+        Returns a SyncReport. Each market type is committed independently; one
+        that raises rolls back and is recorded as failed so the CLI can exit
+        non-zero (BACKEND_AUDIT M11).
         """
         # Ensure tables exist
         from sqlmodel import SQLModel
 
         SQLModel.metadata.create_all(engine)
 
+        report = SyncReport()
+
         with Session(engine) as session:
             for market_type in target_types:
                 file_path = data_dir / f"{market_type}.csv"
                 if not file_path.exists():
                     logger.warning(f"File not found: {file_path}")
+                    report.add(
+                        SourceResult(
+                            name=market_type, success=False, error="file not found"
+                        )
+                    )
                     continue
 
-                logger.info(f"Processing {market_type} companies from {file_path}")
-                companies = self._parse_csv(file_path, market_type)
-                self._upsert_companies(session, companies)
+                try:
+                    logger.info(f"Processing {market_type} companies from {file_path}")
+                    companies = self._parse_csv(file_path, market_type)
+                    self._upsert_companies(session, companies)
+                    session.commit()
+                    report.add(
+                        SourceResult(
+                            name=market_type,
+                            success=True,
+                            rows_written=len(companies),
+                        )
+                    )
+                except Exception as e:
+                    session.rollback()
+                    logger.error(f"Error syncing {market_type}: {e}")
+                    report.add(
+                        SourceResult(name=market_type, success=False, error=str(e))
+                    )
 
-            session.commit()
+        return report
 
     def _parse_csv(self, file_path: Path, market_type: str) -> list[Company]:
         companies = []

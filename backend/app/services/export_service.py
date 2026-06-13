@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import shutil
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -72,6 +73,23 @@ class ExportService:
     def _service_dir(self, suffix: str) -> Path:
         return self._final_output_dir.with_name(self._final_output_dir.name + suffix)
 
+    @staticmethod
+    def _retry_fs_op(op, attempts: int = 20, delay: float = 0.05):
+        """Run a filesystem op, retrying on transient Windows access errors.
+
+        Directory rename / rmtree / mkdir on Windows can briefly fail with
+        WinError 5 or 32 while the OS, an antivirus, or the search indexer
+        still holds a handle that it releases within milliseconds. Retrying a
+        few times makes the atomic swap reliable on Windows.
+        """
+        for i in range(attempts):
+            try:
+                return op()
+            except OSError:
+                if i == attempts - 1:
+                    raise
+                time.sleep(delay)
+
     def _remove_service_dir(self, path: Path):
         """Delete a directory only if it is one of our own .tmp/.bak siblings."""
         resolved = Path(path).resolve()
@@ -82,7 +100,7 @@ class ExportService:
         if resolved not in allowed:
             raise ValueError(f"Refusing to delete non-service-owned path: {resolved}")
         if resolved.exists():
-            shutil.rmtree(resolved)
+            self._retry_fs_op(lambda: shutil.rmtree(resolved))
 
     def export_all(self, session: Session | None = None):
         if session is not None:
@@ -100,12 +118,12 @@ class ExportService:
         self._remove_service_dir(tmp_dir)
         self._remove_service_dir(bak_dir)
 
-        tmp_dir.mkdir(parents=True)
+        self._retry_fs_op(lambda: tmp_dir.mkdir(parents=True))
         original_output_dir = self.output_dir
         original_companies_dir = self.companies_dir
         self.output_dir = tmp_dir
         self.companies_dir = tmp_dir / "companies"
-        self.companies_dir.mkdir()
+        self._retry_fs_op(self.companies_dir.mkdir)
 
         try:
             logger.info("Starting Full Export...")
@@ -122,10 +140,12 @@ class ExportService:
             self.companies_dir = original_companies_dir
 
         # Atomic swap: the live dir always exists either under its own name
-        # or as the complete .bak copy at every point in this sequence.
+        # or as the complete .bak copy at every point in this sequence. The
+        # renames are retried because Windows can transiently deny a directory
+        # rename while a handle from the preceding op is still being released.
         if final_dir.exists():
-            final_dir.rename(bak_dir)
-        tmp_dir.rename(final_dir)
+            self._retry_fs_op(lambda: final_dir.rename(bak_dir))
+        self._retry_fs_op(lambda: tmp_dir.rename(final_dir))
         self._remove_service_dir(bak_dir)
         logger.info("Full Export Completed.")
 

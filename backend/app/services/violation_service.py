@@ -9,6 +9,7 @@ from sqlmodel import Session, select
 from app.db.session import engine
 from app.models.company import Company
 from app.models.violation import Violation
+from app.services.sync_report import SourceResult, SyncReport
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,12 @@ class ViolationService:
             "Union",
         ]
 
-    def sync_violations(self, data_dir: Path, target_sources: list[str]):
-        """
-        Sync violations from downloaded JSONs to DB.
+    def sync_violations(self, data_dir: Path, target_sources: list[str]) -> SyncReport:
+        """Sync violations from downloaded JSONs to DB.
+
+        Returns a SyncReport. Each source is committed independently; a source
+        that raises rolls back both sessions and is recorded as failed so the
+        CLI can exit non-zero (BACKEND_AUDIT M11).
         """
         # Ensure tables exist for both engines
         from sqlmodel import SQLModel
@@ -38,6 +42,8 @@ class ViolationService:
 
         SQLModel.metadata.create_all(engine)
         SQLModel.metadata.create_all(archive_engine)
+
+        report = SyncReport()
 
         with Session(engine) as session, Session(archive_engine) as archive_session:
             # 1. Pre-load companies for linking optimization
@@ -70,36 +76,57 @@ class ViolationService:
                 file_path = data_dir / f"{source}.json"
                 if not file_path.exists():
                     logger.warning(f"File not found: {file_path}")
+                    report.add(
+                        SourceResult(name=source, success=False, error="file not found")
+                    )
                     continue
 
-                logger.info(f"Processing {source} violations from {file_path}")
-                violations = self._parse_json(file_path, source)
-                logger.info(
-                    f"Parsed {len(violations)} records. Starting linking and upsert..."
-                )
+                try:
+                    logger.info(f"Processing {source} violations from {file_path}")
+                    violations, skipped = self._parse_json(file_path, source)
+                    logger.info(
+                        f"Parsed {len(violations)} records "
+                        f"({skipped} skipped). Linking and upserting..."
+                    )
 
-                self._upsert_violations(
-                    session,
-                    archive_session,
-                    violations,
-                    company_map,
-                    company_branch_map,
-                    company_chairman_map,
-                )
-                session.commit()
-                archive_session.commit()
+                    written = self._upsert_violations(
+                        session,
+                        archive_session,
+                        violations,
+                        company_map,
+                        company_branch_map,
+                        company_chairman_map,
+                    )
+                    session.commit()
+                    archive_session.commit()
+                    report.add(
+                        SourceResult(
+                            name=source,
+                            success=True,
+                            rows_written=written,
+                            rows_skipped=skipped,
+                        )
+                    )
+                except Exception as e:
+                    session.rollback()
+                    archive_session.rollback()
+                    logger.error(f"Error syncing {source}: {e}")
+                    report.add(SourceResult(name=source, success=False, error=str(e)))
 
-    def _parse_json(self, file_path: Path, source: str) -> list[Violation]:
+        return report
+
+    def _parse_json(self, file_path: Path, source: str) -> tuple[list[Violation], int]:
         records = []
+        skipped = 0
         try:
             with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
 
             if not isinstance(data, list):
                 logger.warning(f"{source} data is not a list")
-                return []
+                return [], 0
 
-            for row in data:
+            for i, row in enumerate(data):
                 try:
                     # 1. Company Name Strategy
                     c_name = (
@@ -134,13 +161,18 @@ class ViolationService:
                         fine_amount=fine,
                     )
                     records.append(violation)
-                except Exception:
-                    # Log but continue
-                    pass
+                except Exception as e:
+                    skipped += 1
+                    logger.warning(f"Skipped {source} row {i}: {e}")
+                    continue
         except Exception as e:
+            # A whole-file parse failure (unreadable / corrupt / non-JSON) is a
+            # source failure, not an empty success — surface it so the caller
+            # records the source as failed and the CLI exits non-zero (M11).
             logger.error(f"Error parsing {source}: {e}")
+            raise
 
-        return records
+        return records, skipped
 
     def _upsert_violations(
         self,
@@ -150,7 +182,7 @@ class ViolationService:
         company_map: dict[str, str],
         company_branch_map: list[tuple],
         company_chairman_map: dict[str, list],
-    ):
+    ) -> int:
         count = 0
         linked_count = 0
 
@@ -217,17 +249,15 @@ class ViolationService:
                 target_session.add(v)
             count += 1
 
-            # Batch commit to avoid long lock and allow progress tracking
+            # Progress tracking only; commits are owned by the per-source
+            # caller so a failed source can be rolled back cleanly.
             if count % 1000 == 0:
-                session.commit()
-                archive_session.commit()
                 logger.info(f"Processed {count} records...")
 
-        session.commit()
-        archive_session.commit()
         logger.info(
             f"Processed {count} violations. Linked {linked_count} to companies."
         )
+        return count
 
     def _parse_roc_date(self, date_str: str) -> date | None:
         """

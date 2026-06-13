@@ -23,6 +23,7 @@ from app.models.employee_benefit import EmployeeBenefit
 from app.models.non_manager_salary import NonManagerSalary
 from app.models.salary_adjustment import SalaryAdjustment
 from app.models.welfare_policy import WelfarePolicy
+from app.services.sync_report import SourceResult, SyncReport
 
 logger = logging.getLogger(__name__)
 
@@ -108,66 +109,124 @@ class MopsScraper:
 
         logger.info(f"Starting MOPS sync for years {years}, markets {markets}")
 
-        self.sync_employee_benefit(years, markets)
-        self.sync_non_manager_salary(years, markets)
-        self.sync_welfare_policy(years, markets)
-        self.sync_salary_adjustment(years, markets)
+        report = SyncReport()
+        report.add(self.sync_employee_benefit(years, markets))
+        report.add(self.sync_non_manager_salary(years, markets))
+        report.add(self.sync_welfare_policy(years, markets))
+        report.add(self.sync_salary_adjustment(years, markets))
 
         logger.info("MOPS sync completed")
+        return report
 
-    def sync_employee_benefit(self, years: list[int], markets: list[str]):
+    def sync_employee_benefit(
+        self, years: list[int], markets: list[str]
+    ) -> SourceResult:
         """Sync t100sb14 data."""
-        self._sync_data_source("t100sb14", years, markets)
+        return self._sync_data_source("t100sb14", years, markets)
 
-    def sync_non_manager_salary(self, years: list[int], markets: list[str]):
+    def sync_non_manager_salary(
+        self, years: list[int], markets: list[str]
+    ) -> SourceResult:
         """Sync t100sb15 data."""
-        self._sync_data_source("t100sb15", years, markets)
+        return self._sync_data_source("t100sb15", years, markets)
 
-    def sync_welfare_policy(self, years: list[int], markets: list[str]):
+    def sync_welfare_policy(self, years: list[int], markets: list[str]) -> SourceResult:
         """Sync t100sb13 data."""
-        self._sync_data_source("t100sb13", years, markets)
+        return self._sync_data_source("t100sb13", years, markets)
 
-    def sync_salary_adjustment(self, years: list[int], markets: list[str]):
+    def sync_salary_adjustment(
+        self, years: list[int], markets: list[str]
+    ) -> SourceResult:
         """Sync t222sb01 data."""
-        self._sync_data_source("t222sb01", years, markets)
+        return self._sync_data_source("t222sb01", years, markets)
 
-    def _sync_data_source(self, source_key: str, years: list[int], markets: list[str]):
-        """Generic sync method for a data source."""
+    def _sync_data_source(
+        self,
+        source_key: str,
+        years: list[int],
+        markets: list[str],
+        session: Session | None = None,
+        archive_session: Session | None = None,
+    ) -> SourceResult:
+        """Generic sync for one data source. Returns a SourceResult.
+
+        Each (year, market) unit is committed on its own; a unit that raises
+        rolls back BOTH sessions before the next unit runs, so a failure can
+        never poison later units with a PendingRollbackError (BACKEND_AUDIT
+        M4/NF3).
+        """
         config = DATA_SOURCES[source_key]
         logger.info(f"Syncing {config['name']} ({source_key})")
 
-        # Ensure tables exist
-        SQLModel.metadata.create_all(engine)
-        SQLModel.metadata.create_all(archive_engine)
-
-        with Session(engine) as session, Session(archive_engine) as archive_session:
-            # Pre-load companies for matching
-            company_code_map, company_name_map, company_branch_map = (
-                self._load_company_maps(session)
+        # When sessions are injected the caller owns the schema; only touch the
+        # real engines when we create our own sessions.
+        if session is not None and archive_session is not None:
+            return self._sync_units(
+                source_key, config, years, markets, session, archive_session
             )
 
-            for year in years:
-                for market in markets:
-                    try:
-                        self._fetch_and_process(
-                            source_key=source_key,
-                            config=config,
-                            year=year,
-                            market=market,
-                            session=session,
-                            archive_session=archive_session,
-                            company_code_map=company_code_map,
-                            company_name_map=company_name_map,
-                            company_branch_map=company_branch_map,
-                        )
-                    except Exception as e:
-                        logger.error(
-                            f"Error processing {source_key} {market} {year}: {e}"
-                        )
-                        continue
+        SQLModel.metadata.create_all(engine)
+        SQLModel.metadata.create_all(archive_engine)
+        with Session(engine) as own_session, Session(archive_engine) as own_archive:
+            return self._sync_units(
+                source_key, config, years, markets, own_session, own_archive
+            )
 
-            session.commit()
-            archive_session.commit()
+    def _sync_units(
+        self,
+        source_key: str,
+        config: dict,
+        years: list[int],
+        markets: list[str],
+        session: Session,
+        archive_session: Session,
+    ) -> SourceResult:
+        company_code_map, company_name_map, company_branch_map = (
+            self._load_company_maps(session)
+        )
+
+        written = 0
+        skipped = 0
+        failed_units: list[str] = []
+
+        for year in years:
+            for market in markets:
+                try:
+                    unit_written, unit_skipped = self._fetch_and_process(
+                        source_key=source_key,
+                        config=config,
+                        year=year,
+                        market=market,
+                        session=session,
+                        archive_session=archive_session,
+                        company_code_map=company_code_map,
+                        company_name_map=company_name_map,
+                        company_branch_map=company_branch_map,
+                    )
+                    session.commit()
+                    archive_session.commit()
+                    written += unit_written
+                    skipped += unit_skipped
+                except Exception as e:
+                    # Roll both sessions back so the next unit starts clean.
+                    session.rollback()
+                    archive_session.rollback()
+                    logger.error(f"Error processing {source_key} {market} {year}: {e}")
+                    failed_units.append(f"{market}/{year}: {e}")
+                    continue
+
+        error = None
+        if failed_units:
+            error = f"{len(failed_units)} unit(s) failed: " + "; ".join(
+                failed_units[:5]
+            )
+        return SourceResult(
+            name=f"{source_key} ({config['name']})",
+            success=not failed_units,
+            rows_written=written,
+            rows_skipped=skipped,
+            error=error,
+        )
 
     def _load_company_maps(self, session: Session) -> tuple:
         """Load company lookup maps for matching."""
@@ -219,34 +278,36 @@ class MopsScraper:
         cache_dir.mkdir(parents=True, exist_ok=True)
         cache_path = cache_dir / f"{source_key}_{market}_{year}.html"
 
-        # Fetch or load from cache
         if cache_path.exists():
             logger.info(f"Loading from cache: {cache_path}")
             html = cache_path.read_text(encoding="utf-8")
+            records = self._parse_table(html, source_key, year, market)
+            if not records:
+                # A cached file that parses to nothing may be a stale maintenance
+                # page or garbage from a prior bad run; drop it and refetch once
+                # (BACKEND_AUDIT M5).
+                logger.warning(
+                    f"Cache {cache_path.name} parsed 0 records; refetching once."
+                )
+                cache_path.unlink(missing_ok=True)
+                html = self._fetch_html(url, payload)
+                self._write_cache(cache_path, html)
+                records = self._parse_table(html, source_key, year, market)
         else:
-            logger.info(f"Fetching {source_key} {market} {year}...")
-            try:
-                with httpx.Client(timeout=60, follow_redirects=True) as client:
-                    response = client.post(url, headers=HEADERS, data=payload)
-                    response.raise_for_status()
-                    html = response.text
+            html = self._fetch_html(url, payload)
+            self._write_cache(cache_path, html)
+            records = self._parse_table(html, source_key, year, market)
 
-                # Save to cache
-                cache_path.write_text(html, encoding="utf-8")
-                logger.info(f"Cached to {cache_path}")
-            except Exception as e:
-                logger.error(f"HTTP error: {e}")
-                raise
-
-        # Parse HTML
-        records = self._parse_table(html, source_key, year, market)
         logger.info(f"Parsed {len(records)} records from {source_key} {market} {year}")
 
         if not records:
-            return
+            # A genuinely empty unit (no data for this year/market) is not a
+            # failure; only invalid/maintenance content (rejected by _write_cache)
+            # raises.
+            return (0, 0)
 
         # Upsert to DB
-        self._upsert_data(
+        return self._upsert_data(
             session=session,
             archive_session=archive_session,
             records=records,
@@ -255,6 +316,35 @@ class MopsScraper:
             company_name_map=company_name_map,
             company_branch_map=company_branch_map,
         )
+
+    @staticmethod
+    def _is_valid_mops_html(html: str) -> bool:
+        """MOPS serves rate-limit/maintenance notices as HTTP 200 pages."""
+        if not html or not html.strip():
+            return False
+        if "服務暫時無法提供" in html or "請稍後再試" in html:
+            return False
+        return "<table" in html.lower()
+
+    def _fetch_html(self, url: str, payload: dict) -> str:
+        logger.info(f"Fetching {url} ...")
+        try:
+            with httpx.Client(timeout=60, follow_redirects=True) as client:
+                response = client.post(url, headers=HEADERS, data=payload)
+                response.raise_for_status()
+                return response.text
+        except Exception as e:
+            logger.error(f"HTTP error: {e}")
+            raise
+
+    def _write_cache(self, cache_path: Path, html: str) -> None:
+        """Persist HTML only after validating it; reject maintenance/garbage."""
+        if not self._is_valid_mops_html(html):
+            raise ValueError(
+                f"Refusing to cache invalid/maintenance MOPS content: {cache_path.name}"
+            )
+        cache_path.write_text(html, encoding="utf-8")
+        logger.info(f"Cached to {cache_path}")
 
     def _parse_table(
         self, html: str, source_key: str, year: int, market: str
@@ -682,61 +772,74 @@ class MopsScraper:
         company_code_map: dict[str, str],
         company_name_map: dict[str, str],
         company_branch_map: list[tuple],
-    ):
-        """Upsert records to main or archive DB."""
-        count = 0
+    ) -> tuple[int, int]:
+        """Upsert records to main or archive DB.
+
+        A row that fails to build or persist is logged and skipped so it cannot
+        abort the whole batch (BACKEND_AUDIT M4). Committing is the caller's
+        responsibility (the (year, market) boundary), so this method NEVER
+        commits. Returns (written, skipped).
+        """
+        written = 0
+        skipped = 0
         linked_count = 0
 
         for record in records:
-            # Match company
-            matched_code = self._match_company(
-                raw_code=record.get("raw_company_code", ""),
-                raw_name=record.get("company_name", ""),
-                company_code_map=company_code_map,
-                company_name_map=company_name_map,
-                company_branch_map=company_branch_map,
-            )
-
-            record["company_code"] = matched_code
-
-            if matched_code:
-                linked_count += 1
-                target_session = session
-            else:
-                target_session = archive_session
-
-            # Create model instance
-            model_instance = model_class(**record)
-
-            # Check for existing record
-            existing = target_session.exec(
-                select(model_class).where(
-                    model_class.raw_company_code == record["raw_company_code"],
-                    model_class.year == record["year"],
-                    model_class.market_type == record["market_type"],
+            try:
+                # Match company
+                matched_code = self._match_company(
+                    raw_code=record.get("raw_company_code", ""),
+                    raw_name=record.get("company_name", ""),
+                    company_code_map=company_code_map,
+                    company_name_map=company_name_map,
+                    company_branch_map=company_branch_map,
                 )
-            ).first()
 
-            if existing:
-                # Update existing record
-                for key, value in record.items():
-                    if key not in ["id", "created_at"]:
-                        setattr(existing, key, value)
-                existing.last_updated = datetime.now()
-                target_session.add(existing)
-            else:
-                target_session.add(model_instance)
+                record["company_code"] = matched_code
 
-            count += 1
+                if matched_code:
+                    linked_count += 1
+                    target_session = session
+                else:
+                    target_session = archive_session
 
-            if count % 500 == 0:
-                session.commit()
-                archive_session.commit()
-                logger.info(f"Processed {count} records...")
+                # Create model instance
+                model_instance = model_class(**record)
 
-        session.commit()
-        archive_session.commit()
-        logger.info(f"Upserted {count} records. Linked {linked_count} to companies.")
+                # Check for existing record
+                existing = target_session.exec(
+                    select(model_class).where(
+                        model_class.raw_company_code == record["raw_company_code"],
+                        model_class.year == record["year"],
+                        model_class.market_type == record["market_type"],
+                    )
+                ).first()
+
+                if existing:
+                    # Update existing record
+                    for key, value in record.items():
+                        if key not in ["id", "created_at"]:
+                            setattr(existing, key, value)
+                    existing.last_updated = datetime.now()
+                    target_session.add(existing)
+                else:
+                    target_session.add(model_instance)
+
+                written += 1
+            except Exception as e:
+                skipped += 1
+                logger.warning(
+                    f"Skipped MOPS row (raw_code={record.get('raw_company_code')}, "
+                    f"year={record.get('year')}, "
+                    f"market={record.get('market_type')}): {e}"
+                )
+                continue
+
+        logger.info(
+            f"Upserted {written} records ({skipped} skipped). "
+            f"Linked {linked_count} to companies."
+        )
+        return (written, skipped)
 
     def _match_company(
         self,

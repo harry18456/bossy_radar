@@ -8,11 +8,18 @@ from sqlmodel import Session, select
 
 from app.db.session import engine
 from app.models.company import Company
+from app.services.sync_report import SourceResult, SyncReport
 
 logger = logging.getLogger(__name__)
 
 # MOPS Base URL (mopsov supports direct GET with parameters)
 MOPSOV_BASE_URL = "https://mopsov.twse.com.tw/mops/web"
+
+# Absolute attempt ceiling so a negative `retries` can never spin forever
+# (BACKEND_AUDIT H3). After this many consecutive maintenance pages the whole
+# detail sync aborts via a circuit breaker.
+MAX_TOTAL_ATTEMPTS = 50
+MAINTENANCE_BREAK_THRESHOLD = 5
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -65,9 +72,19 @@ class CompanyDetailScraper:
         company_code: str | None = None,
         retries: int = 3,
         delay: float = 2.0,
-    ):
-        """Sync detailed info (Stakeholder/Governance URLs) for all companies."""
-        with Session(engine) as session:
+        session: Session | None = None,
+    ) -> SyncReport:
+        """Sync detailed info (Stakeholder/Governance URLs) for companies.
+
+        Returns a SyncReport. Individual company failures are expected during a
+        long crawl and do not by themselves fail the run; the run is reported
+        failed only when every attempted company failed or when the maintenance
+        circuit breaker trips (BACKEND_AUDIT H3).
+        """
+        owns_session = session is None
+        if owns_session:
+            session = Session(engine)
+        try:
             if company_code:
                 query = select(Company).where(Company.code == company_code)
             else:
@@ -83,29 +100,77 @@ class CompanyDetailScraper:
             if limit:
                 companies = companies[:limit]
 
-            logger.info(
-                f"Starting detail sync for {len(companies)} companies... (Retries: {retries if retries >= 0 else 'infinite'}, Delay: {delay}s)"
+            retries_label = (
+                retries if retries >= 0 else f"capped at {MAX_TOTAL_ATTEMPTS}"
             )
+            logger.info(
+                f"Starting detail sync for {len(companies)} companies... "
+                f"(Retries: {retries_label}, Delay: {delay}s)"
+            )
+
+            updated = failed = maintenance = 0
+            consecutive_maintenance = 0
+            circuit_broken = False
 
             for i, company in enumerate(companies):
                 try:
-                    self._fetch_and_update_company(
+                    outcome = self._fetch_and_update_company(
                         session, company, retries=retries, retry_delay=delay
                     )
-                    # MOPS has strict rate limiting, stay safe
-                    time.sleep(1.5)
-
-                    if (i + 1) % 10 == 0:
-                        session.commit()
-                        logger.info(
-                            f"Progress: {i + 1}/{len(companies)} companies processed."
-                        )
                 except Exception as e:
                     logger.error(f"Error processing company {company.code}: {e}")
-                    continue
+                    outcome = "failed"
+
+                if outcome == "maintenance":
+                    maintenance += 1
+                    consecutive_maintenance += 1
+                    if consecutive_maintenance >= MAINTENANCE_BREAK_THRESHOLD:
+                        circuit_broken = True
+                        logger.error(
+                            f"Circuit breaker tripped after "
+                            f"{consecutive_maintenance} consecutive maintenance "
+                            f"pages; aborting detail sync."
+                        )
+                        break
+                elif outcome == "updated":
+                    updated += 1
+                    consecutive_maintenance = 0
+                else:
+                    failed += 1
+                    consecutive_maintenance = 0
+
+                # MOPS has strict rate limiting, stay safe
+                time.sleep(1.5)
+
+                if (i + 1) % 10 == 0:
+                    session.commit()
+                    logger.info(
+                        f"Progress: {i + 1}/{len(companies)} companies processed."
+                    )
 
             session.commit()
             logger.info("Company detail sync completed.")
+
+            report = SyncReport(circuit_broken=circuit_broken)
+            attempted = updated + failed + maintenance
+            error = None
+            if circuit_broken:
+                error = "circuit breaker tripped on consecutive maintenance pages"
+            elif attempted > 0 and updated == 0:
+                error = "all attempted companies failed"
+            report.add(
+                SourceResult(
+                    name="company-details",
+                    success=error is None,
+                    rows_written=updated,
+                    rows_skipped=failed + maintenance,
+                    error=error,
+                )
+            )
+            return report
+        finally:
+            if owns_session:
+                session.close()
 
     def _fetch_and_update_company(
         self,
@@ -113,8 +178,11 @@ class CompanyDetailScraper:
         company: Company,
         retries: int = 3,
         retry_delay: float = 2.0,
-    ):
-        """Fetch t05st03 for a company and update its URLs."""
+    ) -> str:
+        """Fetch t05st03 for a company and update its URLs.
+
+        Returns an outcome string: "updated", "maintenance", or "failed".
+        """
         # Pattern verified: mopsov supports direct GET
         url = f"{MOPSOV_BASE_URL}/t05st03"
         params = {
@@ -130,19 +198,27 @@ class CompanyDetailScraper:
         cache_path = self.data_dir / f"{company.code}.html"
 
         # 1. Check Cache (Skip if exists and not empty)
-        if cache_path.exists() and cache_path.stat().st_size > 1000:
+        from_cache = cache_path.exists() and cache_path.stat().st_size > 1000
+        if from_cache:
             logger.debug(f"Using cache for {company.code}")
             html = cache_path.read_text(encoding="utf-8")
         else:
-            # 2. Fetch from Network with Retry
+            # 2. Fetch from Network with bounded retry
             html = self._fetch_with_retry(
                 url, params, retries=retries, delay=retry_delay
             )
-            if html:
-                cache_path.write_text(html, encoding="utf-8")
-            else:
+            if html is None:
                 logger.warning(f"Failed to fetch data for {company.code}")
-                return
+                return "failed"
+
+        # A maintenance page is HTTP 200 but carries no real data: never cache
+        # or parse it, and surface it so the circuit breaker can react.
+        if self._is_maintenance_page(html):
+            logger.warning(f"Maintenance page returned for {company.code}")
+            return "maintenance"
+
+        if not from_cache:
+            cache_path.write_text(html, encoding="utf-8")
 
         # 3. Parse
         soup = BeautifulSoup(html, "html.parser")
@@ -160,6 +236,12 @@ class CompanyDetailScraper:
         company.governance_url = governance_url
 
         session.add(company)
+        return "updated"
+
+    @staticmethod
+    def _is_maintenance_page(html: str) -> bool:
+        """MOPS serves rate-limit / maintenance notices as HTTP 200 pages."""
+        return "服務暫時無法提供" in html or "請稍後再試" in html
 
     def _fetch_with_retry(
         self,
@@ -169,37 +251,31 @@ class CompanyDetailScraper:
         delay: float = 2.0,
         max_delay: float = 60.0,
     ) -> str | None:
-        """Fetch URL with exponential backoff retry. Support infinite if retries < 0."""
-        attempt = 0
-        while True:
+        """Fetch a URL with bounded exponential-backoff retry.
+
+        A non-negative `retries` yields up to ``retries + 1`` attempts. A
+        negative `retries` means "retry hard", but is still capped at
+        MAX_TOTAL_ATTEMPTS so the loop can never spin forever (BACKEND_AUDIT
+        H3). Maintenance pages are HTTP 200 and are returned verbatim here; the
+        caller detects them so a rate-limited host is not retried into the
+        ground. Returns the response text, or None when every attempt failed.
+        """
+        max_attempts = (retries + 1) if retries >= 0 else MAX_TOTAL_ATTEMPTS
+        for attempt in range(1, max_attempts + 1):
             try:
                 with httpx.Client(timeout=30, follow_redirects=True) as client:
                     response = client.get(url, headers=HEADERS, params=params)
                     response.raise_for_status()
-
-                    # Check if MOPS returned a valid page (not an error or maintenance page)
-                    if (
-                        "服務暫時無法提供" in response.text
-                        or "請稍後再試" in response.text
-                    ):
-                        raise httpx.HTTPStatusError(
-                            "MOPS rate limit/maintenance detected",
-                            request=response.request,
-                            response=response,
-                        )
-
                     return response.text
             except (httpx.RequestError, httpx.HTTPStatusError) as e:
-                attempt += 1
-                # Check if we should stop
-                if retries >= 0 and attempt > retries:
-                    logger.error(f"Failed after {retries} retries: {e}")
-                    break
+                if attempt >= max_attempts:
+                    logger.error(f"Failed after {attempt} attempt(s): {e}")
+                    return None
 
-                # Calculate exponential backoff
                 wait_time = min(delay * (2 ** (attempt - 1)), max_delay)
                 logger.warning(
-                    f"Attempt {attempt} failed: {e}. Retrying in {wait_time}s... (Target: {params.get('co_id')})"
+                    f"Attempt {attempt}/{max_attempts} failed: {e}. "
+                    f"Retrying in {wait_time}s... (Target: {params.get('co_id')})"
                 )
                 time.sleep(wait_time)
 
