@@ -26,4 +26,4 @@
 ## 6. 端到端驗證
 
 - [x] 6.1 本地 SSG 驗證：cd frontend && npm run generate 成功（failOnError:true 下零 prerender 錯誤），npx serve 或 nuxi preview 起本地站，瀏覽器開 /watchlist（含追蹤超過 20 間情境）與 /companies，console 零錯誤、Network 無 yearly-summaries 請求、每頁 12 筆。驗證：瀏覽器 console 與 Network 面板實測紀錄。
-- [ ] 6.2 production 驗證：commit 並 push 部署 Vercel 後，瀏覽器開 production /watchlist 與 /companies，重複 6.1 檢查項，console 零錯誤。驗證：production 網址實測紀錄。
+- [x] 6.2 production 驗證：commit 並 push 部署 Vercel 後，瀏覽器開 production /watchlist 與 /companies，重複 6.1 檢查項，console 零錯誤。驗證：production 網址實測紀錄。
