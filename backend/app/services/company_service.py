@@ -126,11 +126,7 @@ class CompanyService:
         that raises rolls back and is recorded as failed so the CLI can exit
         non-zero (BACKEND_AUDIT M11).
         """
-        # Ensure tables exist
-        from sqlmodel import SQLModel
-
-        SQLModel.metadata.create_all(engine)
-
+        # Schema is managed by Alembic migrations (run `alembic upgrade head`).
         report = SyncReport()
 
         with Session(engine) as session:

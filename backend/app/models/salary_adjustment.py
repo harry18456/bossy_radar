@@ -4,6 +4,7 @@ t222sb01 - 基層員工調整薪資或分派酬勞
 
 from datetime import datetime
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -11,6 +12,14 @@ class SalaryAdjustment(SQLModel, table=True):
     """基層員工調整薪資或分派酬勞"""
 
     __tablename__ = "salary_adjustment"
+    __table_args__ = (
+        UniqueConstraint(
+            "raw_company_code",
+            "year",
+            "market_type",
+            name="uq_salary_adjustment_natural",
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
 

@@ -25,7 +25,7 @@
 | ✅2 | `frontend-watchlist-static-profile-loading` | Bug Fix / Performance | watchlist 改讀 `data/companies/{code}.json` 組年度資料；修 `page_size` / `limit` / `size` 參數契約 | **✅ 已完成（2026-06-13，含 vitest 測試基礎 + typecheck 全綠）** |
 | ✅3 | `backend-atomic-static-export` | Bug Fix / Reliability | `export_service.py` 改 temp dir + atomic swap；單檔 JSON temp write + `os.replace`；**抽 leaderboard/yearly 組裝為 route+export 共用函式（含 `include` 集合，修 NF1 yearly drift）；修 NF2 `bottom_by_*` 改獨立 `order by asc`** | **✅ 已完成（2026-06-13，含 L13/L14；parity 測試鎖定 route=export）** |
 | ✅4 | `backend-etl-fail-loud-bounded` | Bug Fix / Observability | CLI exit code、source 成敗統計、`retries=-1` 上限、parser skip log、MOPS 維護頁/cache 驗證、單列失敗 rollback、**NF3：`sync-mops` 例外路徑對兩 session `rollback()`（防 `PendingRollbackError` 連環失敗）** | **✅ 已完成（2026-06-13，含 export atomic-swap 的 Windows rename race 修正；真實 sync-mops 煙霧驗證 fail-loud + exit 0 兩路徑）** |
-| 5 | `backend-db-integrity-foundation` | Bug Fix / Data Integrity | migration baseline、清重複資料、unique constraints、upsert 改 DB conflict、SQLite WAL / busy_timeout / FK | ETL fail-loud 後 |
+| ✅5 | `backend-db-integrity-foundation` | Bug Fix / Data Integrity | migration baseline、清重複資料、unique constraints、upsert 改 DB conflict、SQLite WAL / busy_timeout / FK | **✅ 已完成（2026-06-13，Alembic 雙引擎；實測兩 DB 零重複故 dedup no-op；真實遷移零資料遺失 + 重跑 sync 零新增重複）** |
 | 5b | `backend-violation-attribution-correctness` | ⚖️ Correctness / Legal | **M1/M2**：branch-prefix 取最長前綴 + 邊界字、多候選拒絕；Level-4 董事長姓名比對要求佐證訊號（tax_id）否則丟 archive 不自動連結；去重成單一 `CompanyMatcher` 實作 | **第一批內（法律暴露）** |
 | 6 | `extension-widget-render-safety` | Security Fix | 移除 `main.js` render 的 raw `innerHTML` sink，改 DOM API / `textContent` | 擴充套件更新前 |
 | 7 | `extension-trust-cache-privacy-boundaries` | Security / Compliance Fix | `custno=` 限 104 domain、bridge 每個讀取點驗證、SW schema/Content-Type/timeout、`fetchTaxIdBySlug` 加 timeout/大小上限（NF2）、修隱私政策（揭露 per-company + slug 主動帶 cookie 探測，NF1）、更新 `CLAUDE.md` 移除 `dispatched` latch（NF3） | 擴充套件更新前 |
@@ -39,7 +39,7 @@
 2. ✅ ~~`frontend-watchlist-static-profile-loading`~~（已完成，2026-06-13；watchlist 改 per-company profile、25 間實測不截斷、12/頁、typed params、vitest 對照 exporter 語意 8 測試）
 3. ✅ ~~`backend-atomic-static-export`~~（已完成，2026-06-13；原子 swap + 共用 builder + bottom 榜語意修正，73 測試全綠、真實 DB 煙霧測試 2636 檔零結構差異）
 4. ✅ ~~`backend-etl-fail-loud-bounded`~~（已完成，2026-06-13；SyncReport fail-loud、retries 上限 50 + 維護頁斷路、MOPS per-record 防護 + (year,market) commit/rollback + cache 驗證、parser skip log；順帶修 export atomic-swap 的 Windows rename race。96 測試全綠 + 真實 MOPS 雙路徑驗證）
-5. `backend-db-integrity-foundation`
+5. ✅ ~~`backend-db-integrity-foundation`~~（已完成，2026-06-13；Alembic baseline + UNIQUE/dedup_key + ON CONFLICT + WAL/busy_timeout/FK PRAGMA；正式兩 DB 原地遷移零資料遺失、真實 sync 冪等驗證）
 6. `backend-violation-attribution-correctness`（5b，法律暴露，不可留在 medium 散項）
 
 第一批完成後再評估是否切入 extension 兩個 change。若近期不發布擴充套件，extension 可維持 parked；若要上架或更新商店版本，`extension-widget-render-safety` 必須先於 `extension-trust-cache-privacy-boundaries`。

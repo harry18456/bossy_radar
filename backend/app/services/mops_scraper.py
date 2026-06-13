@@ -23,6 +23,7 @@ from app.models.employee_benefit import EmployeeBenefit
 from app.models.non_manager_salary import NonManagerSalary
 from app.models.salary_adjustment import SalaryAdjustment
 from app.models.welfare_policy import WelfarePolicy
+from app.services.db_upsert import model_values, upsert_on_conflict
 from app.services.sync_report import SourceResult, SyncReport
 
 logger = logging.getLogger(__name__)
@@ -165,8 +166,7 @@ class MopsScraper:
                 source_key, config, years, markets, session, archive_session
             )
 
-        SQLModel.metadata.create_all(engine)
-        SQLModel.metadata.create_all(archive_engine)
+        # Schema is managed by Alembic migrations (run `alembic upgrade head`).
         with Session(engine) as own_session, Session(archive_engine) as own_archive:
             return self._sync_units(
                 source_key, config, years, markets, own_session, own_archive
@@ -803,27 +803,16 @@ class MopsScraper:
                 else:
                     target_session = archive_session
 
-                # Create model instance
-                model_instance = model_class(**record)
-
-                # Check for existing record
-                existing = target_session.exec(
-                    select(model_class).where(
-                        model_class.raw_company_code == record["raw_company_code"],
-                        model_class.year == record["year"],
-                        model_class.market_type == record["market_type"],
-                    )
-                ).first()
-
-                if existing:
-                    # Update existing record
-                    for key, value in record.items():
-                        if key not in ["id", "created_at"]:
-                            setattr(existing, key, value)
-                    existing.last_updated = datetime.now()
-                    target_session.add(existing)
-                else:
-                    target_session.add(model_instance)
+                # Build values via a model instance (so defaults are populated)
+                # and upsert on the natural key — the DB enforces idempotency.
+                instance = model_class(**record)
+                values = model_values(instance)
+                upsert_on_conflict(
+                    target_session,
+                    model_class,
+                    values,
+                    conflict_cols=("raw_company_code", "year", "market_type"),
+                )
 
                 written += 1
             except Exception as e:

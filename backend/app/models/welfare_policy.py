@@ -4,6 +4,7 @@ t100sb13 - 員工福利政策及權益維護措施揭露-彙總資料查詢
 
 from datetime import datetime
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -11,6 +12,14 @@ class WelfarePolicy(SQLModel, table=True):
     """員工福利政策及權益維護措施揭露-彙總資料"""
 
     __tablename__ = "welfare_policy"
+    __table_args__ = (
+        UniqueConstraint(
+            "raw_company_code",
+            "year",
+            "market_type",
+            name="uq_welfare_policy_natural",
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
 

@@ -38,6 +38,21 @@ uv run ruff check .    # Lint 檢查
 uv run ruff format .   # 格式化
 ```
 
+### 資料庫 Migration (Alembic)
+
+Schema 由 Alembic 管理（不再用 `create_all`）。`migrations/env.py` 會同時對主庫與歸檔庫套用。
+
+```bash
+uv run alembic upgrade head     # 升級兩個 DB 到最新
+uv run alembic downgrade -1     # 回滾一個版本
+uv run alembic history          # 版本歷史
+# 既有但未追蹤的 DB：先 stamp baseline 再 upgrade
+uv run alembic stamp 0001 && uv run alembic upgrade head
+```
+
+> 連線層 PRAGMA：兩引擎每連線自動套用 `journal_mode=WAL`、`busy_timeout=5000`、`foreign_keys=ON`（`app/db/session.py`）。
+> 冪等性由 DB 保證：各表自然鍵 UNIQUE + upsert 走 SQLite `ON CONFLICT DO UPDATE`；空 disposition_no 違規用確定性 `dedup_key` 合成鍵（`app/services/dedup.py`）。
+
 ### CLI 資料同步
 
 ```bash

@@ -7,16 +7,18 @@ Environmental Service - 環境部裁罰資料 ETL
 import json
 import logging
 import re
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 import requests
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session
 
 from app.core.config import settings
 from app.db.session import archive_engine, engine
 from app.models.environmental_violation import EnvironmentalViolation
 from app.services.company_matcher import CompanyMatcher
+from app.services.db_upsert import model_values, upsert_on_conflict
+from app.services.dedup import env_violation_dedup_key
 
 logger = logging.getLogger(__name__)
 
@@ -112,10 +114,7 @@ class EnvironmentalService:
             logger.error(f"File not found: {file_path}")
             return
 
-        # 確保資料表存在
-        SQLModel.metadata.create_all(engine)
-        SQLModel.metadata.create_all(archive_engine)
-
+        # Schema is managed by Alembic migrations (run `alembic upgrade head`).
         with Session(engine) as session, Session(archive_engine) as archive_session:
             # 初始化比對器
             matcher = CompanyMatcher(session)
@@ -248,59 +247,29 @@ class EnvironmentalService:
             else:
                 target_session = archive_session
 
-            # Upsert 邏輯
-            if not v.disposition_no:
-                target_session.add(v)
-                count += 1
-                continue
-
-            existing = target_session.exec(
-                select(EnvironmentalViolation).where(
-                    EnvironmentalViolation.disposition_no == v.disposition_no
-                )
-            ).first()
-
-            if existing:
-                # 更新現有記錄
-                for field in [
-                    "company_code",
-                    "company_name",
-                    "tax_id",
-                    "control_no",
-                    "company_address",
-                    "violation_address",
-                    "violation_type",
-                    "violation_date",
-                    "violation_reason",
-                    "law_article",
-                    "authority",
-                    "penalty_date",
-                    "fine_amount",
-                    "penalty_reason",
-                    "limit_date",
-                    "is_improved",
-                    "is_appeal",
-                    "appeal_result",
-                    "is_paid",
-                    "illegal_profit",
-                    "other_penalty",
-                    "is_serious",
-                ]:
-                    setattr(existing, field, getattr(v, field))
-                existing.last_updated = datetime.now()
-                target_session.add(existing)
-            else:
-                target_session.add(v)
-
+            # Upsert 邏輯 — deterministic dedup_key (synthetic when the
+            # disposition number is empty) enforces idempotency at the DB layer,
+            # including the empty-disposition rows that were re-inserted on every
+            # sync (BACKEND_AUDIT H5). Commits are owned by sync_data.
+            v.dedup_key = env_violation_dedup_key(
+                disposition_no=v.disposition_no,
+                company_name=v.company_name,
+                penalty_date=v.penalty_date,
+                violation_reason=v.violation_reason,
+                fine_amount=v.fine_amount,
+            )
+            upsert_on_conflict(
+                target_session,
+                EnvironmentalViolation,
+                model_values(v),
+                conflict_cols=("dedup_key",),
+                no_update=("id", "created_at", "dedup_key"),
+            )
             count += 1
 
             if count % 1000 == 0:
-                session.commit()
-                archive_session.commit()
                 logger.info(f"Processed {count} records...")
 
-        session.commit()
-        archive_session.commit()
         logger.info(
             f"Processed {count} violations. Linked {linked_count} to companies."
         )

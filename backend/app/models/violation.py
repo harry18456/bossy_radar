@@ -1,10 +1,17 @@
 from datetime import date, datetime
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
 class Violation(SQLModel, table=True):
+    __table_args__ = (UniqueConstraint("dedup_key", name="uq_violation_dedup_key"),)
+
     id: int | None = Field(default=None, primary_key=True)
+
+    # Deterministic dedup key (BACKEND_AUDIT H5): natural key when
+    # disposition_no is present, else a synthetic hash of identifying fields.
+    dedup_key: str | None = Field(default=None, index=True, description="去重合成鍵")
 
     # Company Link (Nullable)
     company_code: str | None = Field(

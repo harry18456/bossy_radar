@@ -1,12 +1,20 @@
 from datetime import date, datetime
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
 class EnvironmentalViolation(SQLModel, table=True):
     """環境部裁罰紀錄 (EMS_P_46)"""
 
+    __table_args__ = (
+        UniqueConstraint("dedup_key", name="uq_environmentalviolation_dedup_key"),
+    )
+
     id: int | None = Field(default=None, primary_key=True)
+
+    # Deterministic dedup key (BACKEND_AUDIT H5).
+    dedup_key: str | None = Field(default=None, index=True, description="去重合成鍵")
 
     # Company Link (Nullable - 比對成功時填入)
     company_code: str | None = Field(

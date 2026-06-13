@@ -4,6 +4,7 @@ t100sb14 - 財務報告附註揭露之員工福利(薪資)資訊
 
 from datetime import datetime
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -11,6 +12,14 @@ class EmployeeBenefit(SQLModel, table=True):
     """財務報告附註揭露之員工福利(薪資)資訊"""
 
     __tablename__ = "employee_benefit"
+    __table_args__ = (
+        UniqueConstraint(
+            "raw_company_code",
+            "year",
+            "market_type",
+            name="uq_employee_benefit_natural",
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
 

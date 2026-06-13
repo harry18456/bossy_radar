@@ -14,7 +14,8 @@
 
 > 對照當前程式碼重新對抗式驗證。後端 remediation（changes 3-9）**尚未動工**。
 
-**仍成立（逐項確認，零修復、零誤判）**：H1/H2（latent，API 未公開）、H3 `retries=-1` 無限重試、~~H4 export 非原子 rmtree~~（已修，change 3 `backend-atomic-static-export`，2026-06-13）、H5 空 `disposition_no` 重插、H6 零 `UniqueConstraint`、M4/M5 MOPS 半寫/維護頁快取、M6/M7 無 WAL/busy_timeout/FK PRAGMA、M8 只 `create_all`、M11 CLI 假性成功 exit 0。
+**剩餘未修**：H1/H2（latent，API 未公開，change 9 gate）。
+**已修**：H3（change 4）、H4（change 3）、~~H5/H6/M6/M7/M8~~（change 5 `backend-db-integrity-foundation`，2026-06-13）、~~M4/M5~~（change 4）、~~M11~~（change 4）。第一批 backend 修復（change 3/4/5）完成。
 
 **新發現（本輪，報告原本遺漏）**
 - ✅ ~~🟠 **NF1 [Medium] `export_yearly_summaries` 已「實際」drift（非僅「會」）**~~（已修，change 3：抽單一共用組裝函式 `yearly_summary_builder.py`（參數含 include 集合），route 與 exporter 共用，exporter 以 include=all 呼叫並由 builder 結果推導 index；parity 測試鎖定，實測重匯出 18765 筆零語意變化）。
@@ -87,14 +88,14 @@
 - **影響**：SSG `public/data` 直接消費這些檔，一次失敗讓網站資料下線或供應壞掉的子集。
 - **修法**：寫進 temp 兄弟目錄，全部成功後原子 swap（rename old→.bak、tmp→output、刪 .bak）；`_save_json` 寫 temp 檔再 `os.replace`；`export_all` 包 try/except 失敗時保留舊目錄。
 
-### [ ] H5. 無 `disposition_no` 的違規每次同步無條件重插（非冪等）
+### [x] H5. 無 `disposition_no` 的違規每次同步無條件重插（非冪等）✅ 已修（change 5：dedup_key 確定性合成鍵（空 disposition 走 sha1）+ DB UNIQUE + ON CONFLICT，移除無條件 add；真實重跑 sync 零新增重複）
 - **面向**：cli-etl
 - **位置**：`backend/app/services/violation_service.py:191-218`；`environmental_service.py:252-255`
 - **問題**：去重鍵為 `(data_source, disposition_no)`，但 `if not v.disposition_no: target_session.add(v); continue` 在無處分字號時直接無條件 add。`_parse_json:129` 用 `(row.get("處分字號") or "").strip()` → 缺欄位時為空字串（falsy），此分支可達。無任何 unique constraint 當後盾。
 - **影響**：每次排程同步都對所有空處分字號的違規重插一份，膨脹計數、扭曲 leaderboard/aggregation，污染 SSG 匯出。
 - **修法**：為空處分字號列建確定性合成鍵（hash of 公司名+處分日+法條+罰鍰+來源），或加 DB unique constraint + `INSERT OR IGNORE`/`ON CONFLICT`。永不無條件 add。
 
-### [ ] H6. 全表零 `UniqueConstraint`，去重無 DB 後盾（TOCTOU）
+### [x] H6. 全表零 `UniqueConstraint`，去重無 DB 後盾（TOCTOU）✅ 已修（change 5：各表 `__table_args__` UniqueConstraint（MOPS 自然鍵、violation/env dedup_key）+ upsert 改 SQLite ON CONFLICT DO UPDATE，冪等由 DB 保證；Alembic batch 套用到既有兩 DB）
 - **面向**：cli-etl / models-db
 - **位置**：`backend/app/models/*.py`（全 7 個 model，grep `UniqueConstraint|unique=True|__table_args__` 零命中）
 - **問題**：所有 upsert 是 app 層 SELECT-then-INSERT。MOPS 鍵 `(raw_company_code, year, market_type)`、violation `(data_source, disposition_no)`、env `disposition_no` 都只有非唯一 index。dedup bug、並行/重試 sync、部分 commit 都可產生重複列，DB 一律接受。
@@ -145,17 +146,17 @@
 - **問題**：cache key 以今日日期命名，fetch 只 `raise_for_status()`（維護頁是 HTTP 200 過不了）就無條件寫入 cache，**無內容驗證**（不像 `CompanyDetailScraper` 會檢查維護字串與 >1000 byte）。當日後續 run 走 cache 分支重解析垃圾頁 → 0 列、靜默「成功」直到隔日。
 - **修法**：寫 cache 前驗證內容（非空、有預期表格、無維護標記）；既有 cache 命中卻 parse 出 0 列時視為訊號重抓。
 
-### [ ] M6. SQLite 無 `busy_timeout`、無 WAL → 並發讀寫時 `database is locked`
+### [x] M6. SQLite 無 `busy_timeout`、無 WAL → 並發讀寫時 `database is locked` ✅ 已修（change 5：兩引擎 connect event 每連線 `PRAGMA journal_mode=WAL; busy_timeout=5000; foreign_keys=ON`，實測兩 DB 生效）
 - **位置**：`backend/app/db/session.py:7-12`
 - **問題**：兩引擎只設 `check_same_thread=False`，預設 rollback-journal + busy_timeout=0。FastAPI 同步路由走 threadpool（多連線），CLI sync 長交易每 500/1000 列 commit（程式註解自承「Batch commit to avoid long lock」）。sync 寫鎖期間任何 API 讀立即 `SQLITE_BUSY` → 未處理 500。
 - **修法**：註冊 connect-event 每連線跑 `PRAGMA busy_timeout=5000; journal_mode=WAL; foreign_keys=ON;`（兩引擎）。WAL 讓讀寫並行，busy_timeout 讓寫者等待而非報錯。
 
-### [ ] M7. FK 宣告但 `PRAGMA foreign_keys` 未開，約束純裝飾
+### [x] M7. FK 宣告但 `PRAGMA foreign_keys` 未開，約束純裝飾 ✅ 已修（change 5：connect event 開 `foreign_keys=ON`（同 M6）；已驗證 archive 全表 company_code 皆 NULL、main 指向實際公司，開 FK 不擋既有資料；test_db_pragmas 覆蓋 FK 拒絕/NULL 允許）
 - **位置**：`db/session.py`（無 PRAGMA）；FK 定義於 6 個 child model
 - **問題**：每張子表宣告 `foreign_key="company.code"`，但 SQLite 預設不強制、程式從未 `PRAGMA foreign_keys=ON`。`company_code` 可指向不存在公司而被接受。archive DB 的 company 表恆空更明顯。
 - **修法**：同 M6 的 connect-event 開 `foreign_keys=ON`；明確決定 archive DB 是否該帶 FK。
 
-### [ ] M8. 僅 `create_all()`、無 migration → 改 model 必然 schema drift
+### [x] M8. 僅 `create_all()`、無 migration → 改 model 必然 schema drift ✅ 已修（change 5：導入 Alembic（雙引擎 env.py、0001 baseline + 0002 約束/dedup_key），移除四個 service 的 create_all 改走 migration；真實兩 DB stamp 0001 → upgrade head 零資料遺失）
 - **位置**：`company_service.py:128` + `violation_service.py:39-40`、`mops_scraper.py:140-141`、`environmental_service.py:116-117`（4 個 service）
 - **問題**：`create_all()` 只建不存在的表，永不 ALTER。任何 model 變更（新欄、新 index、新 unique、改型）對既有 `bossy_radar.db`(~40MB)/`archive.db`(~320MB) 不生效。無 Alembic。
 - **影響**：上面建議加的 unique/index 不會套用到既有 DB，會出現 `no such column` 或需手動清庫（資料遺失）。

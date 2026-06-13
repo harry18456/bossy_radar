@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 from sqlmodel import Session, select
@@ -9,6 +9,8 @@ from sqlmodel import Session, select
 from app.db.session import engine
 from app.models.company import Company
 from app.models.violation import Violation
+from app.services.db_upsert import model_values, upsert_on_conflict
+from app.services.dedup import violation_dedup_key
 from app.services.sync_report import SourceResult, SyncReport
 
 logger = logging.getLogger(__name__)
@@ -35,13 +37,8 @@ class ViolationService:
         that raises rolls back both sessions and is recorded as failed so the
         CLI can exit non-zero (BACKEND_AUDIT M11).
         """
-        # Ensure tables exist for both engines
-        from sqlmodel import SQLModel
-
+        # Schema is managed by Alembic migrations (run `alembic upgrade head`).
         from app.db.session import archive_engine
-
-        SQLModel.metadata.create_all(engine)
-        SQLModel.metadata.create_all(archive_engine)
 
         report = SyncReport()
 
@@ -220,33 +217,25 @@ class ViolationService:
             else:
                 target_session = archive_session
 
-            # 2. Upsert Logic
-            if not v.disposition_no:
-                target_session.add(v)
-                count += 1
-                continue
-
-            existing = target_session.exec(
-                select(Violation).where(
-                    Violation.data_source == v.data_source,
-                    Violation.disposition_no == v.disposition_no,
-                )
-            ).first()
-
-            if existing:
-                # Update useful fields
-                existing.company_code = v.company_code  # Re-link in case logic changed
-                existing.company_name = v.company_name
-                existing.authority = v.authority
-                existing.penalty_date = v.penalty_date
-                existing.announcement_date = v.announcement_date
-                existing.law_article = v.law_article
-                existing.violation_content = v.violation_content
-                existing.fine_amount = v.fine_amount
-                existing.last_updated = datetime.now()
-                target_session.add(existing)
-            else:
-                target_session.add(v)
+            # 2. Upsert Logic — a deterministic dedup_key (synthetic when the
+            # disposition number is empty) makes every violation idempotent at
+            # the DB layer, including the empty-disposition rows that used to be
+            # re-inserted on every sync (BACKEND_AUDIT H5).
+            v.dedup_key = violation_dedup_key(
+                data_source=v.data_source,
+                disposition_no=v.disposition_no,
+                company_name=v.company_name,
+                penalty_date=v.penalty_date,
+                law_article=v.law_article,
+                fine_amount=v.fine_amount,
+            )
+            upsert_on_conflict(
+                target_session,
+                Violation,
+                model_values(v),
+                conflict_cols=("dedup_key",),
+                no_update=("id", "created_at", "dedup_key"),
+            )
             count += 1
 
             # Progress tracking only; commits are owned by the per-source

@@ -4,6 +4,7 @@ t100sb15 - 非擔任主管職務之全時員工薪資資訊
 
 from datetime import datetime
 
+from sqlalchemy import UniqueConstraint
 from sqlmodel import Field, SQLModel
 
 
@@ -11,6 +12,14 @@ class NonManagerSalary(SQLModel, table=True):
     """非擔任主管職務之全時員工薪資資訊"""
 
     __tablename__ = "non_manager_salary"
+    __table_args__ = (
+        UniqueConstraint(
+            "raw_company_code",
+            "year",
+            "market_type",
+            name="uq_non_manager_salary_natural",
+        ),
+    )
 
     id: int | None = Field(default=None, primary_key=True)
 
