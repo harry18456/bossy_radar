@@ -130,7 +130,7 @@ class TestLeaderboardAPI:
         # Mock today to be 2024-01-01 -> ROC 113
         # Recent years: 113, 112, 111.
         # Test data has 112, 111.
-        with patch("app.api.routes.leaderboard.date") as mock_date:
+        with patch("app.services.leaderboard_builder.date") as mock_date:
             mock_date.today.return_value = date(2024, 1, 1)
             response = client.get("/api/v1/leaderboards")
 

@@ -14,11 +14,11 @@
 
 > 對照當前程式碼重新對抗式驗證。後端 remediation（changes 3-9）**尚未動工**。
 
-**仍成立（逐項確認，零修復、零誤判）**：H1/H2（latent，API 未公開）、H3 `retries=-1` 無限重試、H4 export 非原子 rmtree、H5 空 `disposition_no` 重插、H6 零 `UniqueConstraint`、M4/M5 MOPS 半寫/維護頁快取、M6/M7 無 WAL/busy_timeout/FK PRAGMA、M8 只 `create_all`、M11 CLI 假性成功 exit 0。**程式碼與報告完全一致。**
+**仍成立（逐項確認，零修復、零誤判）**：H1/H2（latent，API 未公開）、H3 `retries=-1` 無限重試、~~H4 export 非原子 rmtree~~（已修，change 3 `backend-atomic-static-export`，2026-06-13）、H5 空 `disposition_no` 重插、H6 零 `UniqueConstraint`、M4/M5 MOPS 半寫/維護頁快取、M6/M7 無 WAL/busy_timeout/FK PRAGMA、M8 只 `create_all`、M11 CLI 假性成功 exit 0。
 
 **新發現（本輪，報告原本遺漏）**
-- 🟠 **NF1 [Medium] `export_yearly_summaries` 已「實際」drift（非僅「會」）**（`export_service.py:194-408` vs `aggregation.py:107-419`）：route 端受 `include_violations/...` 控制（未 include 的表不查），export 端**無 include 概念、永遠查全部 6 表並全塞入** → SSG 靜態 JSON 與帶 `include` 的 API 回應形狀不一致。報告 H8 只說「會 drift」，此為已發生的具體實例。修法同 H8：抽單一共用組裝函式（參數含 include 集合），route 與 exporter 共用。
-- 🟠 **NF2 [Medium] leaderboard `bottom_by_*` 榜語意錯誤（route + export 同源）**（`export_service.py:707-772`、`leaderboard.py:291-308`）：`bottom_by_count` 取的是「被 `limit*2` 截斷的 top 池**尾端** 10 名」而非全體真正最後 10 名。修法：bottom 榜獨立查 `order by count asc`，勿從 top 池尾端切。
+- ✅ ~~🟠 **NF1 [Medium] `export_yearly_summaries` 已「實際」drift（非僅「會」）**~~（已修，change 3：抽單一共用組裝函式 `yearly_summary_builder.py`（參數含 include 集合），route 與 exporter 共用，exporter 以 include=all 呼叫並由 builder 結果推導 index；parity 測試鎖定，實測重匯出 18765 筆零語意變化）。
+- ✅ ~~🟠 **NF2 [Medium] leaderboard `bottom_by_*` 榜語意錯誤（route + export 同源）**~~（已修，change 3：改全量 group by 彙總後 top desc / bottom asc 精確切片，route 與 export 共用 `leaderboard_builder.py`；實測新 bottom 榜為 1,1,1,...（升冪）取代舊的 top 池尾端 7,8,9,...）。
 - 🟠 **NF3 [Medium] `sync-mops` 例外不 rollback → session 連環污染**（`mops_scraper.py:149-170`）：例外被 per-(year,market) `except continue` 吞掉後，共用 `session`/`archive_session` **從未 rollback**；若例外發生在 flush 後，下個市場查詢丟 `PendingRollbackError`，導致該 source **後續所有年度/市場連環失敗**，CLI 仍印 completed（複合 M11）。比 M4 更嚴重的並發/狀態風險。修法：`except` 內對兩 session `rollback()`，或每 (year,market) 用獨立 session/savepoint。
 - ⚖️ **NF4 [Medium→法律暴露] M1/M2 違規歸屬被低估**：把 A 公司違規掛到 B 公司，對指名公布違規的平台是**妨害名譽**法律風險，非單純技術 medium。資料完整性 change #5 修的是「不重複插入」，**不修「不掛錯公司」**。建議升優先級、獨立成 change（見 REMEDIATION_PLAN）。
 - 🟡 **NF5 [Low] 確認**：scripts/ 6 個打 live 政府站的探索腳本仍在版控（= L22）；MOENV_API_KEY 入 query string（latent log 洩漏，gov API 限制，記載即可）。
@@ -80,7 +80,7 @@
 - **影響**：被文件推薦的旗標會讓排程 job 永不結束、持續打政府站、恐被 ban IP。
 - **修法**：即使 infinite 模式也要有 wall-clock deadline 或總次數上限（如 50）＋ N 次連續維護頁後 circuit breaker；停止把 `-1` 當正常用法文件化。
 
-### [ ] H4. export 非原子：先 `rmtree` 抹除全部好資料再重建，中途失敗 = 公開資料下線/損毀
+### [x] H4. export 非原子：先 `rmtree` 抹除全部好資料再重建，中途失敗 = 公開資料下線/損毀 ✅ 已修（change 3：temp 兄弟目錄 + 原子 swap（舊→.bak→新→正式→刪 .bak），失敗保留舊目錄、殘留自動回收，test_export_atomicity.py 覆蓋）
 - **面向**：export-service
 - **位置**：`backend/app/services/export_service.py:71-91`（`_clean_output_dir` + `export_all`）；逐檔寫入 `_save_json:52-69`
 - **問題**：`export_all()` 第一步 `shutil.rmtree(output_dir)`，再跑一長串 DB 驅動寫入（含逐公司數千檔、數十個 `model_validate` 可能丟例外），**無 temp-dir-then-rename、無交易、無 try/except 還原**。任何失敗（DB 例外、磁碟滿、Ctrl-C）→ 公開目錄被刪光或半寫。`_save_json` 用 `open(path,"w")` truncate-then-write，crash 中途 = 無效 JSON。
@@ -108,7 +108,7 @@
 - **問題**：`uv run pytest --cov=app` 回報 TOTAL 85%，但這些檔從未被任何測試 import，coverage.py 直接從分母排除（grep tests/ 對 `ExportService/CrawlerService/...` 零命中）。**實測**把它們算進去後真實功能覆蓋率 ≈ **55.9%**。最高風險的程式碼（DB 寫入、雙 DB archive、匯入時比對、URL 清理、SSG 匯出）可在全測試綠燈下 regress。
 - **修法**：`pyproject.toml` 加 `[tool.coverage.run] source = ['app']` 讓 0% 檔現形；為 `ExportService.export_*`（對 tmp_path）、`EnvironmentalService`、`CompanyDetailScraper`、Typer CLI（`CliRunner`）補測試。
 
-### [ ] H8. export→前端 JSON 合約無測試，且 export 複製 ~400 行路由邏輯會 drift
+### [x] H8. export→前端 JSON 合約無測試，且 export 複製 ~400 行路由邏輯會 drift ✅ 已修（change 3：yearly/leaderboard 各抽單一共用 builder，route 與 exporter 共用；test_export_route_parity.py 以 seed DB 斷言 export JSON == route 回應）
 - **面向**：tests-quality
 - **位置**：`export_service.py:461-841`(export_leaderboards)、`194-408`(export_yearly_summaries)
 - **問題**：網站是 SSG，前端消費的是 export 出的靜態 JSON 而非 live API。`export_leaderboards` 幾乎逐行複製 `leaderboard.py` 路由（同 SQL、同 helper、同 all-time merge），`export_yearly_summaries` 複製 `aggregation.py`，無共用 helper、無測試斷言匯出檔形狀/值。對 `leaderboard.py` 修了 bug 卻沒同步 export → 出貨壞資料但測試全綠。
@@ -226,8 +226,8 @@
 | [ ] L10 | 無連線池，每次 new httpx.Client | 三個 scraper | 每 scraper 一個共用 Client/Session |
 | [ ] L11 | MOENV API 回應無上限累積在記憶體 | `environmental_service.py:60-95` | 加 max-page/record 上限、串流寫檔 |
 | [ ] L12 | ROC/西元年啟發式 `<1000` 模糊 | `violation_service.py:232-256` | 依來源契約明確判定，驗證年份落合理區間 |
-| [ ] L13 | `output_dir` 未驗證直接 `rmtree`（foot-gun） | `export_service.py:75` | resolve 絕對路徑並 assert 在預期 base 內 |
-| [ ] L14 | 逐檔 JSON truncate-then-write | `export_service.py:52-69` | 寫 temp 檔 + `os.replace` |
+| [x] L13 | `output_dir` 未驗證直接 `rmtree`（foot-gun）✅ 已修（change 3：刪除面收斂到自家 .tmp/.bak 命名路徑，其餘丟 ValueError） | `export_service.py` | resolve 絕對路徑並 assert 在預期 base 內 |
+| [x] L14 | 逐檔 JSON truncate-then-write ✅ 已修（change 3） | `export_service.py` | 寫 temp 檔 + `os.replace` |
 | [ ] L15 | `export_company_details` N+1（每公司 6 query） | `export_service.py:117-129` | bulk-fetch 各表一次、記憶體 group |
 | [ ] L16 | system-status 只報 4 張 MOPS 表中的 1 張 | `export_service.py:448-458` | 補 non_manager_salary/welfare_policy/salary_adjustment |
 | [ ] L17 | 熱迴圈中建丟棄式 Company ORM 當 name fallback | `export_service.py:724-797` | 用字串 fallback，不建 ORM |

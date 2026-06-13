@@ -1,12 +1,12 @@
 import json
 import logging
+import os
 import shutil
-from collections import defaultdict
-from datetime import date, datetime
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from sqlmodel import Session, col, extract, func, select
+from sqlmodel import Session, func, select
 
 from app.db.session import engine
 from app.models.company import Company
@@ -22,15 +22,6 @@ from app.schemas.aggregation import (
 )
 from app.schemas.company import CompanyCatalogItem, CompanyResponse
 from app.schemas.environmental_violation import EnvironmentalViolationPublic
-from app.schemas.leaderboard import (
-    IndustrySalaryLeaderboard,
-    IndustrySalaryLeaderboardItem,
-    LeaderboardResponse,
-    SalaryLeaderboard,
-    SalaryLeaderboardItem,
-    ViolationLeaderboard,
-    ViolationLeaderboardItem,
-)
 from app.schemas.mops import (
     EmployeeBenefitResponse,
     NonManagerSalaryResponse,
@@ -38,57 +29,105 @@ from app.schemas.mops import (
     WelfarePolicyResponse,
 )
 from app.schemas.system import SyncStatusItem, SyncStatusResponse
+from app.services.leaderboard_builder import build_leaderboard_response
+from app.services.yearly_summary_builder import build_yearly_summary_items
 
 logger = logging.getLogger(__name__)
 
 
 class ExportService:
     def __init__(self, output_dir: Path):
-        self.output_dir = output_dir
-        self.output_dir.mkdir(parents=True, exist_ok=True)
+        # The live directory is only ever renamed during the swap, never
+        # deleted recursively; all writes go to a temp sibling first.
+        self._final_output_dir = Path(output_dir)
+        self.output_dir = self._final_output_dir
         self.companies_dir = self.output_dir / "companies"
-        self.companies_dir.mkdir(exist_ok=True)
 
     def _save_json(self, path: Path, data: Any):
-        """Helper to save Pydantic models or dicts to JSON"""
-        with open(path, "w", encoding="utf-8") as f:
-            # Check if it's a Pydantic model (or list of them) or dict
-            if isinstance(data, list):
-                # If list of models, dump each
-                json_data = [
-                    item.model_dump(mode="json")
-                    if hasattr(item, "model_dump")
-                    else item
-                    for item in data
-                ]
-            elif hasattr(data, "model_dump"):
-                json_data = data.model_dump(mode="json")
-            else:
-                json_data = data
+        """Write JSON atomically: temp file in the same dir, then os.replace."""
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
 
-            json.dump(json_data, f, ensure_ascii=False, indent=2)
+        # Check if it's a Pydantic model (or list of them) or dict
+        if isinstance(data, list):
+            # If list of models, dump each
+            json_data = [
+                item.model_dump(mode="json") if hasattr(item, "model_dump") else item
+                for item in data
+            ]
+        elif hasattr(data, "model_dump"):
+            json_data = data.model_dump(mode="json")
+        else:
+            json_data = data
 
-    def _clean_output_dir(self):
-        """Clean the output directory before exporting"""
-        if self.output_dir.exists():
-            logger.info(f"Cleaning output directory: {self.output_dir}")
-            shutil.rmtree(self.output_dir)
+        tmp_path = path.with_name(path.name + ".tmp")
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as f:
+                json.dump(json_data, f, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, path)
+        except BaseException:
+            tmp_path.unlink(missing_ok=True)
+            raise
 
-        self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.companies_dir.mkdir(exist_ok=True)
+    def _service_dir(self, suffix: str) -> Path:
+        return self._final_output_dir.with_name(self._final_output_dir.name + suffix)
 
-    def export_all(self):
-        # Clean directory first
-        self._clean_output_dir()
+    def _remove_service_dir(self, path: Path):
+        """Delete a directory only if it is one of our own .tmp/.bak siblings."""
+        resolved = Path(path).resolve()
+        allowed = {
+            self._service_dir(".tmp").resolve(),
+            self._service_dir(".bak").resolve(),
+        }
+        if resolved not in allowed:
+            raise ValueError(f"Refusing to delete non-service-owned path: {resolved}")
+        if resolved.exists():
+            shutil.rmtree(resolved)
 
-        with Session(engine) as session:
+    def export_all(self, session: Session | None = None):
+        if session is not None:
+            self._export_all(session)
+            return
+        with Session(engine) as own_session:
+            self._export_all(own_session)
+
+    def _export_all(self, session: Session):
+        final_dir = self._final_output_dir
+        tmp_dir = self._service_dir(".tmp")
+        bak_dir = self._service_dir(".bak")
+
+        # Recover leftovers from a previously crashed run.
+        self._remove_service_dir(tmp_dir)
+        self._remove_service_dir(bak_dir)
+
+        tmp_dir.mkdir(parents=True)
+        original_output_dir = self.output_dir
+        original_companies_dir = self.companies_dir
+        self.output_dir = tmp_dir
+        self.companies_dir = tmp_dir / "companies"
+        self.companies_dir.mkdir()
+
+        try:
             logger.info("Starting Full Export...")
             self.export_company_catalog(session)
             self.export_yearly_summaries(session)
             self.export_system_status(session)
             self.export_company_details(session)
             self.export_leaderboards(session)
-            logger.info("Full Export Completed.")
+        except BaseException:
+            self._remove_service_dir(tmp_dir)
+            raise
+        finally:
+            self.output_dir = original_output_dir
+            self.companies_dir = original_companies_dir
+
+        # Atomic swap: the live dir always exists either under its own name
+        # or as the complete .bak copy at every point in this sequence.
+        if final_dir.exists():
+            final_dir.rename(bak_dir)
+        tmp_dir.rename(final_dir)
+        self._remove_service_dir(bak_dir)
+        logger.info("Full Export Completed.")
 
     def export_company_catalog(self, session: Session):
         logger.info("Exporting Company Catalog...")
@@ -116,6 +155,7 @@ class ExportService:
 
     def export_company_details(self, session: Session):
         logger.info("Exporting Company Details...")
+        self.companies_dir.mkdir(parents=True, exist_ok=True)
         companies = session.exec(select(Company)).all()
         count = 0
 
@@ -193,210 +233,31 @@ class ExportService:
 
     def export_yearly_summaries(self, session: Session):
         logger.info("Exporting Yearly Summaries...")
-        # Adapted from app/api/routes/aggregation.py get_yearly_summary
-        # But we want ALL data, so no pagination filters
-
-        # Create yearly-summaries directory
+        # Assembly is shared with the aggregation route via
+        # app/services/yearly_summary_builder.py; the exporter is the
+        # include=all full dump grouped by year (BACKEND_AUDIT NF1/H8).
         yearly_summaries_dir = self.output_dir / "yearly-summaries"
-        yearly_summaries_dir.mkdir(exist_ok=True)
+        yearly_summaries_dir.mkdir(parents=True, exist_ok=True)
 
-        # Step 1: Get all years (from MOPS + violations)
-        years_set: set[int] = set()
+        items = build_yearly_summary_items(session, include=["all"])
 
-        # From EmployeeBenefit
-        eb_years = session.exec(select(EmployeeBenefit.year).distinct()).all()
-        years_set.update(eb_years)
-
-        # From Violation (AD -> ROC)
-        vio_years_raw = session.exec(
-            select(extract("year", Violation.penalty_date).label("year"))
-            .distinct()
-            .where(Violation.penalty_date.is_not(None))
-        ).all()
-        years_set.update(int(y) - 1911 for y in vio_years_raw if y)
-
-        # From EnvironmentalViolation (AD -> ROC)
-        env_years_raw = session.exec(
-            select(extract("year", EnvironmentalViolation.penalty_date).label("year"))
-            .distinct()
-            .where(EnvironmentalViolation.penalty_date.is_not(None))
-        ).all()
-        years_set.update(int(y) - 1911 for y in env_years_raw if y)
-
-        available_years = sorted(years_set, reverse=True)
-
-        # Step 2: Get all companies
-        companies = session.exec(select(Company)).all()
-        company_map = {c.code: c for c in companies}
-        company_codes = list(company_map.keys())
-
-        # Step 4: Pre-fetch related data (Include ALL types)
-        # Violations (Total & Yearly)
-        violations_total = {}
-        violations_total_query = session.exec(
-            select(
-                Violation.company_code,
-                func.count(Violation.id).label("count"),
-                func.sum(Violation.fine_amount).label("fine"),
-            )
-            .where(col(Violation.company_code).in_(company_codes))
-            .group_by(Violation.company_code)
-        ).all()
-        for row in violations_total_query:
-            violations_total[row[0]] = {"count": row[1], "fine": row[2] or 0}
-
-        violations_by_year = {}
-        violations_year_query = session.exec(
-            select(
-                Violation.company_code,
-                extract("year", Violation.penalty_date).label("year"),
-                func.count(Violation.id).label("count"),
-                func.sum(Violation.fine_amount).label("fine"),
-            )
-            .where(col(Violation.company_code).in_(company_codes))
-            .group_by(Violation.company_code, extract("year", Violation.penalty_date))
-        ).all()
-        for row in violations_year_query:
-            key = (row[0], int(row[1]) - 1911 if row[1] else None)
-            violations_by_year[key] = {"count": row[2], "fine": row[3] or 0}
-
-        # Environmental Violations (Total & Yearly)
-        env_violations_total = {}
-        env_violations_total_query = session.exec(
-            select(
-                EnvironmentalViolation.company_code,
-                func.count(EnvironmentalViolation.id).label("count"),
-                func.sum(EnvironmentalViolation.fine_amount).label("fine"),
-            )
-            .where(col(EnvironmentalViolation.company_code).in_(company_codes))
-            .group_by(EnvironmentalViolation.company_code)
-        ).all()
-        for row in env_violations_total_query:
-            env_violations_total[row[0]] = {"count": row[1], "fine": row[2] or 0}
-
-        env_violations_by_year = {}
-        env_violations_year_query = session.exec(
-            select(
-                EnvironmentalViolation.company_code,
-                extract("year", EnvironmentalViolation.penalty_date).label("year"),
-                func.count(EnvironmentalViolation.id).label("count"),
-                func.sum(EnvironmentalViolation.fine_amount).label("fine"),
-            )
-            .where(col(EnvironmentalViolation.company_code).in_(company_codes))
-            .group_by(
-                EnvironmentalViolation.company_code,
-                extract("year", EnvironmentalViolation.penalty_date),
-            )
-        ).all()
-        for row in env_violations_year_query:
-            key = (row[0], int(row[1]) - 1911 if row[1] else None)
-            env_violations_by_year[key] = {"count": row[2], "fine": row[3] or 0}
-
-        # MOPS Data Maps
-        def fetch_map(model):
-            result_map = {}
-            results = session.exec(
-                select(model).where(col(model.company_code).in_(company_codes))
-            ).all()
-            for r in results:
-                result_map[(r.company_code, r.year)] = r
-            return result_map
-
-        benefits_map = fetch_map(EmployeeBenefit)
-        salaries_map = fetch_map(NonManagerSalary)
-        policies_map = fetch_map(WelfarePolicy)
-        adjustments_map = fetch_map(SalaryAdjustment)
-
-        # Step 5: Assemble items by year
         items_by_year: dict[int, list[YearlySummaryItem]] = {}
-        total_count = 0
+        for item in items:
+            items_by_year.setdefault(item.year, []).append(item)
 
-        for y in available_years:
-            items_by_year[y] = []
-            for code in company_codes:
-                company = company_map.get(code)
-                if not company:
-                    continue
-
-                benefit = benefits_map.get((code, y))
-                salary = salaries_map.get((code, y))
-                policy = policies_map.get((code, y))
-                adjustment = adjustments_map.get((code, y))
-
-                # Check violation data for this year
-                has_violations = (
-                    violations_by_year.get((code, y), {}).get("count", 0) > 0
-                )
-                has_env_violations = (
-                    env_violations_by_year.get((code, y), {}).get("count", 0) > 0
-                )
-
-                # If no data for this year, skip
-                if (
-                    not benefit
-                    and not salary
-                    and not policy
-                    and not adjustment
-                    and not has_violations
-                    and not has_env_violations
-                ):
-                    continue
-
-                item = YearlySummaryItem(
-                    company_code=code,
-                    company_name=company.name,
-                    market_type=company.market_type,
-                    industry=company.industry,
-                    year=y,
-                )
-
-                # Violations
-                vio_year = violations_by_year.get((code, y), {"count": 0, "fine": 0})
-                vio_total = violations_total.get(code, {"count": 0, "fine": 0})
-                item.violations_year_count = vio_year["count"]
-                item.violations_year_fine = vio_year["fine"]
-                item.violations_total_count = vio_total["count"]
-                item.violations_total_fine = vio_total["fine"]
-
-                # Env Violations
-                env_year = env_violations_by_year.get(
-                    (code, y), {"count": 0, "fine": 0}
-                )
-                env_total = env_violations_total.get(code, {"count": 0, "fine": 0})
-                item.env_violations_year_count = env_year["count"]
-                item.env_violations_year_fine = env_year["fine"]
-                item.env_violations_total_count = env_total["count"]
-                item.env_violations_total_fine = env_total["fine"]
-
-                if benefit:
-                    item.employee_benefit = EmployeeBenefitResponse.model_validate(
-                        benefit
-                    )
-                if salary:
-                    item.non_manager_salary = NonManagerSalaryResponse.model_validate(
-                        salary
-                    )
-                if policy:
-                    item.welfare_policy = WelfarePolicyResponse.model_validate(policy)
-                if adjustment:
-                    item.salary_adjustment = SalaryAdjustmentResponse.model_validate(
-                        adjustment
-                    )
-
-                items_by_year[y].append(item)
-                total_count += 1
-
-        # Step 6: Save per-year files
+        # Index metadata is derived from the builder output, never re-queried.
+        years_desc = sorted(items_by_year, reverse=True)
         year_stats = []
-        for year, items in items_by_year.items():
-            if items:  # Only save if there are items
-                self._save_json(yearly_summaries_dir / f"{year}.json", items)
-                year_stats.append({"year": year, "count": len(items)})
-                logger.info(f"Exported {len(items)} items for year {year}")
+        total_count = 0
+        for year in years_desc:
+            year_items = items_by_year[year]
+            self._save_json(yearly_summaries_dir / f"{year}.json", year_items)
+            year_stats.append({"year": year, "count": len(year_items)})
+            total_count += len(year_items)
+            logger.info(f"Exported {len(year_items)} items for year {year}")
 
-        # Step 7: Save index.json with metadata
         index_data = {
-            "years": available_years,
+            "years": years_desc,
             "year_stats": year_stats,
             "total_count": total_count,
             "generated_at": datetime.now().isoformat(),
@@ -404,7 +265,8 @@ class ExportService:
         self._save_json(yearly_summaries_dir / "index.json", index_data)
 
         logger.info(
-            f"Exported {total_count} yearly summary items across {len(available_years)} years."
+            f"Exported {total_count} yearly summary items across "
+            f"{len(years_desc)} years."
         )
 
     def export_system_status(self, session: Session):
@@ -459,383 +321,9 @@ class ExportService:
         logger.info("Exported system-status.json")
 
     def export_leaderboards(self, session: Session):
-        """匯出首頁排行榜資料 (複用 leaderboard.py 邏輯)"""
-        from sqlalchemy import extract, text
-
+        """匯出首頁排行榜資料（與 leaderboard route 共用 builder，見
+        app/services/leaderboard_builder.py；parity 測試鎖定兩者一致）"""
         logger.info("Exporting Leaderboards...")
-
-        limit = 10
-        years_to_include = 3
-
-        # 計算年份範圍
-        current_year = date.today().year - 1911  # 今年民國年
-        recent_years = [current_year - i for i in range(years_to_include)]
-
-        # ========== Step 1: 取得必要的公司名稱 ==========
-        company_codes_with_data = set()
-
-        # ========== Step 2: 歷年累計違規 ==========
-        labor_top_count = session.exec(
-            select(
-                Violation.company_code,
-                func.count(Violation.id).label("count"),
-                func.sum(Violation.fine_amount).label("fine"),
-            )
-            .where(Violation.company_code.isnot(None))
-            .group_by(Violation.company_code)
-            .order_by(text("count DESC"))
-            .limit(limit * 2)
-        ).all()
-
-        labor_top_fine = session.exec(
-            select(
-                Violation.company_code,
-                func.count(Violation.id).label("count"),
-                func.sum(Violation.fine_amount).label("fine"),
-            )
-            .where(Violation.company_code.isnot(None))
-            .group_by(Violation.company_code)
-            .order_by(text("fine DESC"))
-            .limit(limit * 2)
-        ).all()
-
-        env_top_count = session.exec(
-            select(
-                EnvironmentalViolation.company_code,
-                func.count(EnvironmentalViolation.id).label("count"),
-                func.sum(EnvironmentalViolation.fine_amount).label("fine"),
-            )
-            .where(EnvironmentalViolation.company_code.isnot(None))
-            .group_by(EnvironmentalViolation.company_code)
-            .order_by(text("count DESC"))
-            .limit(limit * 2)
-        ).all()
-
-        env_top_fine = session.exec(
-            select(
-                EnvironmentalViolation.company_code,
-                func.count(EnvironmentalViolation.id).label("count"),
-                func.sum(EnvironmentalViolation.fine_amount).label("fine"),
-            )
-            .where(EnvironmentalViolation.company_code.isnot(None))
-            .group_by(EnvironmentalViolation.company_code)
-            .order_by(text("fine DESC"))
-            .limit(limit * 2)
-        ).all()
-
-        for row in labor_top_count + labor_top_fine + env_top_count + env_top_fine:
-            company_codes_with_data.add(row[0])
-
-        # ========== Step 3: 按年度違規 ==========
-        yearly_violation_data = {}
-        for year_roc in recent_years:
-            year_ad = year_roc + 1911
-
-            labor_year = session.exec(
-                select(
-                    Violation.company_code,
-                    func.count(Violation.id).label("count"),
-                    func.sum(Violation.fine_amount).label("fine"),
-                )
-                .where(Violation.company_code.isnot(None))
-                .where(extract("year", Violation.penalty_date) == year_ad)
-                .group_by(Violation.company_code)
-                .order_by(text("count DESC"))
-                .limit(limit * 2)
-            ).all()
-
-            env_year = session.exec(
-                select(
-                    EnvironmentalViolation.company_code,
-                    func.count(EnvironmentalViolation.id).label("count"),
-                    func.sum(EnvironmentalViolation.fine_amount).label("fine"),
-                )
-                .where(EnvironmentalViolation.company_code.isnot(None))
-                .where(extract("year", EnvironmentalViolation.penalty_date) == year_ad)
-                .group_by(EnvironmentalViolation.company_code)
-                .order_by(text("count DESC"))
-                .limit(limit * 2)
-            ).all()
-
-            yearly_violation_data[year_roc] = {"labor": labor_year, "env": env_year}
-            for row in labor_year + env_year:
-                company_codes_with_data.add(row[0])
-
-        # ========== Step 4: 薪資排行 ==========
-        salary_data = {}
-        salary_by_industry_data = {}
-
-        for year_roc in recent_years:
-            top_avg = session.exec(
-                select(NonManagerSalary)
-                .where(NonManagerSalary.company_code.isnot(None))
-                .where(NonManagerSalary.year == year_roc)
-                .where(NonManagerSalary.avg_salary.isnot(None))
-                .order_by(NonManagerSalary.avg_salary.desc())
-                .limit(limit)
-            ).all()
-
-            bottom_avg = session.exec(
-                select(NonManagerSalary)
-                .where(NonManagerSalary.company_code.isnot(None))
-                .where(NonManagerSalary.year == year_roc)
-                .where(NonManagerSalary.avg_salary.isnot(None))
-                .order_by(NonManagerSalary.avg_salary.asc())
-                .limit(limit)
-            ).all()
-
-            top_median = session.exec(
-                select(NonManagerSalary)
-                .where(NonManagerSalary.company_code.isnot(None))
-                .where(NonManagerSalary.year == year_roc)
-                .where(NonManagerSalary.median_salary.isnot(None))
-                .order_by(NonManagerSalary.median_salary.desc())
-                .limit(limit)
-            ).all()
-
-            bottom_median = session.exec(
-                select(NonManagerSalary)
-                .where(NonManagerSalary.company_code.isnot(None))
-                .where(NonManagerSalary.year == year_roc)
-                .where(NonManagerSalary.median_salary.isnot(None))
-                .order_by(NonManagerSalary.median_salary.asc())
-                .limit(limit)
-            ).all()
-
-            salary_data[year_roc] = {
-                "top_avg": top_avg,
-                "bottom_avg": bottom_avg,
-                "top_median": top_median,
-                "bottom_median": bottom_median,
-            }
-
-            for s in top_avg + bottom_avg + top_median + bottom_median:
-                company_codes_with_data.add(s.company_code)
-
-            # 按產業分組
-            industries = session.exec(
-                select(NonManagerSalary.industry)
-                .where(NonManagerSalary.year == year_roc)
-                .where(NonManagerSalary.industry.isnot(None))
-                .distinct()
-            ).all()
-
-            salary_by_industry_data[year_roc] = {}
-            for industry_result in industries:
-                industry = (
-                    industry_result
-                    if isinstance(industry_result, str)
-                    else industry_result[0]
-                )
-                if not industry:
-                    continue
-
-                ind_top = session.exec(
-                    select(NonManagerSalary)
-                    .where(NonManagerSalary.company_code.isnot(None))
-                    .where(NonManagerSalary.year == year_roc)
-                    .where(NonManagerSalary.industry == industry)
-                    .where(NonManagerSalary.median_salary.isnot(None))
-                    .order_by(NonManagerSalary.median_salary.desc())
-                    .limit(limit)
-                ).all()
-
-                ind_bottom = session.exec(
-                    select(NonManagerSalary)
-                    .where(NonManagerSalary.company_code.isnot(None))
-                    .where(NonManagerSalary.year == year_roc)
-                    .where(NonManagerSalary.industry == industry)
-                    .where(NonManagerSalary.median_salary.isnot(None))
-                    .order_by(NonManagerSalary.median_salary.asc())
-                    .limit(limit)
-                ).all()
-
-                ind_top_eps = session.exec(
-                    select(NonManagerSalary)
-                    .where(NonManagerSalary.company_code.isnot(None))
-                    .where(NonManagerSalary.year == year_roc)
-                    .where(NonManagerSalary.industry == industry)
-                    .where(NonManagerSalary.eps.isnot(None))
-                    .order_by(NonManagerSalary.eps.desc())
-                    .limit(limit)
-                ).all()
-
-                ind_bottom_eps = session.exec(
-                    select(NonManagerSalary)
-                    .where(NonManagerSalary.company_code.isnot(None))
-                    .where(NonManagerSalary.year == year_roc)
-                    .where(NonManagerSalary.industry == industry)
-                    .where(NonManagerSalary.eps.isnot(None))
-                    .order_by(NonManagerSalary.eps.asc())
-                    .limit(limit)
-                ).all()
-
-                salary_by_industry_data[year_roc][industry] = {
-                    "top": ind_top,
-                    "bottom": ind_bottom,
-                    "top_eps": ind_top_eps,
-                    "bottom_eps": ind_bottom_eps,
-                }
-                for s in ind_top + ind_bottom + ind_top_eps + ind_bottom_eps:
-                    company_codes_with_data.add(s.company_code)
-
-        # ========== Step 5: 查詢公司名稱 ==========
-        company_map = {}
-        if company_codes_with_data:
-            companies = session.exec(
-                select(Company).where(Company.code.in_(list(company_codes_with_data)))
-            ).all()
-            company_map = {c.code: c for c in companies}
-
-        # ========== Step 6: 建構回應 ==========
-        def build_violation_leaderboard(data: dict[str, dict]) -> ViolationLeaderboard:
-            items = [
-                ViolationLeaderboardItem(
-                    company_code=code,
-                    company_name=info["name"],
-                    labor_count=info["labor_count"],
-                    labor_fine=info["labor_fine"],
-                    env_count=info["env_count"],
-                    env_fine=info["env_fine"],
-                    total_count=info["labor_count"] + info["env_count"],
-                    total_fine=info["labor_fine"] + info["env_fine"],
-                )
-                for code, info in data.items()
-                if info["labor_count"] + info["env_count"] > 0
-            ]
-
-            by_count = sorted(items, key=lambda x: x.total_count, reverse=True)
-            by_fine = sorted(items, key=lambda x: x.total_fine, reverse=True)
-
-            return ViolationLeaderboard(
-                top_by_count=by_count[:limit],
-                bottom_by_count=by_count[-limit:][::-1]
-                if len(by_count) >= limit
-                else by_count[::-1],
-                top_by_fine=by_fine[:limit],
-                bottom_by_fine=by_fine[-limit:][::-1]
-                if len(by_fine) >= limit
-                else by_fine[::-1],
-            )
-
-        def to_salary_item(s: NonManagerSalary) -> SalaryLeaderboardItem:
-            return SalaryLeaderboardItem(
-                company_code=s.company_code,
-                company_name=company_map.get(
-                    s.company_code, Company(name=s.company_name)
-                ).name,
-                avg_salary=s.avg_salary,
-                median_salary=s.median_salary,
-            )
-
-        def to_industry_salary_item(
-            s: NonManagerSalary,
-        ) -> IndustrySalaryLeaderboardItem:
-            return IndustrySalaryLeaderboardItem(
-                company_code=s.company_code,
-                company_name=company_map.get(
-                    s.company_code, Company(name=s.company_name)
-                ).name,
-                industry=s.industry or "",
-                avg_salary=s.avg_salary,
-                median_salary=s.median_salary,
-                eps=s.eps,
-            )
-
-        # 合併歷年違規
-        all_time_stats: dict[str, dict] = defaultdict(
-            lambda: {
-                "name": "",
-                "labor_count": 0,
-                "labor_fine": 0,
-                "env_count": 0,
-                "env_fine": 0,
-            }
-        )
-        for row in labor_top_count + labor_top_fine:
-            code = row[0]
-            all_time_stats[code]["name"] = company_map.get(code, Company(name="")).name
-            all_time_stats[code]["labor_count"] = max(
-                all_time_stats[code]["labor_count"], row[1]
-            )
-            all_time_stats[code]["labor_fine"] = max(
-                all_time_stats[code]["labor_fine"], row[2] or 0
-            )
-        for row in env_top_count + env_top_fine:
-            code = row[0]
-            all_time_stats[code]["name"] = company_map.get(code, Company(name="")).name
-            all_time_stats[code]["env_count"] = max(
-                all_time_stats[code]["env_count"], row[1]
-            )
-            all_time_stats[code]["env_fine"] = max(
-                all_time_stats[code]["env_fine"], row[2] or 0
-            )
-
-        violation_all_time = build_violation_leaderboard(all_time_stats)
-
-        # 各年度違規
-        violation_yearly = {}
-        for year_roc, data in yearly_violation_data.items():
-            yearly_stats: dict[str, dict] = defaultdict(
-                lambda: {
-                    "name": "",
-                    "labor_count": 0,
-                    "labor_fine": 0,
-                    "env_count": 0,
-                    "env_fine": 0,
-                }
-            )
-            for row in data["labor"]:
-                code = row[0]
-                yearly_stats[code]["name"] = company_map.get(
-                    code, Company(name="")
-                ).name
-                yearly_stats[code]["labor_count"] = row[1]
-                yearly_stats[code]["labor_fine"] = row[2] or 0
-            for row in data["env"]:
-                code = row[0]
-                yearly_stats[code]["name"] = company_map.get(
-                    code, Company(name="")
-                ).name
-                yearly_stats[code]["env_count"] = row[1]
-                yearly_stats[code]["env_fine"] = row[2] or 0
-
-            if yearly_stats:
-                violation_yearly[year_roc] = build_violation_leaderboard(yearly_stats)
-
-        # 各年度薪資
-        salary = {}
-        for year_roc, data in salary_data.items():
-            salary[year_roc] = SalaryLeaderboard(
-                top_by_avg=[to_salary_item(s) for s in data["top_avg"]],
-                bottom_by_avg=[to_salary_item(s) for s in data["bottom_avg"]],
-                top_by_median=[to_salary_item(s) for s in data["top_median"]],
-                bottom_by_median=[to_salary_item(s) for s in data["bottom_median"]],
-            )
-
-        # 各年度各產業薪資
-        salary_by_industry = {}
-        for year_roc, industries in salary_by_industry_data.items():
-            salary_by_industry[year_roc] = {}
-            for industry, data in industries.items():
-                salary_by_industry[year_roc][industry] = IndustrySalaryLeaderboard(
-                    top_by_median=[to_industry_salary_item(s) for s in data["top"]],
-                    bottom_by_median=[
-                        to_industry_salary_item(s) for s in data["bottom"]
-                    ],
-                    top_by_eps=[to_industry_salary_item(s) for s in data["top_eps"]],
-                    bottom_by_eps=[
-                        to_industry_salary_item(s) for s in data["bottom_eps"]
-                    ],
-                )
-
-        response = LeaderboardResponse(
-            latest_year=current_year,
-            violation_all_time=violation_all_time,
-            violation_yearly=violation_yearly,
-            salary=salary,
-            salary_by_industry=salary_by_industry,
-        )
-
+        response = build_leaderboard_response(session)
         self._save_json(self.output_dir / "leaderboards.json", response)
         logger.info("Exported leaderboards.json")
