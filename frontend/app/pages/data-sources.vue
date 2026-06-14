@@ -150,22 +150,25 @@ definePageMeta({
           </h2>
           <div class="bg-gray-50 dark:bg-slate-800/50 rounded-lg p-5 text-sm text-gray-600 dark:text-slate-400 space-y-3">
             <p>
-              由於政府開放資料中，違規紀錄通常僅提供「公司名稱」而無「統一編號」，因此本站必須進行資料比對（Fuzzy Matching）將違規紀錄連結至特定的上市櫃公司。我們採用以下多層次比對邏輯：
+              由於政府開放資料中，違規紀錄通常僅提供「公司名稱」而無「統一編號」，本站以多層次<strong>精確比對</strong>將違規紀錄連結至特定的上市櫃公司。為避免誤植，採保守原則：任何一層無把握即不連結（寧可漏接，不誤掛）。比對層次如下：
             </p>
             <ol class="list-decimal pl-5 space-y-2">
               <li>
-                <strong>統編精確比對 (Exact Match)</strong>：針對環保裁罰等包含「統一編號」的資料，本站直接以統編進行 100% 精確關聯。
+                <strong>公司代號精確比對</strong>：針對 MOPS 薪資／福利等附有上市櫃公司代號的資料，直接以代號精確關聯。
               </li>
               <li>
-                <strong>精確名稱比對</strong>：若無統編，則比對違規紀錄的公司全名與上市櫃公司名稱是否完全一致。
+                <strong>統一編號精確比對</strong>：針對環保裁罰等包含「統一編號」的資料，以統編進行精確關聯。
               </li>
               <li>
-                <strong>分公司與模糊比對</strong>：針對分公司或廠區（例如：「某某科技股份有限公司新竹廠」），我們會嘗試比對其總公司名稱。
+                <strong>公司名稱精確比對</strong>：比對違規紀錄的公司全名或簡稱與上市櫃公司是否完全一致。
               </li>
               <li>
-                <strong>負責人輔助確認</strong>：在名稱相似度高但不完全相同時，會參考「負責人/董事長」姓名進行二次確認，以降低誤判率。
+                <strong>分公司／廠區比對</strong>：針對分公司或廠區（例如：「某某科技股份有限公司新竹廠」），取最長前綴對應的總公司；若同時符合多家公司則不連結，以維持結果穩定並避免猜測。
               </li>
             </ol>
+            <p>
+              為避免將自然人或負責人之違規誤掛至上市公司，<strong>負責人／董事長姓名不會單獨作為連結依據</strong>；缺乏公司全名、統一編號或公司代號等佐證時，該筆資料寧可歸入未比對資料，也不猜測歸屬。
+            </p>
             <p class="text-amber-600 dark:text-amber-500 flex items-start gap-2 mt-4">
               <Icon name="lucide:alert-triangle" class="w-4 h-4 mt-0.5 shrink-0" />
               <span>

@@ -15,14 +15,14 @@ from pathlib import Path
 
 import httpx
 from bs4 import BeautifulSoup
-from sqlmodel import Session, SQLModel, select
+from sqlmodel import Session, SQLModel
 
 from app.db.session import archive_engine, engine
-from app.models.company import Company
 from app.models.employee_benefit import EmployeeBenefit
 from app.models.non_manager_salary import NonManagerSalary
 from app.models.salary_adjustment import SalaryAdjustment
 from app.models.welfare_policy import WelfarePolicy
+from app.services.company_matcher import CompanyMatcher
 from app.services.db_upsert import model_values, upsert_on_conflict
 from app.services.sync_report import SourceResult, SyncReport
 
@@ -181,9 +181,9 @@ class MopsScraper:
         session: Session,
         archive_session: Session,
     ) -> SourceResult:
-        company_code_map, company_name_map, company_branch_map = (
-            self._load_company_maps(session)
-        )
+        # Single shared matcher (change 5b): MOPS raw_company_code uses the
+        # code layer; name/branch share the same implementation as labor/env.
+        matcher = CompanyMatcher(session)
 
         written = 0
         skipped = 0
@@ -199,9 +199,7 @@ class MopsScraper:
                         market=market,
                         session=session,
                         archive_session=archive_session,
-                        company_code_map=company_code_map,
-                        company_name_map=company_name_map,
-                        company_branch_map=company_branch_map,
+                        matcher=matcher,
                     )
                     session.commit()
                     archive_session.commit()
@@ -228,22 +226,6 @@ class MopsScraper:
             error=error,
         )
 
-    def _load_company_maps(self, session: Session) -> tuple:
-        """Load company lookup maps for matching."""
-        companies = session.exec(select(Company)).all()
-
-        company_code_map = {c.code: c.code for c in companies}
-        company_name_map = {}
-        company_branch_map = []
-
-        for c in companies:
-            company_name_map[c.name] = c.code
-            if c.abbreviation:
-                company_name_map[c.abbreviation] = c.code
-            company_branch_map.append((c.name, c.code))
-
-        return company_code_map, company_name_map, company_branch_map
-
     def _fetch_and_process(
         self,
         source_key: str,
@@ -252,9 +234,7 @@ class MopsScraper:
         market: str,
         session: Session,
         archive_session: Session,
-        company_code_map: dict[str, str],
-        company_name_map: dict[str, str],
-        company_branch_map: list[tuple],
+        matcher: CompanyMatcher,
     ):
         """Fetch HTML from MOPS and process data."""
         # Build payload using config
@@ -312,9 +292,7 @@ class MopsScraper:
             archive_session=archive_session,
             records=records,
             model_class=config["model"],
-            company_code_map=company_code_map,
-            company_name_map=company_name_map,
-            company_branch_map=company_branch_map,
+            matcher=matcher,
         )
 
     @staticmethod
@@ -769,9 +747,7 @@ class MopsScraper:
         archive_session: Session,
         records: list[dict],
         model_class: type[SQLModel],
-        company_code_map: dict[str, str],
-        company_name_map: dict[str, str],
-        company_branch_map: list[tuple],
+        matcher: CompanyMatcher,
     ) -> tuple[int, int]:
         """Upsert records to main or archive DB.
 
@@ -787,12 +763,9 @@ class MopsScraper:
         for record in records:
             try:
                 # Match company
-                matched_code = self._match_company(
-                    raw_code=record.get("raw_company_code", ""),
-                    raw_name=record.get("company_name", ""),
-                    company_code_map=company_code_map,
-                    company_name_map=company_name_map,
-                    company_branch_map=company_branch_map,
+                matched_code = matcher.match(
+                    company_code=record.get("raw_company_code", ""),
+                    company_name=record.get("company_name", ""),
                 )
 
                 record["company_code"] = matched_code
@@ -829,31 +802,6 @@ class MopsScraper:
             f"Linked {linked_count} to companies."
         )
         return (written, skipped)
-
-    def _match_company(
-        self,
-        raw_code: str,
-        raw_name: str,
-        company_code_map: dict[str, str],
-        company_name_map: dict[str, str],
-        company_branch_map: list[tuple],
-    ) -> str | None:
-        """Match raw company data to existing company code."""
-        # Level 1: Exact code match
-        if raw_code and raw_code in company_code_map:
-            return company_code_map[raw_code]
-
-        # Level 2: Exact name match
-        if raw_name and raw_name in company_name_map:
-            return company_name_map[raw_name]
-
-        # Level 3: Branch match (startswith)
-        if raw_name:
-            for c_name, c_code in company_branch_map:
-                if raw_name.startswith(c_name) and len(raw_name) > len(c_name):
-                    return c_code
-
-        return None
 
     def _clean_text(self, cell) -> str:
         """Extract and clean text from a table cell."""

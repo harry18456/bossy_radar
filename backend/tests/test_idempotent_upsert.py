@@ -11,6 +11,7 @@ from sqlmodel import select
 
 from app.models.non_manager_salary import NonManagerSalary
 from app.models.violation import Violation
+from app.services.company_matcher import CompanyMatcher
 from app.services.dedup import env_violation_dedup_key, violation_dedup_key
 from app.services.mops_scraper import MopsScraper
 from app.services.violation_service import ViolationService
@@ -99,14 +100,13 @@ class TestDbIdempotentUpsert:
             "market_type": "sii",
             "avg_salary": 100,
         }
+        matcher = CompanyMatcher(test_session)
         scraper._upsert_data(
             session=test_session,
             archive_session=test_session,
             records=[dict(base)],
             model_class=NonManagerSalary,
-            company_code_map={},
-            company_name_map={},
-            company_branch_map=[],
+            matcher=matcher,
         )
         test_session.commit()
         scraper._upsert_data(
@@ -114,9 +114,7 @@ class TestDbIdempotentUpsert:
             archive_session=test_session,
             records=[{**base, "avg_salary": 200}],
             model_class=NonManagerSalary,
-            company_code_map={},
-            company_name_map={},
-            company_branch_map=[],
+            matcher=matcher,
         )
         test_session.commit()
 
@@ -126,6 +124,7 @@ class TestDbIdempotentUpsert:
 
     def test_empty_disposition_violation_dedupes(self, test_session):
         svc = ViolationService()
+        matcher = CompanyMatcher(test_session)
 
         def make():
             return Violation(
@@ -137,9 +136,9 @@ class TestDbIdempotentUpsert:
                 disposition_no="",
             )
 
-        svc._upsert_violations(test_session, test_session, [make()], {}, [], {})
+        svc._upsert_violations(test_session, test_session, [make()], matcher)
         test_session.commit()
-        svc._upsert_violations(test_session, test_session, [make()], {}, [], {})
+        svc._upsert_violations(test_session, test_session, [make()], matcher)
         test_session.commit()
 
         rows = test_session.exec(select(Violation)).all()
@@ -147,6 +146,7 @@ class TestDbIdempotentUpsert:
 
     def test_non_empty_disposition_violation_dedupes(self, test_session):
         svc = ViolationService()
+        matcher = CompanyMatcher(test_session)
 
         def make():
             return Violation(
@@ -156,9 +156,9 @@ class TestDbIdempotentUpsert:
                 fine_amount=100,
             )
 
-        svc._upsert_violations(test_session, test_session, [make()], {}, [], {})
+        svc._upsert_violations(test_session, test_session, [make()], matcher)
         test_session.commit()
-        svc._upsert_violations(test_session, test_session, [make()], {}, [], {})
+        svc._upsert_violations(test_session, test_session, [make()], matcher)
         test_session.commit()
 
         rows = test_session.exec(select(Violation)).all()

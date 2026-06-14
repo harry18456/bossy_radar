@@ -7,6 +7,7 @@ import pytest
 from sqlmodel import select
 
 from app.models.non_manager_salary import NonManagerSalary
+from app.services.company_matcher import CompanyMatcher
 from app.services.mops_scraper import DATA_SOURCES, MopsScraper
 
 
@@ -149,10 +150,8 @@ class TestMopsParser:
             }
         ]
 
-        # Mock maps
-        code_map = {"2330": "2330"}
-        name_map = {"台積電": "2330"}
-        branch_map = []
+        # Shared matcher loaded from the seeded company
+        matcher = CompanyMatcher(test_session)
 
         # Upsert
         scraper._upsert_data(
@@ -160,9 +159,7 @@ class TestMopsParser:
             archive_session=test_session,  # Reuse for test
             records=records,
             model_class=NonManagerSalary,
-            company_code_map=code_map,
-            company_name_map=name_map,
-            company_branch_map=branch_map,
+            matcher=matcher,
         )
 
         # Verify
@@ -221,42 +218,6 @@ class TestMopsParser:
         assert foxconn["pretax_net_profit"] == 10000000
         assert foxconn["actual_allocation_ratio"] == "7%"
 
-    def test_match_company(self, scraper):
-        """Test company matching logic."""
-        code_map = {"2330": "2330", "1101": "1101"}
-        name_map = {
-            "台積電": "2330",
-            "台灣積體電路製造股份有限公司": "2330",
-            "台泥": "1101",
-        }
-        branch_map = [("台灣積體電路", "2330")]
-
-        # 1. Exact Code Match
-        assert (
-            scraper._match_company("2330", "Unknown", code_map, name_map, branch_map)
-            == "2330"
-        )
-
-        # 2. Exact Name Match
-        assert (
-            scraper._match_company("9999", "台積電", code_map, name_map, branch_map)
-            == "2330"
-        )
-
-        # 3. Branch Match
-        assert (
-            scraper._match_company(
-                "9999", "台灣積體電路三廠", code_map, name_map, branch_map
-            )
-            == "2330"
-        )
-
-        # 4. No Match
-        assert (
-            scraper._match_company("9999", "Unknown", code_map, name_map, branch_map)
-            is None
-        )
-
     def test_sync_all_mock(self, scraper):
         """Test sync_all high level flow (mocking internal methods)."""
         from unittest.mock import patch
@@ -282,8 +243,7 @@ class TestMopsIntegrity:
         self, scraper, test_session, seed_companies, caplog
     ):
         """A row that fails to build is skipped+logged; siblings still written."""
-        code_map = {"2330": "2330", "2317": "2317", "6510": "6510"}
-        name_map = {"台積電": "2330", "鴻海": "2317", "精測": "6510"}
+        matcher = CompanyMatcher(test_session)
         records = [
             {
                 "raw_company_code": "2330",
@@ -314,9 +274,7 @@ class TestMopsIntegrity:
                 archive_session=test_session,
                 records=records,
                 model_class=NonManagerSalary,
-                company_code_map=code_map,
-                company_name_map=name_map,
-                company_branch_map=[],
+                matcher=matcher,
             )
 
         assert written == 2
@@ -347,9 +305,7 @@ class TestMopsIntegrity:
             archive_session=test_session,
             records=records,
             model_class=NonManagerSalary,
-            company_code_map={},
-            company_name_map={},
-            company_branch_map=[],
+            matcher=CompanyMatcher(test_session),
         )
 
         assert commits["n"] == 0
@@ -425,9 +381,7 @@ class TestMopsIntegrity:
                     market="sii",
                     session=test_session,
                     archive_session=test_session,
-                    company_code_map={},
-                    company_name_map={},
-                    company_branch_map=[],
+                    matcher=CompanyMatcher(test_session),
                 )
 
         assert list(tmp_path.rglob("*.html")) == []
@@ -468,9 +422,7 @@ class TestMopsIntegrity:
                 market="sii",
                 session=test_session,
                 archive_session=test_session,
-                company_code_map={},
-                company_name_map={},
-                company_branch_map=[],
+                matcher=CompanyMatcher(test_session),
             )
 
         assert post_calls["n"] == 1

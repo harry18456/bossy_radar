@@ -66,18 +66,6 @@ class TestCompanyMatcher:
     def test_match_by_branch_not_found(self, matcher):
         assert matcher.match_by_branch("完全不相關的名稱") is None
 
-    # --- Chairman matching ---
-
-    def test_match_by_chairman_unique(self, matcher):
-        """Unique chairman name should match."""
-        assert matcher.match_by_chairman("魏哲家") == "2330"
-
-    def test_match_by_chairman_not_found(self, matcher):
-        assert matcher.match_by_chairman("不存在的人") is None
-
-    def test_match_by_chairman_none(self, matcher):
-        assert matcher.match_by_chairman(None) is None
-
     # --- Composite match (priority tests) ---
 
     def test_match_tax_id_has_highest_priority(self, matcher):

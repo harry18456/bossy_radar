@@ -4,11 +4,11 @@ import re
 from datetime import date
 from pathlib import Path
 
-from sqlmodel import Session, select
+from sqlmodel import Session
 
 from app.db.session import engine
-from app.models.company import Company
 from app.models.violation import Violation
+from app.services.company_matcher import CompanyMatcher
 from app.services.db_upsert import model_values, upsert_on_conflict
 from app.services.dedup import violation_dedup_key
 from app.services.sync_report import SourceResult, SyncReport
@@ -43,31 +43,10 @@ class ViolationService:
         report = SyncReport()
 
         with Session(engine) as session, Session(archive_engine) as archive_session:
-            # 1. Pre-load companies for linking optimization
-            # Fetch essential fields: code, name, abbreviation, chairman
-            # For 2000 companies this is fine. If 100k+, need smarter lookup.
-            companies = session.exec(select(Company)).all()
-
-            # Index companies for fast lookup
-            company_map = {}  # name -> code
-            company_branch_map = []  # (name, code) list for startswith check
-            company_chairman_map = {}  # chairman -> list of (name, code)
-
-            for c in companies:
-                # Exact Match
-                company_map[c.name] = c.code
-                if c.abbreviation:
-                    company_map[c.abbreviation] = c.code
-
-                # Branch Match Prep
-                # Remove generic suffixes for cleaner matching? For now use full name
-                company_branch_map.append((c.name, c.code))
-
-                # Chairman Match Prep
-                if c.chairman:
-                    if c.chairman not in company_chairman_map:
-                        company_chairman_map[c.chairman] = []
-                    company_chairman_map[c.chairman].append((c.name, c.code))
+            # Single shared matcher (change 5b): one CompanyMatcher implementation
+            # for labor/env/mops attribution — no per-source inline copy. Bare
+            # personal names and ambiguous prefixes are archived, not guessed.
+            matcher = CompanyMatcher(session)
 
             for source in target_sources:
                 file_path = data_dir / f"{source}.json"
@@ -87,12 +66,7 @@ class ViolationService:
                     )
 
                     written = self._upsert_violations(
-                        session,
-                        archive_session,
-                        violations,
-                        company_map,
-                        company_branch_map,
-                        company_chairman_map,
+                        session, archive_session, violations, matcher
                     )
                     session.commit()
                     archive_session.commit()
@@ -176,39 +150,17 @@ class ViolationService:
         session: Session,
         archive_session: Session,
         violations: list[Violation],
-        company_map: dict[str, str],
-        company_branch_map: list[tuple],
-        company_chairman_map: dict[str, list],
+        matcher: CompanyMatcher,
     ) -> int:
         count = 0
         linked_count = 0
 
         for v in violations:
-            # 1. Linking Logic
-            matched_code = None
-
-            # Level 1: Exact Match
-            if v.company_name in company_map:
-                matched_code = company_map[v.company_name]
-
-            # Level 2: Branch Match (StartsWith)
-            if not matched_code:
-                # Iterate all companies (slow? 1000 companies * 50000 violations = 50M checks. might need optimization)
-                # But typically violation batch is per-day or file based.
-                # Optimization: Only check if c_name is longer than company name
-                for c_name, c_code in company_branch_map:
-                    if v.company_name.startswith(c_name) and len(v.company_name) > len(
-                        c_name
-                    ):
-                        matched_code = c_code
-                        break
-
-            # Level 3: Chairman Match (Only for specific sources or "Person Names")
-            if not matched_code and v.company_name in company_chairman_map:
-                candidates = company_chairman_map[v.company_name]
-                if len(candidates) == 1:
-                    # Only link if unique chairman. If multiple "Chen, Tai-Ming", don't guess.
-                    matched_code = candidates[0][1]
+            # Single shared matcher (change 5b). The labor source carries no
+            # tax_id/company_code, so attribution relies on exact name and the
+            # deterministic longest-prefix branch match. Bare personal names and
+            # ambiguous prefixes return None -> the row goes to archive.
+            matched_code = matcher.match(company_name=v.company_name)
 
             if matched_code:
                 v.company_code = matched_code
