@@ -1,0 +1,21 @@
+[
+  {
+    "company_code": "2002",
+    "company_name": "中國鋼鐵股份有限公司",
+    "market_type": "Listed",
+    "industry": "10",
+    "year": 100,
+    "violations_year_count": 0,
+    "violations_year_fine": 0,
+    "violations_total_count": 23,
+    "violations_total_fine": 20000,
+    "env_violations_year_count": 1,
+    "env_violations_year_fine": 100000,
+    "env_violations_total_count": 33,
+    "env_violations_total_fine": 8019000,
+    "employee_benefit": null,
+    "non_manager_salary": null,
+    "welfare_policy": null,
+    "salary_adjustment": null
+  }
+]

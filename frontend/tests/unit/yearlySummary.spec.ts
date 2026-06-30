@@ -11,7 +11,11 @@ import type {
   YearlySummaryItem
 } from '~/types/api'
 
-const dataDir = fileURLToPath(new URL('../../public/data', import.meta.url))
+// Committed fixtures (trimmed export samples) so the frontend<->backend export
+// parity test runs in CI without the gitignored public/data tree. Regenerate
+// after an export-format change by copying the two companies' profiles and
+// filtering each yearly-summaries/<year>.json down to those company codes.
+const dataDir = fileURLToPath(new URL('../fixtures', import.meta.url))
 
 let nextId = 0
 
@@ -184,7 +188,7 @@ describe('buildYearlySummaryItems', () => {
   })
 
   describe('assembled values equal exported values (real export samples)', () => {
-    const sampleCodes = ['6505', '2330']
+    const sampleCodes = ['2330', '2002']
 
     const loadJson = <T>(relPath: string): T =>
       JSON.parse(readFileSync(`${dataDir}/${relPath}`, 'utf-8')) as T
