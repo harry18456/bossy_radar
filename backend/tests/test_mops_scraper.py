@@ -107,6 +107,29 @@ class TestMopsParser:
         assert foxconn["median_salary_change"] == 5.26
         assert foxconn["performance_salary_relation_note"] == "關聯說明"
 
+    def test_parse_t100sb15_v4_114_gender_block(self, scraper, html_data_path):
+        """t100sb15 114 inserts a gender-salary block, pushing the 同業 columns
+        right. Industry columns must be read from the trailing end, not fixed
+        offsets (regression for the 114 industry_avg_salary/eps=NULL bug)."""
+        html = (html_data_path / "t100sb15_114.html").read_text(encoding="utf-8")
+        records = scraper._parse_table(html, "t100sb15", 114, "sii")
+
+        assert len(records) == 1
+        r = records[0]
+
+        assert r["raw_company_code"] == "2317"
+        # Leading block stays at fixed-left offsets.
+        assert r["avg_salary"] == 2600
+        assert r["avg_salary_change"] == 4.0
+        assert r["median_salary"] == 2100
+        assert r["eps"] == 11.5  # cells[11], NOT a gender-block cell
+        # Trailing block read from the right, skipping the 12-col gender block.
+        assert r["industry_avg_salary"] == 1850  # not 990 (male avg at cells[12])
+        assert r["industry_avg_eps"] == 5.5  # not None ('不適用' at cells[13])
+        assert r["is_better_eps_lower_salary"] == "Y"
+        assert r["performance_salary_relation_note"] == "關聯說明114"
+        assert r["improvement_measures_note"] == "改善措施114"
+
     def test_parse_t100sb14_v2_112(self, scraper, html_data_path):
         """Test parsing t100sb14 (Employee Benefit)."""
         html = (html_data_path / "t100sb14_112.html").read_text(encoding="utf-8")

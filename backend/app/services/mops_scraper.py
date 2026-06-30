@@ -504,7 +504,13 @@ class MopsScraper:
 
                 # Mapping based on version
                 if num_cells >= 19:
-                    # V3 (113+)
+                    # V3 (113): 19 cols. V4 (114+): MOPS inserted a 12-col
+                    # "性別薪資資訊" (gender salary) block between EPS and the
+                    # 同業公司資訊 block, so the row grows to 29-31 cols. The
+                    # leading 12 fields (0-11) and the trailing 7 (industry
+                    # avg salary/EPS + 3 flags + 2 notes) are stable across both
+                    # layouts, so index the trailing block from the RIGHT to
+                    # stay correct regardless of the gender block's width.
                     record.update(
                         {
                             "avg_salary_previous_year": self._parse_number(cells[6]),
@@ -513,17 +519,17 @@ class MopsScraper:
                             "median_salary_previous_year": self._parse_number(cells[9]),
                             "median_salary_change": self._parse_float(cells[10]),
                             "eps": self._parse_float(cells[11]),
-                            "industry_avg_salary": self._parse_number(cells[12]),
-                            "industry_avg_eps": self._parse_float(cells[13]),
-                            "is_avg_salary_under_500k": self._clean_text(cells[14]),
-                            "is_better_eps_lower_salary": self._clean_text(cells[15]),
+                            "industry_avg_salary": self._parse_number(cells[-7]),
+                            "industry_avg_eps": self._parse_float(cells[-6]),
+                            "is_avg_salary_under_500k": self._clean_text(cells[-5]),
+                            "is_better_eps_lower_salary": self._clean_text(cells[-4]),
                             "is_eps_growth_salary_decrease": self._clean_text(
-                                cells[16]
+                                cells[-3]
                             ),
                             "performance_salary_relation_note": self._clean_text(
-                                cells[17]
+                                cells[-2]
                             ),
-                            "improvement_measures_note": self._clean_text(cells[18]),
+                            "improvement_measures_note": self._clean_text(cells[-1]),
                         }
                     )
                 elif num_cells >= 16:
