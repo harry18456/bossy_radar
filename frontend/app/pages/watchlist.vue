@@ -104,12 +104,41 @@ const availableYears = computed(() => {
 // State: Selected Year
 const selectedYear = ref<number | null>(null);
 
-// Set default year when data loads
+// Current ROC (民國) year, e.g. 2026 -> 115. Computed once on the client.
+const CURRENT_ROC_YEAR = new Date().getFullYear() - 1911;
+
+// Years that actually carry the salary/EPS comparison (non_manager_salary /
+// employee_benefit). Violation-only years (which can reach the current year
+// before financial reports are filed) are excluded so the default never lands
+// on a year whose salary/EPS columns are entirely blank.
+const yearsWithComparisonData = computed(() => {
+  if (!allComparisonData.value) return [];
+  const years = new Set(
+    allComparisonData.value
+      .filter((item) => item.non_manager_salary || item.employee_benefit)
+      .map((item) => item.year),
+  );
+  return Array.from(years).sort((a, b) => b - a);
+});
+
+// Default = the latest year that has salary/EPS data and is not in the future
+// (so it tracks the current year as that data arrives, e.g. 115 once 115
+// financial reports publish). Falls back to the latest year of any data when
+// the whole watchlist has no salary/EPS at all.
+const defaultYear = computed<number | null>(() => {
+  const salaryYears = yearsWithComparisonData.value.filter(
+    (y) => y <= CURRENT_ROC_YEAR,
+  );
+  if (salaryYears.length > 0) return salaryYears[0] ?? null;
+  return availableYears.value[0] ?? null;
+});
+
+// Set default year when data loads (only until the user picks one manually).
 watch(
-  availableYears,
-  (years) => {
-    if (years.length > 0 && !selectedYear.value) {
-      selectedYear.value = years[0] ?? null;
+  defaultYear,
+  (year) => {
+    if (year !== null && !selectedYear.value) {
+      selectedYear.value = year;
     }
   },
   { immediate: true },
